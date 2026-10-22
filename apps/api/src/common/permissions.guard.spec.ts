@@ -31,13 +31,13 @@ describe("PermissionsGuard", () => {
 
   it("throws when the staff is missing the required permission", () => {
     const guard = makeGuard(["staff.manage"]);
-    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["audit.read"]) };
+    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["audit.read"]), isSuperAdmin: false };
     expect(() => guard.canActivate(makeContext(staff))).toThrow(ForbiddenException);
   });
 
   it("allows the request through when the staff has every required permission", () => {
     const guard = makeGuard(["staff.manage"]);
-    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["staff.manage"]) };
+    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["staff.manage"]), isSuperAdmin: false };
     expect(guard.canActivate(makeContext(staff))).toBe(true);
   });
 });

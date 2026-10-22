@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { listDriverDefinitions, type ProviderCapability } from "@clothing/shared/providers";
@@ -113,6 +113,13 @@ export class ProviderInstancesController {
   @Delete(":id")
   async remove(@Param("id") id: string, @Req() req: Request) {
     const existing = await this.prisma.providerInstance.findUniqueOrThrow({ where: { id } });
+    const mediaCount = await this.prisma.media.count({ where: { providerInstanceId: id, deletedAt: null } });
+    if (mediaCount > 0) {
+      throw new BadRequestException({
+        code: "PROVIDER_IN_USE",
+        message: `${mediaCount} media asset(s) still live on this provider — migrate them first`,
+      });
+    }
     await this.prisma.providerInstance.delete({ where: { id } });
     await this.audit.record({
       actorType: "staff",
@@ -124,6 +131,13 @@ export class ProviderInstancesController {
       ip: req.ip ?? null,
       userAgent: req.get("user-agent") ?? null,
     });
+  }
+
+  @Get(":id/usage")
+  async usage(@Param("id") id: string) {
+    const result = await this.registry.getUsage(id);
+    if (!result) return { supported: false };
+    return { supported: true, ...result };
   }
 
   @Post(":id/test-connection")

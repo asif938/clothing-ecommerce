@@ -6,7 +6,14 @@ import { StaffAuthGuard } from "../auth/staff-auth.guard";
 import { PermissionsGuard } from "../common/permissions.guard";
 import { RequirePermissions } from "../common/require-permissions.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
-import { updateMediaSchema, type UpdateMediaDto } from "./dto";
+import {
+  createDirectUploadTicketSchema,
+  finalizeDirectUploadSchema,
+  updateMediaSchema,
+  type CreateDirectUploadTicketDto,
+  type FinalizeDirectUploadDto,
+  type UpdateMediaDto,
+} from "./dto";
 import { MediaService } from "./media.service";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -27,6 +34,16 @@ export class MediaController {
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   upload(@UploadedFile() file: Express.Multer.File, @Query("folderId") folderId: string | undefined, @Req() req: Request) {
     return this.media.upload(file, folderId ?? null, req.staff!, { ip: req.ip ?? null, userAgent: req.get("user-agent") ?? null });
+  }
+
+  @Post("direct-upload-ticket")
+  createDirectUploadTicket(@Body(new ZodValidationPipe(createDirectUploadTicketSchema)) body: CreateDirectUploadTicketDto) {
+    return this.media.createDirectUploadTicket(body);
+  }
+
+  @Post("finalize")
+  finalizeDirectUpload(@Body(new ZodValidationPipe(finalizeDirectUploadSchema)) body: FinalizeDirectUploadDto, @Req() req: Request) {
+    return this.media.finalizeDirectUpload(body, req.staff!, { ip: req.ip ?? null, userAgent: req.get("user-agent") ?? null });
   }
 
   @Patch(":id")

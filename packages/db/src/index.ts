@@ -3,6 +3,7 @@ export type {
   AuditActorType,
   AreaType,
   MediaKind,
+  MediaMigrationJobStatus,
   ProviderMode,
   ScheduledTaskStatus,
   StaffUserStatus,

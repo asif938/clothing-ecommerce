@@ -22,7 +22,7 @@ function makePrismaMock(initialRows: Record<string, { value: unknown }> = {}) {
 }
 
 function makeStaff(permissions: string[]): AuthenticatedStaff {
-  return { id: "staff-1", name: "Owner", email: "owner@example.com", locale: "bn", permissions: new Set(permissions) };
+  return { id: "staff-1", name: "Owner", email: "owner@example.com", locale: "bn", permissions: new Set(permissions), isSuperAdmin: false };
 }
 
 describe("SettingsService", () => {

@@ -11,14 +11,18 @@ const ENCRYPTION_KEY = randomBytes(32).toString("hex");
 describe("ProviderRegistryService", () => {
   let root: string;
   let prisma: { providerInstance: { findUnique: ReturnType<typeof vi.fn> }; providerLog: { create: ReturnType<typeof vi.fn> } };
+  let audit: { record: ReturnType<typeof vi.fn> };
+  let cache: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn>; invalidateTag: ReturnType<typeof vi.fn> };
   let config: { getOrThrow: ReturnType<typeof vi.fn> };
   let service: ProviderRegistryService;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "clothing-provider-test-"));
     prisma = { providerInstance: { findUnique: vi.fn() }, providerLog: { create: vi.fn() } };
+    audit = { record: vi.fn() };
+    cache = { get: vi.fn(() => undefined), set: vi.fn(), invalidateTag: vi.fn() };
     config = { getOrThrow: vi.fn(() => ENCRYPTION_KEY) };
-    service = new ProviderRegistryService(prisma as never, config as never);
+    service = new ProviderRegistryService(prisma as never, audit as never, cache as never, config as never);
   });
 
   afterEach(async () => {
@@ -67,5 +71,32 @@ describe("ProviderRegistryService", () => {
     expect(prisma.providerLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ providerInstanceId: "p1", status: "ok" }) }),
     );
+  });
+
+  it("getUsage returns null for a driver with no usage hook (local)", async () => {
+    prisma.providerInstance.findUnique.mockResolvedValue({
+      id: "p1",
+      capability: "storage",
+      driver: "local",
+      config: service.encryptConfig({ rootDir: root, publicBaseUrl: "http://localhost:4000/media" }),
+    });
+    expect(await service.getUsage("p1")).toBeNull();
+  });
+
+  it("getUsage caches the result and audit-logs the first time a threshold is crossed", async () => {
+    prisma.providerInstance.findUnique.mockResolvedValue({
+      id: "p2",
+      capability: "storage",
+      driver: "cloudinary",
+      config: service.encryptConfig({ cloudName: "demo", apiKey: "k", apiSecret: "s", mock: true }),
+    });
+    // Mock mode always reports 0% — exercise the "no threshold crossed" path, then the cache hit.
+    const first = await service.getUsage("p2");
+    expect(first).toEqual({ usedPercent: 0, details: { mock: true } });
+    expect(cache.set).toHaveBeenCalledTimes(1);
+
+    cache.get.mockReturnValueOnce({ usedPercent: 0, details: { mock: true } });
+    await service.getUsage("p2");
+    expect(prisma.providerInstance.findUnique).toHaveBeenCalledTimes(1); // the cached second call never re-fetches the instance
   });
 });

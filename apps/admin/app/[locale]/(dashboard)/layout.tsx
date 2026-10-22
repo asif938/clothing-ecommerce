@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/staff", labelKey: "navStaff" },
   { href: "/media", labelKey: "navMedia" },
   { href: "/integrations", labelKey: "navIntegrations" },
+  { href: "/system-health", labelKey: "navSystemHealth" },
   { href: "/audit", labelKey: "navAudit" },
 ] as const;
 

@@ -218,6 +218,46 @@ export const SECURITY_STAFF_SESSION_TTL_HOURS = defineSetting({
   ui: { widget: "text" },
 });
 
+/**
+ * "env" (the default) means new uploads use the env-configured S3/R2
+ * driver — storage bucket credentials stay infra-only (docs/DECISIONS.md,
+ * Milestone 1). Any other value is a `provider_instances.id` for an
+ * alternative storage provider (Cloudinary — change request 2026-10-22).
+ * Switching this affects NEW uploads only; existing media keeps the
+ * provider it was uploaded to (`media.providerInstanceId`).
+ */
+export const MEDIA_DEFAULT_PROVIDER = defineSetting({
+  key: "media.defaultProvider",
+  group: "media",
+  type: z.string().min(1),
+  default: "env",
+  label: { bn: "ডিফল্ট মিডিয়া প্রোভাইডার", en: "Default media provider" },
+  help: {
+    bn: '"env" মানে পরিবেশ ভেরিয়েবলে কনফিগার করা S3/R2। নতুন আপলোডের জন্য প্রযোজ্য — পুরনো ফাইল অপরিবর্তিত থাকে।',
+    en: 'Use "env" for the S3/R2 driver configured via environment variables, or a storage provider\'s id (e.g. Cloudinary). Applies to new uploads only — existing files keep working on their original provider.',
+  },
+  secret: false,
+  public: false,
+  permission: "providers.manage",
+  ui: { widget: "text" },
+});
+
+export const MEDIA_FALLBACK_TO_ENV_ON_PROVIDER_LIMIT = defineSetting({
+  key: "media.fallbackToEnvOnProviderLimit",
+  group: "media",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "লিমিটের কাছে গেলে ডিফল্ট স্টোরেজে ফিরে যান", en: "Fall back to default storage near provider limit" },
+  help: {
+    bn: "ক্লাউডিনারির মত শেয়ার্ড-ক্রেডিট প্রোভাইডার ৯৫% ব্যবহারের কাছাকাছি গেলে নতুন আপলোড env-কনফিগার করা স্টোরেজে পাঠানো হবে।",
+    en: "When a shared-credit provider like Cloudinary nears 95% usage, new uploads are sent to the env-configured storage instead.",
+  },
+  secret: false,
+  public: false,
+  permission: "providers.manage",
+  ui: { widget: "toggle" },
+});
+
 export const SECURITY_PASSWORD_MIN_LENGTH = defineSetting({
   key: "security.passwordMinLength",
   group: "security",

@@ -62,6 +62,10 @@ export function createS3StorageDriver(config: S3StorageConfig): StorageDriver {
     publicUrl(key) {
       return `${config.publicBaseUrl.replace(/\/$/, "")}/${key}`;
     },
+    async signedPutUrl(key, contentType, expiresInSeconds) {
+      const command = new PutObjectCommand({ Bucket: config.bucket, Key: key, ContentType: contentType });
+      return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    },
   };
 }
 

@@ -196,7 +196,8 @@ model ProviderInstance {
   createdAt  DateTime     @default(now()) @map("created_at")
   updatedAt  DateTime     @updatedAt @map("updated_at")
 
-  logs ProviderLog[]
+  logs  ProviderLog[]
+  media Media[]
 
   @@map("provider_instances")
   @@index([capability])
@@ -331,11 +332,25 @@ model Media {
   id            String    @id @default(cuid(2))
   folderId      String?   @map("folder_id")
   kind          MediaKind
-  // "local" | "s3" (packages/shared provider driver key) — which storage
-  // driver this file lives in, so it can be served/regenerated correctly
-  // even if the active driver setting changes later.
+  // "local" | "s3" | "cloudinary" (packages/shared provider driver key) —
+  // which storage driver this file lives in, so it can be served/deleted/
+  // regenerated correctly even if the active driver setting changes later
+  // (docs/DECISIONS.md, Cloudinary change request 2026-10-22).
   storageDriver String    @map("storage_driver")
   storageKey    String    @map("storage_key")
+  // Set only when storageDriver's config comes from `provider_instances`
+  // (e.g. cloudinary), never for the env-configured default. Deleting that
+  // instance is blocked while media rows reference it — see
+  // ProviderInstancesController.
+  providerInstanceId String? @map("provider_instance_id")
+  // Cloudinary public_id (or any future provider's native id). Null for
+  // local/s3, which only need storageKey.
+  externalId    String?   @map("external_id")
+  // Cloudinary resource_type vocabulary (image/video/raw), populated for
+  // every asset regardless of provider so it's ready when an asset moves.
+  resourceType  String    @default("image") @map("resource_type")
+  // Cloudinary asset version, for cache-busting delivery URLs. Null otherwise.
+  version       Int?
   originalName  String    @map("original_name")
   mimeType      String    @map("mime_type")
   sizeBytes     Int       @map("size_bytes")
@@ -344,7 +359,9 @@ model Media {
   blurDataUrl   String?   @map("blur_data_url")
   focalX        Float?    @map("focal_x")
   focalY        Float?    @map("focal_y")
-  // { thumb: { key, width, height }, md: {...}, lg: {...} } — generated sizes.
+  // { thumb: { key, width, height }, md: {...}, lg: {...} } — generated
+  // sizes. Null for cloudinary-backed assets, which size on the fly
+  // (packages/shared/src/media/url.ts) instead of pre-generating.
   variants      Json?
   altText       Json?     @map("alt_text")
   uploadedBy    String?   @map("uploaded_by")
@@ -352,12 +369,14 @@ model Media {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  folder        MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  usages        MediaUsage[]
-  staffAvatarOf StaffUser[]
+  folder           MediaFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  providerInstance ProviderInstance? @relation(fields: [providerInstanceId], references: [id], onDelete: SetNull)
+  usages           MediaUsage[]
+  staffAvatarOf    StaffUser[]
 
   @@map("media")
   @@index([folderId])
+  @@index([providerInstanceId])
   @@index([kind])
 }
 
@@ -373,4 +392,36 @@ model MediaUsage {
   @@map("media_usages")
   @@unique([mediaId, entityType, entityId])
   @@index([entityType, entityId])
+}
+
+enum MediaMigrationJobStatus {
+  pending
+  running
+  done
+  failed
+  cancelled
+}
+
+// "Move media to provider X" (change request 2026-10-22, §7): a resumable,
+// chunked background job — apps/api's MediaMigrationService processes a
+// bounded batch per scheduler tick and advances `cursor`, so a restart
+// continues instead of starting over. Super Admin only.
+model MediaMigrationJob {
+  id             String                  @id @default(cuid(2))
+  // "env" or a provider_instances.id — same vocabulary as `media.defaultProvider`.
+  toProvider     String                  @map("to_provider")
+  dryRun         Boolean                 @default(false) @map("dry_run")
+  status         MediaMigrationJobStatus @default(pending)
+  totalCount     Int                     @default(0) @map("total_count")
+  processedCount Int                     @default(0) @map("processed_count")
+  failedCount    Int                     @default(0) @map("failed_count")
+  // Last processed Media.id (ids sort chronologically — cuid2) — the resume point.
+  cursor         String?
+  lastError      String?                 @map("last_error")
+  createdBy      String?                 @map("created_by")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  finishedAt     DateTime?               @map("finished_at")
+
+  @@map("media_migration_jobs")
 }

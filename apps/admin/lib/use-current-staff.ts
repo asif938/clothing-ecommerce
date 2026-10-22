@@ -9,6 +9,7 @@ export interface CurrentStaff {
   email: string;
   locale: string;
   permissions: string[];
+  isSuperAdmin: boolean;
 }
 
 export function useCurrentStaff() {

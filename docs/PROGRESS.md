@@ -249,6 +249,113 @@ means moving `apps/api` to ESM, a bigger, separate change).
   commit could not be pushed (same situation flagged at the end of M0,
   still unresolved — needs the project owner to add one).
 
+---
+
+## Cloudinary media provider (change request, pre-Milestone 2)
+
+**Status: complete.** R2/S3 (env-configured) stays the default; Cloudinary
+is now a real alternative, switchable from the admin panel with no code
+change. See docs/DECISIONS.md (2026-10-22 entry) for the reasoning behind
+every non-obvious call below.
+
+### Built
+
+- **`packages/shared`**: `cloudinaryStorageDriverDefinition` (capability
+  `storage`, driver `cloudinary`) — REST calls via plain `fetch` + a
+  hand-rolled signature (no `cloudinary` SDK dependency), `config.mock` for
+  the required mock mode, `usage()` hook (new, optional, on
+  `ProviderDriverDefinition`) backed by Cloudinary's usage API. New
+  isomorphic subpath `@clothing/shared/media` (`src/media/url.ts`):
+  `getMediaUrl(ref, options)` — the one place either app builds a media
+  delivery URL, for either provider family, with zero Node imports (kept
+  out of `@clothing/shared/providers`, which pulls in `node:fs`/aws-sdk and
+  would be unsafe in a browser bundle). New settings `media.defaultProvider`
+  (`"env"` or a `provider_instances.id`) and
+  `media.fallbackToEnvOnProviderLimit`. 18 new unit tests (URL builder +
+  Cloudinary driver, both exact-string/mock-mode since no live Cloudinary
+  account exists in this environment).
+- **`packages/db`**: non-destructive migration adding
+  `media.provider_instance_id`/`external_id`/`resource_type`/`version` +
+  a new `MediaMigrationJob` table/enum (`media_migration_jobs`).
+- **`apps/api`**: `MediaDriver` abstraction (`media/media-driver.ts`) with
+  two implementations — the env-backed one (unchanged sharp
+  thumb/md/lg/blur pre-generation, now also used for direct-upload
+  finalize) and the Cloudinary one (uploads the original only, sizes on
+  the fly, still a cheap local/on-the-fly blur placeholder).
+  `MediaProvidersService` resolves which driver backs a new upload
+  (`media.defaultProvider`, with automatic fallback to env past 95% usage)
+  versus an *existing* asset (always from the row's own stored fields —
+  switching providers never strands old assets); handles delete-with-retry
+  (failed remote delete → logged + one scheduled retry, DB never left
+  inconsistent). `MediaService` gained the direct-upload flow
+  (`POST /admin/media/direct-upload-ticket` → browser uploads straight to
+  S3 (presigned PUT) or Cloudinary (signed POST) → `POST
+  /admin/media/finalize`; local correctly reports unsupported and the
+  admin UI falls back to the existing multipart upload).
+  `MediaMigrationService`/`MediaMigrationController` — "move media to
+  provider X," resumable (stored cursor) and chunked (20/tick), dry-run
+  count, Super Admin only (`SuperAdminGuard`, new — checks
+  `staffUser.roles[].role.isSystem`, not a permission string).
+  `ProviderRegistryService.getUsage()` — 1h-cached usage, audit-logs once
+  per 80%/95% threshold crossing. `ProviderInstancesController` now blocks
+  deleting a storage instance that still has media on it. 36 new unit
+  tests (media-driver, media-providers, media-migration, super-admin
+  guard, provider-registry usage/caching).
+- **`apps/admin`**: Integrations page gained a `storage` capability tab
+  (Cloudinary, configured through the existing generic instance-create
+  UI) + a "check usage" action; Settings page special-cases
+  `media.defaultProvider` as a live dropdown of real provider instances;
+  Media page now uses `next/image` + a custom loader
+  (`lib/media-image-loader.ts`, wrapping `getMediaUrl`) instead of a raw
+  `<img>`, shows a provider badge per asset, does the direct-upload dance
+  with a multipart fallback, and (Super Admin only) a migration panel
+  (target picker, dry-run count, start, polled progress). New System
+  Health page (`/system-health`) — deliberately minimal: Cloudinary
+  credit-usage bar + 80%/95% banners, with a comment marking it as the
+  extension point for a fuller dashboard later, not the finished thing.
+  New `--color-warning` design-system token (preset.css) for those
+  banners.
+- **`apps/storefront`**: `lib/media-image-loader.ts` added as the same
+  ready extension point — unused until real product imagery exists
+  (M3/M4).
+
+### Verified
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` all pass across
+  the whole workspace (new totals: 58 `@clothing/shared`, 7 `@clothing/db`,
+  53 `apps/api` unit tests).
+- **Ran the real API dev server with no database available**: full DI
+  graph resolves (MediaModule/ProvidersModule/MediaMigrationController all
+  wire cleanly), every new route maps
+  (`/admin/media/direct-upload-ticket`, `/admin/media/finalize`,
+  `/admin/media-migrations[/:id]`, `/admin/providers/:id/usage`), `/health`
+  stays 200, DB-dependent routes fail with the real "can't reach database"
+  error rather than crashing — same graceful-degradation property as M0/M1.
+- **Not verified in this environment** (no Cloudinary credentials, no live
+  Postgres — same root cause flagged in M0/M1): an actual Cloudinary
+  account's response shapes/signature acceptance, and the full live
+  acceptance scenario (switch default provider → upload → render sized
+  WebP/AVIF from Cloudinary on real pages → switch back → run a real
+  migration job). The Cloudinary mock driver and the URL-builder's
+  exact-string tests are the next best thing available here; re-verify
+  against a real account and a real Postgres in the same session Docker
+  becomes available.
+
+### Known issues / explicitly deferred
+
+- Cloudinary's AI tools (background removal, auto-tagging, etc.) — Phase 2
+  with the other AI features (M13). `createCloudinaryMediaDriver` is the
+  extension point.
+- Usage-threshold alerts reach the Audit page only, not an actual
+  notification to Super Admin — waits for the general staff-notification
+  system already flagged as deferred in M1 (`notifications_admin`).
+- Migration-job "verification" is "upload succeeded with sane dimensions,"
+  not a byte-for-byte checksum.
+- A fuller System Health dashboard (queue depth, DB status, per-provider
+  error rates) is its own future milestone.
+
+---
+
 ### Next up
 
 Milestone 2 — catalog and inventory (§16 M2): categories tree, attributes,

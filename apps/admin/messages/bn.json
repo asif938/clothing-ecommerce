@@ -41,7 +41,8 @@
   "settings": {
     "title": "সেটিংস",
     "saved": "সেটিংস সংরক্ষিত হয়েছে",
-    "secretReplace": "পরিবর্তন করুন"
+    "secretReplace": "পরিবর্তন করুন",
+    "mediaProviderEnv": "ডিফল্ট (env-কনফিগার করা S3/R2)"
   },
   "staff": {
     "title": "স্টাফ",
@@ -56,7 +57,15 @@
     "title": "মিডিয়া লাইব্রেরি",
     "upload": "আপলোড করুন",
     "folders": "ফোল্ডার",
-    "usageNone": "এখনও কোথাও ব্যবহৃত হয়নি"
+    "usageNone": "এখনও কোথাও ব্যবহৃত হয়নি",
+    "migratePanelTitle": "অন্য প্রোভাইডারে মিডিয়া স্থানান্তর করুন",
+    "migrateTarget": "যেখানে স্থানান্তর করবেন",
+    "migrateDryRun": "সংখ্যা দেখুন",
+    "migrateStart": "স্থানান্তর শুরু করুন",
+    "migrateEligible": "{count}টি ফাইল স্থানান্তরিত হবে",
+    "migrateProgress": "{processed}/{total} সম্পন্ন, {failed}টি ব্যর্থ",
+    "migrateStatusDone": "সম্পন্ন",
+    "migrateStatusRunning": "চলছে…"
   },
   "audit": {
     "title": "অডিট লগ",
@@ -66,7 +75,17 @@
     "title": "ইন্টিগ্রেশন",
     "testConnection": "সংযোগ পরীক্ষা করুন",
     "testSuccess": "সংযোগ সফল হয়েছে",
-    "testFailure": "সংযোগ ব্যর্থ হয়েছে"
+    "testFailure": "সংযোগ ব্যর্থ হয়েছে",
+    "checkUsage": "ব্যবহার দেখুন",
+    "usagePercent": "ক্রেডিট ব্যবহার: {percent}%",
+    "usageFallbackActive": "এটি কমা পর্যন্ত নতুন আপলোড ডিফল্ট স্টোরেজে যাচ্ছে"
+  },
+  "systemHealth": {
+    "title": "সিস্টেম স্বাস্থ্য",
+    "cloudinaryUsageTitle": "ক্লাউডিনারি ক্রেডিট ব্যবহার",
+    "noCloudinaryInstance": "এখনও কোনো ক্লাউডিনারি প্রোভাইডার কনফিগার করা হয়নি — ইন্টিগ্রেশন দেখুন।",
+    "warningNear80": "ক্রেডিট ব্যবহার ৮০%-এর বেশি — শীঘ্রই এটি বিবেচনা করুন।",
+    "dangerNear95": "ক্রেডিট ব্যবহার ৯৫%-এর বেশি — নতুন আপলোড ডিফল্ট স্টোরেজে পাঠানো হচ্ছে।"
   },
   "shell": {
     "searchPlaceholder": "খুঁজুন বা একটি কমান্ড চালান…",
@@ -75,6 +94,7 @@
     "navStaff": "স্টাফ ও রোল",
     "navMedia": "মিডিয়া",
     "navIntegrations": "ইন্টিগ্রেশন",
+    "navSystemHealth": "সিস্টেম স্বাস্থ্য",
     "navAudit": "অডিট লগ"
   }
 }

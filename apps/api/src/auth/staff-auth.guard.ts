@@ -19,7 +19,9 @@ export class StaffAuthGuard implements CanActivate {
     }
 
     const permissions = new Set<string>();
+    let isSuperAdmin = false;
     for (const staffRole of session.staffUser.roles) {
+      if (staffRole.role.isSystem) isSuperAdmin = true;
       for (const rolePermission of staffRole.role.permissions) {
         permissions.add(rolePermission.permission);
       }
@@ -31,6 +33,7 @@ export class StaffAuthGuard implements CanActivate {
       email: session.staffUser.email,
       locale: session.staffUser.locale,
       permissions,
+      isSuperAdmin,
     };
     return true;
   }

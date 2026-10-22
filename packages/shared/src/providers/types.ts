@@ -35,6 +35,17 @@ export interface ProviderTestResult {
 }
 
 /**
+ * A provider's self-reported consumption against whatever quota it has
+ * (Cloudinary's shared storage/bandwidth/transformation credits, a courier's
+ * monthly request cap, …). `usedPercent` is 0-100; `details` is
+ * driver-specific and shown as-is on the admin System Health panel.
+ */
+export interface ProviderUsageResult {
+  usedPercent: number;
+  details?: Record<string, unknown>;
+}
+
+/**
  * Static catalog entry for one driver of one capability — config schema,
  * which fields are secrets, and how to test a configured instance. This is
  * framework-agnostic (no DB/Nest dependency); `apps/api`'s ProviderRegistry
@@ -47,6 +58,8 @@ export interface ProviderDriverDefinition<TConfig = Record<string, unknown>> {
   configSchema: z.ZodType<TConfig>;
   secretFields: string[];
   testConnection: (config: TConfig) => Promise<ProviderTestResult>;
+  /** Optional: only drivers with a real usage/quota API implement this (e.g. Cloudinary credits). */
+  usage?: (config: TConfig) => Promise<ProviderUsageResult>;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +73,8 @@ export interface StorageDriver {
   delete(key: string): Promise<void>;
   signedUrl(key: string, expiresInSeconds: number): Promise<string>;
   publicUrl(key: string): string;
+  /** Optional: a presigned PUT URL for direct browser→bucket uploads. Only the s3 driver implements it — local has no such concept. */
+  signedPutUrl?(key: string, contentType: string, expiresInSeconds: number): Promise<string>;
 }
 
 export interface EmailMessage {

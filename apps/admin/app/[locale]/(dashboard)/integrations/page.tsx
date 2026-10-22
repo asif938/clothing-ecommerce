@@ -5,10 +5,11 @@ import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
 
-// Storage isn't here: it's configured from env, not provider_instances — see
-// docs/DECISIONS.md. These are the capabilities with a driver catalog in
-// Milestone 1 (packages/shared/src/providers/catalog.ts).
-const CAPABILITIES = ["email", "sms"] as const;
+// The env-configured default (local/s3) isn't managed here — see
+// docs/DECISIONS.md. "storage" only lists *alternative* storage providers
+// (Cloudinary) that an admin can switch to via the `media.defaultProvider`
+// setting; email/sms were the Milestone 1 proof of the generic pattern.
+const CAPABILITIES = ["storage", "email", "sms"] as const;
 
 interface DriverCatalogEntry {
   capability: string;
@@ -34,6 +35,7 @@ export default function IntegrationsPage() {
   const [instances, setInstances] = useState<ProviderInstance[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { ok: boolean; message: string }>>({});
+  const [usage, setUsage] = useState<Record<string, { supported: boolean; usedPercent?: number }>>({});
   const [creatingDriver, setCreatingDriver] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [configText, setConfigText] = useState("{}");
@@ -80,6 +82,15 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function handleCheckUsage(id: string) {
+    try {
+      const result = await api.get<{ supported: boolean; usedPercent?: number }>(`/admin/providers/${id}/usage`);
+      setUsage((prev) => ({ ...prev, [id]: result }));
+    } catch {
+      setUsage((prev) => ({ ...prev, [id]: { supported: false } }));
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
@@ -110,13 +121,26 @@ export default function IntegrationsPage() {
                 <div className="text-sm font-medium text-surface-foreground">
                   {instance.name} <span className="text-surface-foreground/50">({instance.driver}, {instance.mode})</span>
                 </div>
-                <Button variant="secondary" onClick={() => handleTest(instance.id)}>
-                  {t("testConnection")}
-                </Button>
+                <div className="flex gap-2">
+                  {capability === "storage" && (
+                    <Button variant="secondary" onClick={() => handleCheckUsage(instance.id)}>
+                      {t("checkUsage")}
+                    </Button>
+                  )}
+                  <Button variant="secondary" onClick={() => handleTest(instance.id)}>
+                    {t("testConnection")}
+                  </Button>
+                </div>
               </div>
               {results[instance.id] && (
                 <p className={`mt-2 text-xs ${results[instance.id]?.ok ? "text-success" : "text-danger"}`}>
                   {results[instance.id]?.ok ? t("testSuccess") : t("testFailure")}: {results[instance.id]?.message}
+                </p>
+              )}
+              {usage[instance.id]?.supported && (
+                <p className={`mt-2 text-xs ${(usage[instance.id]?.usedPercent ?? 0) >= 80 ? "text-danger" : "text-surface-foreground/60"}`}>
+                  {t("usagePercent", { percent: (usage[instance.id]?.usedPercent ?? 0).toFixed(1) })}
+                  {(usage[instance.id]?.usedPercent ?? 0) >= 95 && ` — ${t("usageFallbackActive")}`}
                 </p>
               )}
             </li>

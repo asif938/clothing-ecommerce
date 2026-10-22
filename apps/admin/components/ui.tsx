@@ -64,10 +64,11 @@ export function Toggle({ checked, onChange, disabled }: { checked: boolean; onCh
   );
 }
 
-export function Banner({ kind, children }: { kind: "error" | "success" | "info"; children: ReactNode }) {
+export function Banner({ kind, children }: { kind: "error" | "success" | "info" | "warning"; children: ReactNode }) {
   const styles = {
     error: "bg-danger/10 text-danger border-danger/30",
     success: "bg-success/10 text-success border-success/30",
+    warning: "bg-warning/10 text-warning border-warning/30",
     info: "bg-muted text-surface-foreground border-border",
   }[kind];
   return <div className={`rounded-theme border px-4 py-3 text-sm ${styles}`}>{children}</div>;

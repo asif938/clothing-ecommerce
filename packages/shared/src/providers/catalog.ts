@@ -1,6 +1,7 @@
 import type { ProviderCapability, ProviderDriverDefinition } from "./types.ts";
 import { localStorageDriverDefinition } from "./drivers/storage-local.ts";
 import { s3StorageDriverDefinition } from "./drivers/storage-s3.ts";
+import { cloudinaryStorageDriverDefinition } from "./drivers/storage-cloudinary.ts";
 import { mockEmailDriverDefinition } from "./drivers/email-mock.ts";
 import { smtpEmailDriverDefinition } from "./drivers/email-smtp.ts";
 import { mockSmsDriverDefinition } from "./drivers/sms-mock.ts";
@@ -19,6 +20,7 @@ import { mockSmsDriverDefinition } from "./drivers/sms-mock.ts";
 export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   localStorageDriverDefinition as unknown as ProviderDriverDefinition,
   s3StorageDriverDefinition as unknown as ProviderDriverDefinition,
+  cloudinaryStorageDriverDefinition as unknown as ProviderDriverDefinition,
   mockEmailDriverDefinition as unknown as ProviderDriverDefinition,
   smtpEmailDriverDefinition as unknown as ProviderDriverDefinition,
   mockSmsDriverDefinition as unknown as ProviderDriverDefinition,

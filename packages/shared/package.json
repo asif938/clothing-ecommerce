@@ -12,7 +12,8 @@
     "./settings": "./src/settings/index.ts",
     "./permissions": "./src/permissions/index.ts",
     "./crypto": "./src/crypto/index.ts",
-    "./providers": "./src/providers/index.ts"
+    "./providers": "./src/providers/index.ts",
+    "./media": "./src/media/url.ts"
   },
   "scripts": {
     "lint": "eslint .",

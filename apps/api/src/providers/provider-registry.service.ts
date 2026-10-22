@@ -1,9 +1,14 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { decrypt, encrypt, isEncryptedPayload, maskSecret } from "@clothing/shared/crypto";
-import { getDriverDefinition, type ProviderCapability, type ProviderTestResult } from "@clothing/shared/providers";
+import { getDriverDefinition, type ProviderCapability, type ProviderTestResult, type ProviderUsageResult } from "@clothing/shared/providers";
 import { Prisma } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { CacheService } from "../cache/cache.service";
+
+const USAGE_CACHE_TTL_SECONDS = 60 * 60;
+const USAGE_ALERT_THRESHOLDS = [95, 80] as const;
 
 /**
  * Resolves `provider_instances` rows against the static driver catalog
@@ -17,6 +22,8 @@ import { PrismaService } from "../prisma/prisma.service";
 export class ProviderRegistryService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly cache: CacheService,
     @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
@@ -86,6 +93,45 @@ export class ProviderRegistryService {
         response: { message: result.message, details: result.details ?? null } as Prisma.InputJsonValue,
       },
     });
+
+    return result;
+  }
+
+  /**
+   * Cached 1h (shared-credit providers like Cloudinary rate-limit the usage
+   * API and this value also drives the upload-fallback decision —
+   * docs/PROJECT_SPEC.md change request 2026-10-22, §8). Audit-logs once per
+   * threshold crossing so Super Admin sees it on the Audit page even though
+   * no staff-notification channel exists yet (docs/DECISIONS.md).
+   */
+  async getUsage(instanceId: string): Promise<ProviderUsageResult | null> {
+    const cacheKey = `provider-usage:${instanceId}`;
+    const cached = this.cache.get<ProviderUsageResult>(cacheKey);
+    if (cached) return cached;
+
+    const instance = await this.prisma.providerInstance.findUnique({ where: { id: instanceId } });
+    if (!instance) throw new NotFoundException("Provider instance not found");
+
+    const definition = getDriverDefinition(instance.capability as ProviderCapability, instance.driver);
+    if (!definition?.usage) return null;
+
+    const config = this.decryptConfig(instance.config);
+    const result = await definition.usage(config);
+    this.cache.set(cacheKey, result, { ttlSeconds: USAGE_CACHE_TTL_SECONDS, tags: [`provider-usage:${instanceId}`] });
+
+    const alertCacheKey = `provider-usage-alert:${instanceId}`;
+    const lastAlertedThreshold = this.cache.get<number>(alertCacheKey) ?? 0;
+    const crossed = USAGE_ALERT_THRESHOLDS.find((threshold) => result.usedPercent >= threshold && threshold > lastAlertedThreshold);
+    if (crossed) {
+      this.cache.set(alertCacheKey, crossed, { ttlSeconds: 24 * USAGE_CACHE_TTL_SECONDS });
+      await this.audit.record({
+        actorType: "system",
+        action: "provider_instance.usage_alert",
+        entityType: "provider_instance",
+        entityId: instanceId,
+        after: { usedPercent: result.usedPercent, threshold: crossed, driver: instance.driver },
+      });
+    }
 
     return result;
   }

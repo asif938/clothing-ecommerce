@@ -44,7 +44,7 @@ export class AuthController {
   @UseGuards(StaffAuthGuard)
   me(@Req() req: Request) {
     const staff = req.staff!;
-    return { id: staff.id, name: staff.name, email: staff.email, locale: staff.locale, permissions: [...staff.permissions] };
+    return { id: staff.id, name: staff.name, email: staff.email, locale: staff.locale, permissions: [...staff.permissions], isSuperAdmin: staff.isSuperAdmin };
   }
 
   @Post("totp/setup")

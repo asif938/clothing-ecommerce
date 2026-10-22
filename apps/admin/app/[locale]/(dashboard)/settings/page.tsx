@@ -29,7 +29,14 @@ function labelOf(text: LocalizedText | null | undefined): string {
   return text?.en ?? text?.bn ?? "";
 }
 
-function SettingField({ setting, onSaved }: { setting: SettingRow; onSaved: () => void }) {
+interface StorageProviderInstance {
+  id: string;
+  name: string;
+  driver: string;
+  enabled: boolean;
+}
+
+function SettingField({ setting, onSaved, storageInstances }: { setting: SettingRow; onSaved: () => void; storageInstances: StorageProviderInstance[] }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
   const [value, setValue] = useState<unknown>(setting.value);
@@ -56,7 +63,29 @@ function SettingField({ setting, onSaved }: { setting: SettingRow; onSaved: () =
   const label = labelOf(setting.label) || setting.key;
 
   let control: React.ReactNode;
-  if (setting.secret) {
+  if (setting.key === "media.defaultProvider") {
+    // Special-cased (not the generic registry-driven widget): the choices are
+    // "env" plus whatever storage provider instances exist in the DB right
+    // now (Cloudinary, once configured) — the setting registry has no way
+    // to know those at definition time.
+    control = (
+      <select
+        className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+        value={String(value ?? "env")}
+        onChange={(e) => {
+          setValue(e.target.value);
+          void save(e.target.value);
+        }}
+      >
+        <option value="env">{t("mediaProviderEnv")}</option>
+        {storageInstances.map((instance) => (
+          <option key={instance.id} value={instance.id}>
+            {instance.name} ({instance.driver})
+          </option>
+        ))}
+      </select>
+    );
+  } else if (setting.secret) {
     control = (
       <div className="flex items-center gap-2">
         <span className="rounded-theme border border-border bg-muted px-3 py-2 text-sm">{String(setting.value ?? "")}</span>
@@ -177,14 +206,19 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingRow[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [storageInstances, setStorageInstances] = useState<StorageProviderInstance[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
     try {
-      const result = await api.get<{ groups: string[]; settings: SettingRow[] }>("/admin/settings");
+      const [result, instances] = await Promise.all([
+        api.get<{ groups: string[]; settings: SettingRow[] }>("/admin/settings"),
+        api.get<StorageProviderInstance[]>("/admin/providers?capability=storage"),
+      ]);
       setSettings(result.settings);
       setGroups(result.groups);
       setActiveGroup((prev) => prev ?? result.groups[0] ?? null);
+      setStorageInstances(instances);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load settings");
     }
@@ -221,7 +255,7 @@ export default function SettingsPage() {
         </nav>
         <Card className="flex-1">
           {visible.map((setting) => (
-            <SettingField key={setting.key} setting={setting} onSaved={load} />
+            <SettingField key={setting.key} setting={setting} onSaved={load} storageInstances={storageInstances} />
           ))}
           {visible.length === 0 && <p className="text-sm text-surface-foreground/60">—</p>}
         </Card>

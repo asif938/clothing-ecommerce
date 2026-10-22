@@ -41,7 +41,8 @@
   "settings": {
     "title": "Settings",
     "saved": "Settings saved",
-    "secretReplace": "Replace"
+    "secretReplace": "Replace",
+    "mediaProviderEnv": "Default (env-configured S3/R2)"
   },
   "staff": {
     "title": "Staff",
@@ -56,7 +57,15 @@
     "title": "Media library",
     "upload": "Upload",
     "folders": "Folders",
-    "usageNone": "Not used anywhere yet"
+    "usageNone": "Not used anywhere yet",
+    "migratePanelTitle": "Move media to another provider",
+    "migrateTarget": "Move to",
+    "migrateDryRun": "Preview count",
+    "migrateStart": "Start migration",
+    "migrateEligible": "{count} asset(s) would move",
+    "migrateProgress": "{processed}/{total} moved, {failed} failed",
+    "migrateStatusDone": "Done",
+    "migrateStatusRunning": "Running…"
   },
   "audit": {
     "title": "Audit log",
@@ -66,7 +75,17 @@
     "title": "Integrations",
     "testConnection": "Test connection",
     "testSuccess": "Connection succeeded",
-    "testFailure": "Connection failed"
+    "testFailure": "Connection failed",
+    "checkUsage": "Check usage",
+    "usagePercent": "Credit usage: {percent}%",
+    "usageFallbackActive": "new uploads are being sent to the default storage until this clears"
+  },
+  "systemHealth": {
+    "title": "System health",
+    "cloudinaryUsageTitle": "Cloudinary credit usage",
+    "noCloudinaryInstance": "No Cloudinary provider configured yet — see Integrations.",
+    "warningNear80": "Credit usage is above 80% — consider the usage soon.",
+    "dangerNear95": "Credit usage is above 95% — new uploads are falling back to the default storage."
   },
   "shell": {
     "searchPlaceholder": "Search or run a command…",
@@ -75,6 +94,7 @@
     "navStaff": "Staff & roles",
     "navMedia": "Media",
     "navIntegrations": "Integrations",
+    "navSystemHealth": "System health",
     "navAudit": "Audit log"
   }
 }

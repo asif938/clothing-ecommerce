@@ -463,3 +463,104 @@ Recorded here, not just as code comments, so they stay visible:
   due when the theme system is implemented (M3).
 - Prisma 6→7 (or whatever is current then) — revisit when `apps/api` has a
   concrete reason to move to ESM.
+
+---
+
+## 2026-10-22 — Cloudinary as an optional media provider (change request, pre-M2)
+
+**Context:** R2 (via the S3-compatible driver) stays the default storage —
+no egress fees, cheapest at scale. Cloudinary is valuable for its on-the-fly
+transforms and video handling, but its free tier shares one monthly credit
+pool across storage+bandwidth+transformations and the next tier is
+expensive — it must never become a hard dependency. Requirement: add it as
+a true alternative behind the existing provider framework, switchable from
+the admin panel with zero code change, with old assets unaffected.
+
+**Decision — `media.defaultProvider` sentinel, not a provider_instances row
+for the default:** Milestone 1 deliberately kept storage (local/s3)
+configured from env, not `provider_instances`, because spec §4.1 names
+bucket credentials as infra-only. Rather than reverse that call, the new
+setting `media.defaultProvider` takes the literal value `"env"` (its
+default — meaning "use the env-configured S3/R2/local driver") or a real
+`provider_instances.id` for an alternative like Cloudinary. This keeps the
+M1 boundary intact while giving Cloudinary a normal, admin-manageable
+provider instance. Switching this setting affects *new* uploads only.
+
+**Decision — per-asset provider linkage, resolved from the row, never from
+the current setting:** `media.providerInstanceId`/`externalId`/
+`resourceType`/`version` were added to the `Media` table (non-destructive
+migration). Every read/delete/download resolves "which driver backs this
+asset" from these stored fields (`MediaProvidersService.resolveDriverForAsset`),
+never from `media.defaultProvider` — so flipping the default never strands
+already-uploaded files on the provider they were actually uploaded to.
+
+**Decision — one isomorphic URL builder, in its own package subpath:**
+`@clothing/shared/media` (`src/media/url.ts`) exports `getMediaUrl()` and
+`MediaRef` with zero Node imports — deliberately separate from
+`@clothing/shared/providers`, which pulls in `node:fs`/`@aws-sdk/*` and
+would be unsafe to import into a browser bundle. Both apps' `next/image`
+usage is meant to go through `lib/media-image-loader.ts` (admin's media
+page does; storefront's is a ready extension point — no real product
+imagery exists yet, see Milestone 3/4 in PROGRESS.md). Local/s3 pick the
+nearest pre-generated variant; Cloudinary builds a transformation URL
+(`f_auto,q_auto[,c_<crop>,w_,h_,g_xy_center,x_,y_,fl_region_relative]`) —
+the focal-point-to-gravity mapping (`fl_region_relative` treats x_/y_ as
+0–1 fractions, matching how `focalX`/`focalY` are already stored) is
+documented but **not verified against a live Cloudinary account** — no
+credentials in this sandbox. Covered instead by exact-string unit tests
+against Cloudinary's own published transformation syntax and the required
+mock driver.
+
+**Decision — Cloudinary talks to Cloudinary via plain `fetch` + a hand-rolled
+signature,** not the official `cloudinary` SDK — same reasoning as the
+existing S3 driver (`@aws-sdk/client-s3` is the one SDK dependency; nothing
+else needs a bespoke vendor package). `config.mock: boolean` is the
+required mock mode, exercised by every Cloudinary-path test in this change.
+
+**Decision — direct-to-provider upload, S3 and Cloudinary only:** local has
+no signed-PUT concept, so `createDirectUploadTicket` reports
+`supported: false` for it and the admin UI falls back to the existing
+multipart `POST /admin/media` path. The `Media` row is created only at
+`finalize`, not at ticket-issuance, so an abandoned ticket never leaves an
+orphaned placeholder row. The ticket response echoes back
+`storageDriver`/`providerInstanceId` for the client to send to `finalize`
+unchanged — guarantees finalize resolves the *same* driver the ticket was
+issued for even if `media.defaultProvider` or the usage-fallback decision
+changes in the few seconds in between, without needing server-side session
+state for it.
+
+**Decision — "verified copy" in the migration job means "upload succeeded
+and (for images) returned real dimensions," not a byte-for-byte checksum.**
+Full content verification is a reasonable future hardening, deferred as a
+deliberate scope line for this change rather than left as an unstated gap.
+The job is Super Admin only (`SuperAdminGuard`, checking
+`staffUser.roles[].role.isSystem`, not a permission string — only the
+seeded Super Admin role is a system role, consistent with M1's "no
+superuser bypass" design) — resumable via a stored `cursor` (last
+processed `Media.id`) and chunked at 20 assets per scheduler tick, so it
+stays free-tier safe (no long-running request).
+
+**Decision — usage alerting reuses the audit log, not a new notification
+channel.** `ProviderRegistryService.getUsage()` caches a provider's usage
+for 1h and audit-logs a `provider_instance.usage_alert` entry the first
+time 80%/95% is crossed (visible on the existing Audit page to Super
+Admin). Actually paging/emailing Super Admin is deferred to the
+general staff-notification system already flagged as deferred in M1
+(`notifications_admin`) — building a one-off channel just for this would
+pre-empt that design. The "fall back to env storage near the limit" rule
+(`media.fallbackToEnvOnProviderLimit`, default on) reuses the same cached
+value rather than calling the usage API per upload.
+
+**Decision — a `--color-warning` theme token was added** to
+`packages/config/tailwind/preset.css` (alongside the existing
+`danger`/`success`) for the System Health page's 80%/95% banners — this is
+a design-system token like its siblings, not brand content, so it doesn't
+violate golden rule 1.
+
+**Deferred (documented, not silently dropped):** Cloudinary's AI tools
+(background removal, auto-tagging, etc.) belong with the other AI features
+in Phase 2 (M13) — `createCloudinaryMediaDriver` is the extension point;
+see the TODO in `docs/PROGRESS.md`. A fuller System Health dashboard (queue
+depth, DB connection status, per-provider error rates) is its own future
+milestone — the page built here is deliberately scoped to just the
+Cloudinary usage panel this change needs.
