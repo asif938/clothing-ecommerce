@@ -8,6 +8,13 @@ import { api } from "../../../lib/api";
 
 const NAV_ITEMS = [
   { href: "/", labelKey: "navDashboard" },
+  { href: "/products", labelKey: "navProducts" },
+  { href: "/catalog", labelKey: "navCatalog" },
+  { href: "/collections", labelKey: "navCollections" },
+  { href: "/price-schedules", labelKey: "navPriceSchedules" },
+  { href: "/inventory", labelKey: "navInventory" },
+  { href: "/import-export", labelKey: "navImportExport" },
+  { href: "/search", labelKey: "navSearch" },
   { href: "/settings", labelKey: "navSettings" },
   { href: "/staff", labelKey: "navStaff" },
   { href: "/media", labelKey: "navMedia" },

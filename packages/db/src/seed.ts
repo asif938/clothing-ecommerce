@@ -132,6 +132,14 @@ async function seedLocations() {
   );
 }
 
+/** Milestone 2 (docs/PROJECT_SPEC.md §16 M2): "stock locations (one seeded)" — a fresh install needs somewhere to hold inventory before the owner adds real warehouses. */
+async function seedDefaultStockLocation() {
+  const existing = await prisma.stockLocation.findFirst();
+  if (existing) return;
+  await prisma.stockLocation.create({ data: { name: "Main warehouse", isDefault: true, isActive: true, fulfillsOnline: true } });
+  console.log('[db:seed] Default stock location "Main warehouse" created.');
+}
+
 async function seedDemoBrand() {
   const overrides: [string, unknown][] = [
     ["brand.name", { bn: "ডেমো ফ্যাশন", en: "Demo Fashion" }],
@@ -156,6 +164,7 @@ async function main() {
   await seedSuperAdminRole();
   await seedUiStrings();
   await seedLocations();
+  await seedDefaultStockLocation();
   if (isDemo) {
     await seedDemoBrand();
   }

@@ -47,6 +47,16 @@ export const PERMISSIONS: PermissionDefinition[] = [
 
   // Setup wizard
   { key: "setup.run", group: "setup", label: { bn: "সেটআপ চালান", en: "Run setup" } },
+
+  // Catalog (docs/PROJECT_SPEC.md §16 M2) — one broad permission per module,
+  // matching the media.manage/locations.manage/providers.manage granularity
+  // already established, plus a narrow one guarding cost_price (§5.3: "cost
+  // price (permission-protected)") since that field is commercially sensitive
+  // in a way the rest of the catalog isn't.
+  { key: "catalog.manage", group: "catalog", label: { bn: "পণ্য ক্যাটালগ পরিচালনা করুন", en: "Manage product catalog" } },
+  { key: "catalog.cost.read", group: "catalog", label: { bn: "পণ্যের ক্রয়মূল্য দেখুন", en: "View product cost price" } },
+  { key: "inventory.manage", group: "inventory", label: { bn: "ইনভেন্টরি পরিচালনা করুন", en: "Manage inventory" } },
+  { key: "search.manage", group: "search", label: { bn: "সার্চ সেটিংস পরিচালনা করুন", en: "Manage search settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

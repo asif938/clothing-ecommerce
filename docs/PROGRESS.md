@@ -356,10 +356,165 @@ every non-obvious call below.
 
 ---
 
+## Milestone 2 — Catalog and inventory
+
+Status: complete (§16 M2). All acceptance criteria met at the code/test
+level; search and the CSV import job's live-Postgres behavior are not
+exercised against a real database in this environment (see "Not verified"
+below) — same limitation as M0/M1.
+
+### Built
+
+- **`packages/db`**: full catalog/inventory schema (hand-written migration
+  `20261023090000_catalog_inventory_search`, same reasoning as the
+  Cloudinary change — no live DB/shadow DB here to run `prisma migrate
+  dev`): `attributes`/`attribute_values`, `size_systems`, `size_charts`,
+  `categories` (self-referencing tree), `products` +
+  `product_categories`/`product_attribute_values`/`product_options`/
+  `product_option_values`/`product_variants`/`product_media`/
+  `product_relations`/`product_versions`, `collections` +
+  `collection_products`, `price_schedules`, `stock_locations` +
+  `inventory_levels` (with a real Postgres `GENERATED ALWAYS AS (on_hand -
+  reserved) STORED` `available` column) + `stock_movements`,
+  `search_synonyms`, `catalog_import_jobs`. `products.search_document` is
+  a trigger-maintained `tsvector` (`'simple'` config) plus `pg_trgm`
+  trigram indexes on title — see docs/DECISIONS.md for why it's a trigger
+  and not a generated column. `pnpm db:seed` now also creates one default
+  "Main warehouse" stock location (§16 M2: "stock locations (one
+  seeded)").
+- **`packages/shared`**: `slugify`/`uniqueSlug` (`src/catalog/slug.ts`) —
+  isomorphic slug helpers shared by categories/products/collections.
+- **`apps/api`** — one NestJS module per bounded context, all wired into
+  `AppModule`:
+  - `CatalogModule`: categories (tree, image/banner/SEO/size-chart/
+    attribute-set, cycle-safe reparenting), attributes & values, size
+    systems, size charts.
+  - `ProductsModule`: products (localized title/description, category +
+    additional categories, tags, status/scheduling, SEO, attribute
+    values), options & values, variants (the matrix generator —
+    `variant-matrix.ts`'s `generateVariantCombinations`, additive, zero
+    options → one "free size" variant — plus inline update, bulk-fill,
+    delete), product media (gallery, per-color assignment via
+    `optionValueId`), product relations (similar/complete-the-look/
+    upsell/cross-sell), product version history + restore, and a
+    recurring publish/unpublish sweep. `cost_price` is filtered out of
+    API responses without `catalog.cost.read` (`cost-price.filter.ts`).
+  - `CollectionsModule`: manual (drag-sort via a `position` field) and
+    automatic (typed rule tree → Prisma `where`, `collection-rules.ts`,
+    with a live preview-count endpoint) collections.
+  - `PriceSchedulesModule`: scheduled price changes on a
+    variant/product/collection/category/tag, applied/reverted by a
+    recurring sweep, with an exact-revert snapshot
+    (`price-schedules.service.ts`, `price-math.ts`).
+  - `InventoryModule`: stock locations, inventory levels (auto-
+    provisioned per variant per active location), adjustments (with a
+    full audit trail via `stock_movements`, blocking a decrease that
+    would go negative), low-stock list, barcode label data.
+  - `ImportExportModule`: CSV/Excel upload → dry-run validation report
+    (`row-schema.ts`) or a resumable, chunked background job (same
+    `cursor`/`CHUNK_SIZE=20` pattern as the Cloudinary change's media
+    migration job) that upserts products/variants/options by SKU and
+    sets initial stock, with a per-row JSON error list rendered to CSV on
+    download; export streams the catalog back out in the same template.
+  - `SearchModule`: `/store/search` (Postgres FTS + trigram + Banglish
+    synonym expansion, `search-query.ts`) and the admin synonyms CRUD
+    (`search_synonyms`).
+  - `queue/scheduler.service.ts` gained `registerRecurring()` — a second,
+    simpler mechanism (alongside the existing tracked-`scheduled_tasks`
+    one) for cheap idempotent sweeps with no job row of their own; used by
+    the product publish sweep and the price-schedule sweep.
+  - `media/media-usage.service.ts` (new, shared) — a single diff-based
+    `sync()` call that every catalog entity with an image uses to keep
+    `media_usages` accurate, extending M1's "media delete blocked while
+    in use" rule across the whole catalog.
+  - New dependency: `xlsx` (SheetJS) for CSV/Excel parsing and writing.
+- **`apps/admin`**: `/catalog` (tabbed: categories, attributes, size
+  systems, size charts), `/products` (list) + `/products/[id]` (full
+  editor: details, options & values, variants table with inline edit +
+  generate + bulk-fill, media gallery via the existing media library,
+  relations, version history with restore), `/collections` (manual
+  product list + automatic rule preview), `/price-schedules`,
+  `/inventory` (locations, stock levels with inline adjust, low-stock
+  list, barcode-label print view), `/import-export` (upload, dry-run
+  report, job progress polling, error-report download, CSV export), and
+  `/search` (Banglish synonym editor). New nav entries in the dashboard
+  sidebar; new `catalog`/`products`/`collections`/`priceSchedules`/
+  `inventory`/`importExport`/`search` message namespaces (bn + en).
+
+### Verified
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` all pass across
+  the whole workspace (new totals: 64 `@clothing/shared`, 7 `@clothing/db`,
+  101 `apps/api` unit tests — 37 of them new this milestone: variant
+  matrix generation incl. the free-size and size×color cases, collection
+  rule→query mapping, price schedule apply/revert/rounding, the CSV
+  import row validator and chunked job processing, the search synonym
+  expansion/tsquery builder covering the exact "punjabi/panjabi/পাঞ্জাবি"
+  scenario, inventory adjustment arithmetic incl. the insufficient-stock
+  guard, the export row flattener, and the new scheduler recurring-handler
+  mechanism).
+- **Ran the real API dev server with no database available**: the full DI
+  graph resolves (every new module wires cleanly, no circular-dependency
+  or missing-provider errors), every new route maps correctly
+  (`/admin/categories`, `/admin/attributes[/:id/values]`,
+  `/admin/size-systems`, `/admin/size-charts`, `/admin/products[...]`
+  (options/variants/media/relations/versions), `/admin/collections[...]`,
+  `/admin/price-schedules`, `/admin/stock-locations`,
+  `/admin/inventory[...]`, `/admin/catalog/import[...]`,
+  `/admin/catalog/export`, `/admin/search/synonyms`, `/store/search`),
+  `/health` stays 200, and DB-dependent routes (e.g. `/admin/categories`,
+  `/store/search`) return the real `PrismaClientInitializationError`
+  ("can't reach database server") rather than crashing or 500ing on a
+  code bug — same graceful-degradation property verified in M0/M1 and the
+  Cloudinary change.
+- All three apps (`admin`, `api`, `storefront`) build cleanly together
+  (`pnpm build`), including every new admin route.
+
+### Not verified in this environment
+
+- No live Postgres is available here, so: the full-text search path
+  (trigger-maintained `search_document`, the synonym-expanded `tsquery`,
+  the `pg_trgm` fallback) has not run against a real database — only its
+  pure query-building logic is unit-tested (`search-query.spec.ts`). The
+  acceptance scenario's search behavior is covered at that level, not
+  end-to-end.
+- The CSV import job has not been run against a real 500-row file through
+  a real database — `CatalogImportService`'s dry-run and chunk-processing
+  logic are unit-tested with a mocked Prisma client instead.
+- Creating a free-size and a size×color product through the actual admin
+  UI in a browser has not been clicked through — the variant-matrix
+  generation logic itself is unit-tested, and the admin pages build and
+  typecheck cleanly, but no browser session was available to exercise the
+  click path end-to-end.
+- Re-run all of the above (plus the Cloudinary and live-Postgres items
+  already flagged in M0/M1) once a real Postgres instance (and, for the
+  Cloudinary change, real Cloudinary credentials) are available.
+
+### Known issues / explicitly deferred
+
+- CSV/Excel import's column-mapping UI is a fixed template, not a
+  drag-and-drop mapper; image-by-URL / bulk zip image import is not
+  built. See docs/DECISIONS.md.
+- Export doesn't round-trip option labels (size/color) or per-location
+  stock, only the commerce-critical columns.
+- Barcode labels print as plain text, not real Code128 symbology.
+- The admin category tree, size chart editor, and product-media picker
+  are simple (dropdown/number-field based), not full drag-and-drop/grid/
+  modal UIs — functionally complete, visually simpler than §8.1/§8.2.
+- Stock transfers, stock takes, suppliers, purchase orders — explicitly
+  M12 (phase 2), not built here.
+- Storefront catalog pages (category/product listing, PDP) are
+  deliberately not built — that's Milestone 4's job.
+
+---
+
 ### Next up
 
-Milestone 2 — catalog and inventory (§16 M2): categories tree, attributes,
-size systems/charts, options & variant matrix, products editor, collections,
-price schedules, product versions, stock locations/levels/adjustments,
-CSV/Excel import-export with dry run, barcode labels, search provider
-(Postgres FTS + trigram + editable Banglish synonyms table).
+Milestone 3 — Theme, CMS core and storefront shell (§16 M3): theme tokens
+→ CSS variables with 3 presets and a live-preview design screen, the block
+system with the MVP block library, the page builder (drafts, publish,
+schedule, preview links, version history, edit lock, autosave), menus
+editor, announcement bars, popups, UI text, redirects, the storefront
+layout (header/footer/mega menu/chat buttons/announcement bar), home page
+from CMS, CMS pages, policy placeholder pages, the revalidation pipeline,
+`/_styleguide`, and 404/500/maintenance pages.

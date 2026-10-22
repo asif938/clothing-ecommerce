@@ -564,3 +564,160 @@ see the TODO in `docs/PROGRESS.md`. A fuller System Health dashboard (queue
 depth, DB connection status, per-provider error rates) is its own future
 milestone — the page built here is deliberately scoped to just the
 Cloudinary usage panel this change needs.
+
+## 2026-10-23 — Milestone 2: catalog and inventory
+
+**Context.** §16 M2 is the largest milestone so far: categories, attributes,
+size systems/charts, options & the variant matrix, products (full editor),
+collections (manual + automatic), price schedules, product version
+history, stock locations/levels/movements, CSV/Excel import/export with a
+dry-run report, barcode labels, and search (Postgres FTS + trigram +
+editable Banglish synonyms). Built in one pass; the decisions below cover
+where the spec left room for judgment and where scope was deliberately
+trimmed to fit, consistent with §0.1's "pick the most reasonable option and
+record it" instruction.
+
+**Decision — catalog slugs (`categories`, `products`, `collections`) are a
+single ASCII identifier shared by both locales, not per-locale paths.**
+`packages/shared/src/catalog/slug.ts` (`slugify`/`uniqueSlug`) strips
+non-ASCII, so a Bangla-only title falls back to an id-based slug. Simplest
+option consistent with golden rule 1, and nothing routes on a per-locale
+slug before the storefront exists (M3/M4) to need it. A slug only changes
+on an explicit rename request (`dto.slug` present) — editing the title
+alone never silently rewrites it and breaks a link already issued.
+
+**Decision — full-text search uses a trigger-maintained `tsvector`, not a
+Postgres generated column.** `products.search_document` is
+`Unsupported("tsvector")` in `schema.prisma` (Prisma can't model it) and
+populated by a `BEFORE INSERT OR UPDATE` trigger in
+`20261023090000_catalog_inventory_search/migration.sql`, because
+`to_tsvector()` is STABLE, not IMMUTABLE, and Postgres only allows
+IMMUTABLE expressions in `GENERATED ALWAYS AS ... STORED` columns — the
+standard workaround. The config is `simple` (no stemming), so mixed bn/en
+tokens and Banglish synonym entries index as literal lexemes. Synonym
+expansion happens at query time (`apps/api/src/search/search-query.ts`): a
+typed word is looked up in the editable `search_synonyms` table and
+expanded to every spelling in its group before the tsquery is built, so
+"punjabi", the Bangla script spelling, and the product's own literal
+title token "panjabi" all match once a synonym row links them — exactly
+the acceptance scenario. `pg_trgm` similarity is an additional OR'd
+fallback for typo tolerance. Not exercised against a live Postgres in
+this environment (none available) — `search-query.spec.ts` covers the
+query-building logic the way the Cloudinary driver's mock mode covered
+that integration in the previous change; re-verify against a real
+database before launch.
+
+**Decision — `inventory_levels.available` is a real Postgres `GENERATED
+ALWAYS AS (on_hand - reserved) STORED` column**, unlike `search_document`:
+simple integer arithmetic is IMMUTABLE-safe, so this one can use
+Postgres's native generated-column syntax. It's declared in
+`schema.prisma` as an ordinary `Int` field that application code never
+writes — Prisma only reads it back.
+
+**Decision — a new `SchedulerService.registerRecurring(type, handler)`
+mechanism**, alongside the existing `registerHandler` (for tracked
+`scheduled_tasks` rows). Two features this milestone — flipping a
+`scheduled` product live at its `publishedAt`/`unpublishAt`, and
+applying/reverting price schedules at their `startsAt`/`endsAt` — are
+cheap, idempotent sweeps with no per-run job state worth tracking; forcing
+them through a job row would be pure overhead. `runDueTasks()` (called by
+both the embedded 60s tick and the external-cron endpoint) now runs every
+registered recurring handler first, each wrapped in try/catch so one
+failing sweep never blocks the others or the tracked-task queue.
+
+**Decision — price schedules snapshot the exact prior price per variant
+(`appliedSnapshot: { [variantId]: previousPrice }`) at apply time**, so a
+revert is exact even if something else touched the same variant's price
+in between, and `revertOnEnd: false` schedules simply end without
+touching prices (the discount becomes the new permanent price). Percent
+changes round to the nearest poisha (`price-math.ts`, golden rule 3 — no
+fractional poisha ever persisted).
+
+**Decision — `catalog.cost.read` is a narrow, single-purpose permission**
+gating `ProductVariant.costPrice` in API responses
+(`cost-price.filter.ts`), rather than building a general field-level-
+permission framework for the whole API. §5.3 only calls this field out by
+name ("cost price (permission-protected)"); a generic framework is
+speculative scope the spec doesn't ask for yet.
+
+**Decision — `MediaUsageService.sync(entityType, entityId, mediaIds)`**
+(new, in `apps/api/src/media/`) extends M1's "media delete is blocked
+while in use" rule to every catalog entity that references an image —
+product gallery, category/collection image+banner, size chart "how to
+measure" image, attribute value image, option value swatch — via a single
+diff-based reconcile call instead of each service hand-rolling
+`media_usages` writes.
+
+**Decision — CSV/Excel import uses one fixed row template (one row is one
+variant, grouped into a product by `productSlug`), not a drag-and-drop
+column-mapping UI.** §8.2 calls for "CSV/Excel import with column
+mapping"; a full mapper is substantial standalone UI work that doesn't
+change what's achievable (upsert 500 products with variants, with an error
+report) — it only changes how forgiving the uploaded file's headers can
+be. `row-schema.ts`'s header matching is already case/spacing-tolerant.
+The mapper itself is a reasonable follow-up, not silently dropped — noted
+below. Parsing/writing both `.csv` and `.xlsx` uses `xlsx` (SheetJS, a new
+`apps/api` dependency) — one vendor dependency, same "no bespoke parser"
+pattern as the S3 driver's AWS SDK.
+
+**Decision — the import job's uploaded bytes and the running error list
+are scratch data stored directly on `CatalogImportJob` (a `Bytes` column,
+cleared once done; a JSON error list, rendered to CSV only on download),
+not pushed through the media library/provider framework.** It's processing
+state for the job's lifetime, not catalog content — going through Media
+would create rows nothing should ever reference as media.
+
+**Decision — export round-trips the commerce-critical columns (sku,
+price/compare-at/cost, barcode, weight, category, tags, status) but not
+size/color option labels or current on-hand stock.** Reconstructing option
+labels and location-scoped stock into the same flat row needs extra joins
+that don't change the acceptance scenario; flagged below as the next
+enhancement rather than silently incomplete.
+
+**Decision — the variant matrix generator is strictly additive.**
+Re-running it after adding a new color only creates the newly-missing
+combinations (compared by value-id set, `variant-matrix.ts`); it never
+touches an existing variant's price/SKU/stock. Zero options yields exactly
+one variant (the "free size" case, §5.3). New variants get an
+auto-generated SKU (`<PRODUCT-SLUG>-<n>`) and `price: 0` — the admin fills
+real prices in via the editor's per-variant fields or the bulk-fill
+action, matching §8.2's own "generate matrix, then bulk-fill column"
+workflow.
+
+**Decision — collections' "automatic" rule builder is a small typed
+condition tree** (`category`/`tag`/`price`/`attribute`/`status`, each with
+an operator and value, ANDed or ORed — `collections/collection-rules.ts`)
+evaluated into a Prisma `where` clause, not a general-purpose query
+language. Covers the realistic cases (§8.2's own example surface) without
+building a rule-expression parser.
+
+**Decision — the admin category tree, size chart row editor, and
+product-media picker are deliberately simple, not the full polish
+described in §8.1/§8.2.** Categories reorder via a parent dropdown plus a
+numeric `sortOrder` rather than drag-and-drop; size chart rows/columns are
+entered as comma-separated lists rather than a spreadsheet-style grid; the
+product editor's media picker is a dropdown over the existing media
+library by filename rather than a searchable modal with inline upload.
+Barcode labels print as plain text (SKU, barcode value, title, price) in a
+3-column print view, not a real Code128 symbology render. Each is
+functionally complete (an admin can do the task) but visually/ergonomically
+simpler than the full spec — the same kind of MVP-first trade already made
+for M1's settings UI and provider config forms.
+
+**Deferred (documented, not silently dropped):**
+- CSV/Excel import's drag-and-drop column-mapping UI (currently a fixed
+  template) and image-by-URL / bulk zip image import (§8.2) — picked up
+  whenever catalog import needs more than the fixed template handles.
+- Export including option labels and per-location stock.
+- Real barcode symbology rendering (e.g. Code128 via a client-side
+  renderer) for the printed labels, if warehouse scanning needs it before
+  M6's fuller label/invoice PDF work.
+- Storefront catalog pages (category/product listing, PDP) — that's M4's
+  job per the milestone plan; M2 only needed the API, the admin panel, and
+  the one `/store/search` endpoint the acceptance scenario exercises.
+- Stock transfers, stock takes, suppliers, purchase orders — explicitly
+  M12 (phase 2) per §16, not M2.
+- Re-verify the full Postgres FTS + trigram + synonyms search path and the
+  CSV import job against a live Postgres and a real 500-row file — no
+  database is available in this environment (same root cause flagged
+  throughout M0/M1 and the Cloudinary change).

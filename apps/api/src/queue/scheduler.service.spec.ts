@@ -63,6 +63,33 @@ describe("SchedulerService", () => {
     expect(prisma.__updates.at(-1)).toEqual({ id: "t3", data: { status: "failed", lastError: "kaboom" } });
   });
 
+  it("runs every registered recurring handler on each tick, independent of scheduled_tasks rows", async () => {
+    const prisma = makePrismaMock([]);
+    const scheduler = new SchedulerService(prisma as never, makeConfig() as never);
+    const sweep = vi.fn().mockResolvedValue(undefined);
+    scheduler.registerRecurring("product.publish_sweep", sweep);
+
+    await scheduler.runDueTasks();
+    await scheduler.runDueTasks();
+
+    expect(sweep).toHaveBeenCalledTimes(2);
+  });
+
+  it("logs and continues when a recurring handler throws, without affecting scheduled_tasks processing", async () => {
+    const prisma = makePrismaMock([{ id: "t4", type: "ping", payload: null }]);
+    const scheduler = new SchedulerService(prisma as never, makeConfig() as never);
+    scheduler.registerRecurring("broken_sweep", async () => {
+      throw new Error("sweep failed");
+    });
+    const handler = vi.fn().mockResolvedValue(undefined);
+    scheduler.registerHandler("ping", handler);
+
+    const result = await scheduler.runDueTasks();
+
+    expect(result).toEqual({ processed: 1 });
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
   it("does not start an embedded ticker when WORKER_MODE is not embedded", () => {
     const prisma = makePrismaMock([]);
     const scheduler = new SchedulerService(prisma as never, makeConfig("separate") as never);

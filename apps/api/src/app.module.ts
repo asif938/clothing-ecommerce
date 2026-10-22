@@ -17,6 +17,13 @@ import { ProvidersModule } from "./providers/providers.module";
 import { QueueModule } from "./queue/queue.module";
 import { SetupModule } from "./setup/setup.module";
 import { HealthModule } from "./health/health.module";
+import { CatalogModule } from "./catalog/catalog.module";
+import { ProductsModule } from "./products/products.module";
+import { CollectionsModule } from "./collections/collections.module";
+import { PriceSchedulesModule } from "./price-schedules/price-schedules.module";
+import { InventoryModule } from "./inventory/inventory.module";
+import { ImportExportModule } from "./import-export/import-export.module";
+import { SearchModule } from "./search/search.module";
 
 @Module({
   imports: [
@@ -48,8 +55,16 @@ import { HealthModule } from "./health/health.module";
     ProvidersModule,
     SetupModule,
     HealthModule,
-    // Catalog, cart/checkout, CMS, etc. are added here starting Milestone 2+
-    // (one module per bounded context, see docs/PROJECT_SPEC.md §3.4).
+    // Milestone 2 (docs/PROJECT_SPEC.md §16 M2) — catalog and inventory.
+    // Cart/checkout, CMS, etc. are added here starting Milestone 3+ (one
+    // module per bounded context, see docs/PROJECT_SPEC.md §3.4).
+    CatalogModule,
+    InventoryModule,
+    ProductsModule,
+    CollectionsModule,
+    PriceSchedulesModule,
+    ImportExportModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

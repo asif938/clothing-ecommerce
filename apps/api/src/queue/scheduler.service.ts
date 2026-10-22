@@ -6,6 +6,7 @@ import type { Env } from "../config/env.schema";
 const EMBEDDED_TICK_INTERVAL_MS = 60_000;
 
 export type ScheduledTaskHandler = (payload: unknown) => Promise<void>;
+export type RecurringTaskHandler = () => Promise<void>;
 
 /**
  * `scheduled_tasks` (docs/PROJECT_SPEC.md §5.1) — admin-visible schedules,
@@ -22,6 +23,11 @@ export type ScheduledTaskHandler = (payload: unknown) => Promise<void>;
 export class SchedulerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SchedulerService.name);
   private readonly handlers = new Map<string, ScheduledTaskHandler>();
+  // Handlers with no `scheduled_tasks` row of their own — cheap, idempotent
+  // sweeps (e.g. "flip scheduled products live", "apply/revert price
+  // schedules") that just need to run on every tick, embedded or external
+  // cron alike, rather than tracking a job per run.
+  private readonly recurringHandlers = new Map<string, RecurringTaskHandler>();
   private intervalHandle: NodeJS.Timeout | null = null;
 
   constructor(
@@ -44,7 +50,19 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     this.handlers.set(type, handler);
   }
 
+  registerRecurring(type: string, handler: RecurringTaskHandler): void {
+    this.recurringHandlers.set(type, handler);
+  }
+
   async runDueTasks(): Promise<{ processed: number }> {
+    for (const [type, handler] of this.recurringHandlers) {
+      try {
+        await handler();
+      } catch (error) {
+        this.logger.error(`Recurring task "${type}" failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
+
     const due = await this.prisma.scheduledTask.findMany({
       where: { status: "pending", runAt: { lte: new Date() } },
       take: 50,

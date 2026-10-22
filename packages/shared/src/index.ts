@@ -11,4 +11,5 @@ export const SHARED_PACKAGE_VERSION = "0.1.0";
 export * from "./i18n/localized-text.ts";
 export * from "./i18n/defaults.ts";
 export * from "./permissions/index.ts";
+export * from "./catalog/slug.ts";
 export type { ProviderCapability, ProviderTestResult } from "./providers/types.ts";
