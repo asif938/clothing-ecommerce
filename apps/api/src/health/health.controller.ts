@@ -1,8 +1,7 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import { HealthCheckService, HealthCheck, type HealthIndicatorResult } from "@nestjs/terminus";
-import type { PrismaClient } from "@clothing/db";
-import { PRISMA_CLIENT } from "./prisma-client.token";
+import { PrismaService } from "../prisma/prisma.service";
 
 /**
  * Unprefixed by design (see main.ts) so external uptime checks and the
@@ -13,7 +12,7 @@ import { PRISMA_CLIENT } from "./prisma-client.token";
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
-    @Inject(PRISMA_CLIENT) private readonly prisma: PrismaClient,
+    private readonly prisma: PrismaService,
   ) {}
 
   // Liveness: the process is up. No external dependencies checked.

@@ -203,13 +203,263 @@ working `"detect"` support under ESLint 10, either is fine.
 
 ---
 
+## 2026-10-22 — Milestone 1: Prisma v7 re-evaluated and deferred again
+
+**Context:** the M0 decision explicitly said to revisit Prisma 6→7 "at the
+start of Milestone 1, before the real domain model is migrated." Did so
+before writing `schema.prisma`.
+
+**Decision:** stayed on Prisma 6.19.3. Prisma 7 (confirmed still current
+stable, `7.10.1`) requires the whole project to move to ESM (`"type":
+"module"`, `module`/`moduleResolution` ESNext/bundler, `target: ES2023`) —
+driver adapters alone wouldn't be the issue, but `apps/api` currently runs as
+a CommonJS build with NestJS 12's ESM-core-packages consumed via Node's
+`require(esm)` interop (M0 decision). Moving to full ESM is a bigger,
+independent change than "swap the Postgres driver," and doing it at the same
+time as the entire domain model would make any breakage hard to isolate.
+6.19.3 still has security support through 2026-11-19. **Revisit again when
+`apps/api` has a concrete reason to move to ESM** (or when Prisma ships a
+CJS-compatible v7/v8 path), not on a fixed schedule.
+
+**Alternatives considered:** Move `apps/api` to ESM now, as part of M1 —
+rejected, too much unrelated risk stacked onto the milestone that's also
+adding ~15 new Prisma models and the entire RBAC/auth system.
+
+---
+
+## 2026-10-22 — Running `@clothing/shared` as raw TypeScript at runtime needs literal `.ts` import extensions
+
+**Context:** `@clothing/shared` (`"type": "module"`) grew real internal
+relative imports once settings/permissions/providers/crypto were built.
+`apps/api`'s NestJS 12 dev server runs it unbuilt via Node 24's native
+TypeScript support (no separate transpile step for workspace deps, per the
+M0 decision to consume `@clothing/db`/`@clothing/shared` as raw `.ts` via
+their `main`/`types` fields).
+
+**Problem found:** writing those relative imports the normal NodeNext way
+(`from "./registry.js"`, matching the eventual compiled output) satisfies
+`tsc`, but **crashes at runtime** — `ERR_MODULE_NOT_FOUND`. Node's ESM
+loader resolves import specifiers literally; a specifier ending in `.js`
+only ever resolves to an actual `.js` file, and Node's type-stripping
+doesn't remap extensions — it only extends *extensionless* resolution and,
+specifically, resolution of a literal `.ts` specifier. Verified by hand:
+`import "./a"` → `ERR_MODULE_NOT_FOUND`; `import "./a.js"` →
+`ERR_MODULE_NOT_FOUND`; `import "./a.ts"` → works.
+
+**Decision:** `@clothing/shared`'s own relative imports are written with a
+literal `.ts` extension (`from "./registry.ts"`). To typecheck this (TS
+normally forbids `.ts`-extension import specifiers) and to keep a real
+`tsc` emit correct (e.g. `nest build`, which *does* compile `apps/api`'s own
+sources to `.js`), `packages/config/tsconfig/base.json` — not just
+`@clothing/shared`'s own tsconfig — now sets
+`allowImportingTsExtensions: true` and `rewriteRelativeImportExtensions:
+true`. It has to be on the shared base, not just the owning package's
+tsconfig, because `apps/api`'s own `tsc --noEmit` program pulls
+`@clothing/shared`'s files in too (there's no project-reference boundary
+between raw-TS workspace packages) and applies its own compiler options to
+everything it resolves.
+
+**Alternatives considered:** Drop `"type": "module"` from
+`@clothing/shared` (CommonJS packages don't have this problem, extensionless
+`require()` works) — rejected; the package already has top-level
+`import`/`export` syntax throughout and converting it to CJS-style exports
+would be a larger, purely-mechanical change for no real benefit. Give
+`@clothing/shared` a real build step (`tsc` → `dist/`, consumed via a
+built `main`) — rejected for M1; worth reconsidering once the package is
+large enough that raw-TS dev-time compilation cost matters, but adds a
+"remember to rebuild" step that isn't worth it yet.
+
+---
+
+## 2026-10-22 — Express 5 / path-to-regexp v8 wildcard syntax
+
+**Context:** NestJS 12 / `@nestjs/platform-express` 12 bundle Express 5
+(confirmed: `express@5.3.0`, `path-to-regexp@8.4.2`), which changed wildcard
+route syntax. The old bare `*` (e.g. `app.setGlobalPrefix("api/v1",
+{ exclude: ["media/(.*)"] })`, `@Get("*path")` via a plain `*`) either
+throws at startup or silently fails to match.
+
+**Decision:** use the new named-wildcard syntax everywhere a catch-all path
+is needed: `media/*path` for `MediaFilesController`'s local-file-serving
+route, and `"media/*splat"` in `main.ts`'s `setGlobalPrefix` exclude list.
+Verified directly against the installed Express 5 (`req.params.path` comes
+back as a string array of segments, joined with `/` to reconstruct the
+storage key) before relying on it in `MediaFilesController`.
+
+---
+
+## 2026-10-22 — Storage is configured from environment variables, not `provider_instances`
+
+**Context:** §4.3's provider table lists Storage (`local`/`s3`) alongside
+payment/courier/SMS/etc., all of which are configured as encrypted
+`provider_instances` rows editable from the Integrations screen. But §4.1's
+own rule list names "storage bucket credentials" as one of the few things
+environment variables *are* for, and M0 had already scaffolded
+`STORAGE_DRIVER`/`S3_*` env vars on exactly that basis.
+
+**Decision:** kept Storage entirely environment-driven
+(`apps/api/src/storage/storage.module.ts` picks `local` vs `s3` from
+`STORAGE_DRIVER` and builds the driver from env at boot) — no
+`provider_instances` row, no Integrations-UI entry, no "test connection"
+button for it. It's still a provider behind the shared `StorageDriver`
+interface (golden rule 2); only its *configuration source* differs from the
+merchant-configurable providers, because its credentials must be infra
+secrets (needed before any DB-backed config could be read, and not
+something a merchant edits through a UI). Email and SMS got their `mock`
+driver wired through the real `provider_instances` + Integrations-UI +
+test-connection path instead, to prove that pattern end-to-end without
+conflating it with Storage's different, legitimate exception.
+
+---
+
+## 2026-10-22 — RBAC: no hardcoded superuser bypass; provider wrapper retries deferred
+
+**Decision:** the "Super Admin" role created by `pnpm db:seed` is a normal
+system role (`is_system: true`) granted every permission in
+`packages/shared/src/permissions/index.ts` — `PermissionsGuard` has exactly
+one code path (check `staff.permissions.has(...)`), never a special-cased
+role ID. New permissions are automatically *not* granted to anyone until a
+role is updated to include them, which is the safer default.
+
+Also decided: the provider-call wrapper (`ProviderRegistryService`) only
+adds timing + `provider_logs` in Milestone 1 — retries-with-backoff and
+circuit-breaking (§4.3 rule 3) are deferred to the milestone that adds the
+first driver making real, repeated network calls under load (payment/
+courier, M5–M6). Building that generically now, against only `local`/`s3`
+storage and `mock`/`smtp` email, would be guessing at requirements no real
+driver has exercised yet.
+
+---
+
+## 2026-10-22 — Staff 2FA: mandatory through the setup wizard for Super Admin, self-service for everyone else
+
+**Context:** the M1 acceptance line says "Super Admin logs in with 2FA" but
+§5.1/§16 don't otherwise say 2FA is mandatory for every staff account.
+
+**Decision:** `POST /setup/super-admin` immediately generates and stores a
+TOTP secret and returns its QR code; the account cannot log in with a
+session until `POST /setup/super-admin/confirm-totp` verifies a real code
+from an authenticator app (`totp_enabled` only flips to `true` then) — so
+the very first account is always 2FA-protected by construction, not by
+convention. Other staff accounts created later via `POST /admin/staff` start
+with `totp_enabled: false` and can enable it for themselves via
+`POST /auth/totp/setup` + `/auth/totp/confirm` (same two-step
+generate-then-confirm flow), but nothing forces it. A `security.*` setting
+to make 2FA mandatory for specific roles is a reasonable future addition,
+not built speculatively now.
+
+The "password verified, TOTP pending" handoff between `POST /auth/login`
+and `POST /auth/login/totp` is an in-memory ticket store
+(`PendingLoginStore`, 5-minute TTL), not a DB table — same free-tier,
+single-instance reasoning as the in-memory `CacheService` (§15.2). A
+horizontally-scaled deployment would need to move this to Redis; tracked
+here so a future session doesn't have to rediscover it.
+
+---
+
+## 2026-10-22 — `PrismaService` does not eagerly `$connect()`
+
+**Context:** the first working version of `PrismaService` called
+`await this.$connect()` in `onModuleInit`, which seemed like normal
+lifecycle hygiene. It actually crashed the entire API at boot whenever
+Postgres was unreachable (`PrismaClientInitializationError`, uncaught) —
+breaking the exact graceful-degradation property M0's `/ready` endpoint was
+built and verified to have.
+
+**Decision:** removed the eager `$connect()`. Prisma Client connects lazily
+on its first real query by default, which is sufficient and keeps the API
+serving `/health` (and everything that doesn't touch the DB) even when
+Postgres is down — verified by actually running the dev server with no
+database available and confirming `/health` is 200, `/ready` is a clean
+503, and every other route either works or fails with the real
+"can't reach database" error rather than crashing the process.
+
+---
+
+## 2026-10-22 — BD locations dataset: source, license, and verification approach
+
+**Context:** §5.2 requires seeding all 8 divisions, 64 districts, their
+upazilas/thanas, and Dhaka city areas, "from a reliable open dataset
+(record the source and license)."
+
+**Decision:** compiled via a dedicated research pass (not hand-typed from
+memory) cross-checked live against Wikipedia's "Divisions of Bangladesh",
+"Districts of Bangladesh", "Dhaka Metropolitan Police" (thana list), and
+"Upazilas of Bangladesh" pages, plus general knowledge of Bangladesh's
+administrative geography including 2023–2025 upazila splits (Karnaphuli,
+Osmani Nagar, Rangabali, Bijoynagar, Lalmai). Wikipedia text is **CC BY-SA
+4.0**; admin names/hierarchy are also public BBS/bangladesh.gov.bd data. The
+source/license/retrieval-date are recorded in the seed file itself
+(`packages/db/src/seed-data/bd-locations.json`'s `source`/`license`/
+`retrievedDate` fields), not only here. Result: all 8 divisions and all 64
+districts verified against a live source; 541 areas total (51 Dhaka
+`city_area` thanas + 490 upazilas/thanas across all districts, including
+Dhaka district's own 5 non-city upazilas). Upazila names for the 63
+non-Dhaka districts were not individually re-verified one-by-one against a
+live source — a handful of obscure or very recently split upazilas may be
+missing or have minor spelling variants; `packages/db/src/seed-data/
+bd-locations.test.ts` checks structural integrity (every area references a
+real district, every district a real division, no duplicate keys, Dhaka
+city areas correctly flagged) but can't check completeness against the
+real world. Admin can add/rename/disable areas after seeding either way
+(§5.2's own escape hatch).
+
+---
+
+## 2026-10-22 — Settings UI: generic JSON editor for `json`/structured fields in Milestone 1
+
+**Context:** §4.1 says the admin Settings screen is "generated from the
+registry" so adding a setting never needs custom UI.
+
+**Decision:** the Milestone 1 settings UI (`apps/admin/.../settings/page.tsx`)
+renders a real field-specific control for `text`/`textarea`/`toggle`/
+`select`/`color`/`localizedText`, but falls back to a raw JSON textarea for
+the `json` widget (e.g. `brand.socialLinks`, `locale.enabled`) rather than a
+bespoke key-value or tag-list editor, and `image` settings (`brand.logoLight`
+etc.) take a media ID as plain text rather than opening a media picker modal.
+Both are still fully functional and still require zero code changes to add
+a new setting of either widget type — only the *ergonomics* of editing them
+are reduced for now. A media-picker modal and structured JSON sub-editors are
+natural additions once the media library UI (built this milestone) and more
+`json`-widget settings (theme layout variants, M3) exist to justify the
+extra UI work.
+
+---
+
+## 2026-10-22 — Deferred from the full §5.1 table and other M1 scope boundaries
+
+Recorded here, not just as code comments, so they stay visible:
+
+- `approval_requests`, `notifications_admin`, `saved_views`, `api_keys`,
+  `outbound_webhooks` (+ deliveries), `webhook_events`,
+  `courier_area_mappings` — not in `schema.prisma` yet; added with the
+  milestone that needs them (M5–M7).
+- Password hashing uses `@node-rs/argon2` (napi-rs, prebuilt binaries for
+  every platform) rather than the `argon2` package (native, compiles from
+  source — risk given this sandbox has no C/C++ toolchain) or `bcryptjs`
+  (pure JS but weaker/slower) — chosen for the same "don't repeat the M0
+  native-build pain" reason as `@swc/core`.
+- TOTP uses `otplib` **13.x**'s new functional API
+  (`generateSecret`/`generate`/`verify`/`generateURI`, all async, default
+  audited `@noble`/`@scure` plugins) — v13 is a complete rewrite from the
+  v12 `authenticator` singleton most examples online still show; the old
+  API no longer exists in this package.
+- `MediaService` has no endpoint yet to set `staff_users.avatar_media_id`
+  from an uploaded file (the DB relation exists; the "set as my avatar"
+  action in the admin UI doesn't) — trivial addition, deferred since it's
+  not needed for M1's acceptance scenario.
+- Config export/import (§4.4 item 5) is not built — nothing yet exists that
+  would be worth exporting beyond settings/UI-strings (no CMS/menus/
+  templates/categories until later milestones), so it's deferred until
+  there's a real bundle to export.
+
 ## Still owed (tracked here so they are not forgotten)
 
-- BD location dataset source (divisions/districts/upazilas/thanas + Dhaka city
-  areas) and its license — due when §5.2 is implemented (M1/M2).
 - The two named BD SMS gateway drivers — due when §10.3 is implemented (M7).
 - PDF rendering approach for invoices/labels on the free tier
   (Playwright/Chromium vs. `@react-pdf/renderer`) — due when §6.8/§8.2
   fulfillment (invoices, labels) is implemented (M6).
 - Font pair for Bangla + Latin (default suggestion: Hind Siliguri + Inter) —
   due when the theme system is implemented (M3).
+- Prisma 6→7 (or whatever is current then) — revisit when `apps/api` has a
+  concrete reason to move to ESM.

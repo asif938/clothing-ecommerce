@@ -1,13 +1,20 @@
 // Prisma schema — Fashion Commerce Platform.
 // Conventions (docs/PROJECT_SPEC.md §5): tables snake_case plural; id cuid2 string;
 // created_at/updated_at on every table; soft delete (deleted_at) on catalog, CMS,
-// customers, staff; money fields are Int poisha; LocalizedText is JSONB.
+// customers, staff; money fields are Int poisha; LocalizedText is JSONB (modeled
+// here as `Json`, shape `{ bn?: string; en?: string }` — see packages/shared/src/i18n).
 //
-// This file intentionally has zero models in Milestone 0. The full domain model
-// (system/staff, locations, catalog, inventory, customers, cart/checkout/orders,
-// shipping/payment rules, promotions, CMS, automation/AI/analytics/finance/support)
-// is designed and migrated in Milestone 1 onward — see docs/PROJECT_SPEC.md §5
-// and docs/PROGRESS.md for current status.
+// Milestone 1 scope (docs/PROJECT_SPEC.md §16 M1): system/staff, settings,
+// ui_strings, locations, media, audit. Catalog/inventory/customers/orders/CMS
+// etc. are designed together with their own milestones (M2+) rather than
+// bolted on here — see docs/DECISIONS.md "Milestone 0 scope boundary" for the
+// same reasoning applied again at M1.
+//
+// Deferred from the full §5.1 "System and staff" table list — not needed to
+// satisfy M1's acceptance criteria, added when the milestone that needs them
+// arrives (recorded in docs/DECISIONS.md): approval_requests, notifications_admin,
+// saved_views, api_keys, outbound_webhooks (+ deliveries), webhook_events,
+// courier_area_mappings.
 
 generator client {
   provider = "prisma-client-js"
@@ -17,4 +24,353 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DATABASE_DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Settings, UI strings
+// ---------------------------------------------------------------------------
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model UiString {
+  key       String   @id
+  bn        String
+  en        String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ui_strings")
+}
+
+// ---------------------------------------------------------------------------
+// Staff, roles, RBAC
+// ---------------------------------------------------------------------------
+
+enum StaffUserStatus {
+  active
+  disabled
+}
+
+model StaffUser {
+  id            String          @id @default(cuid(2))
+  name          String
+  email         String          @unique @db.Citext
+  passwordHash  String          @map("password_hash")
+  totpSecret    String?         @map("totp_secret")
+  totpEnabled   Boolean         @default(false) @map("totp_enabled")
+  locale        String          @default("bn")
+  avatarMediaId String?         @map("avatar_media_id")
+  status        StaffUserStatus @default(active)
+  lastLoginAt   DateTime?       @map("last_login_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  avatar   Media?         @relation(fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  sessions StaffSession[]
+  roles    StaffRole[]
+
+  @@map("staff_users")
+  @@index([status])
+  @@index([avatarMediaId])
+}
+
+model StaffSession {
+  id          String    @id @default(cuid(2))
+  staffUserId String    @map("staff_user_id")
+  tokenHash   String    @unique @map("token_hash")
+  ip          String?
+  userAgent   String?   @map("user_agent")
+  expiresAt   DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  staffUser StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@map("staff_sessions")
+  @@index([staffUserId])
+  @@index([expiresAt])
+}
+
+model Role {
+  id          String   @id @default(cuid(2))
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  staff       StaffRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String @id @default(cuid(2))
+  roleId     String @map("role_id")
+  permission String
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("role_permissions")
+  @@unique([roleId, permission])
+  @@index([permission])
+}
+
+model StaffRole {
+  id          String @id @default(cuid(2))
+  staffUserId String @map("staff_user_id")
+  roleId      String @map("role_id")
+
+  staffUser StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("staff_roles")
+  @@unique([staffUserId, roleId])
+  @@index([roleId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+enum AuditActorType {
+  staff
+  system
+  customer
+  api_key
+}
+
+model AuditLog {
+  id         String         @id @default(cuid(2))
+  actorType  AuditActorType @map("actor_type")
+  actorId    String?        @map("actor_id")
+  action     String
+  entityType String         @map("entity_type")
+  entityId   String?        @map("entity_id")
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?        @map("user_agent")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  // Append-only: no updatedAt, no soft delete, no update/delete access from app code.
+
+  @@map("audit_logs")
+  @@index([entityType, entityId])
+  @@index([actorType, actorId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Provider framework
+// ---------------------------------------------------------------------------
+
+enum ProviderMode {
+  sandbox
+  live
+}
+
+model ProviderInstance {
+  id         String       @id @default(cuid(2))
+  capability String
+  driver     String
+  name       String
+  enabled    Boolean      @default(false)
+  mode       ProviderMode @default(sandbox)
+  isDefault  Boolean      @default(false) @map("is_default")
+  priority   Int          @default(0)
+  // Encrypted at rest (AES-256-GCM, see packages/shared/src/crypto): the column
+  // is JSONB, but its value is always `{ iv, tag, ciphertext }` (base64), never
+  // plaintext config. See packages/shared/src/providers.
+  config     Json
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  logs ProviderLog[]
+
+  @@map("provider_instances")
+  @@index([capability])
+}
+
+model ProviderLog {
+  id                 String   @id @default(cuid(2))
+  providerInstanceId String   @map("provider_instance_id")
+  operation          String
+  status             String
+  durationMs         Int      @map("duration_ms")
+  // Redacted by the provider wrapper before being written — never raw secrets.
+  request            Json?
+  response           Json?
+  correlationId      String?  @map("correlation_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  providerInstance ProviderInstance @relation(fields: [providerInstanceId], references: [id], onDelete: Cascade)
+
+  @@map("provider_logs")
+  @@index([providerInstanceId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Queue / scheduler (admin-visible schedules; pg-boss owns its own tables)
+// ---------------------------------------------------------------------------
+
+enum ScheduledTaskStatus {
+  pending
+  running
+  done
+  failed
+}
+
+model ScheduledTask {
+  id        String              @id @default(cuid(2))
+  type      String
+  payload   Json?
+  runAt     DateTime            @map("run_at")
+  status    ScheduledTaskStatus @default(pending)
+  lastError String?             @map("last_error")
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  @@map("scheduled_tasks")
+  @@index([status, runAt])
+}
+
+// ---------------------------------------------------------------------------
+// Locations (Bangladesh)
+// ---------------------------------------------------------------------------
+
+model Division {
+  id   String @id @default(cuid(2))
+  code String @unique
+  name Json
+
+  districts District[]
+
+  @@map("divisions")
+}
+
+model District {
+  id         String @id @default(cuid(2))
+  divisionId String @map("division_id")
+  code       String @unique
+  name       Json
+
+  division Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  areas    Area[]
+
+  @@map("districts")
+  @@index([divisionId])
+}
+
+enum AreaType {
+  upazila
+  thana
+  city_area
+}
+
+model Area {
+  id          String   @id @default(cuid(2))
+  districtId  String   @map("district_id")
+  // Stable natural key for seed idempotency and courier area-mapping tools
+  // (`<districtCode>-<slug(nameEn)>`), since `name` (LocalizedText JSONB)
+  // can't itself be a unique/upsert key in Postgres via Prisma.
+  code        String   @unique
+  name        Json
+  type        AreaType
+  isDhakaCity Boolean  @default(false) @map("is_dhaka_city")
+  postcode    String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@map("areas")
+  @@index([districtId])
+  @@index([isDhakaCity])
+}
+
+// ---------------------------------------------------------------------------
+// Media library
+// ---------------------------------------------------------------------------
+
+model MediaFolder {
+  id        String   @id @default(cuid(2))
+  name      String
+  parentId  String?  @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   MediaFolder?  @relation("MediaFolderParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children MediaFolder[] @relation("MediaFolderParent")
+  media    Media[]
+
+  @@map("media_folders")
+  @@index([parentId])
+}
+
+enum MediaKind {
+  image
+  video
+  document
+  font
+}
+
+model Media {
+  id            String    @id @default(cuid(2))
+  folderId      String?   @map("folder_id")
+  kind          MediaKind
+  // "local" | "s3" (packages/shared provider driver key) — which storage
+  // driver this file lives in, so it can be served/regenerated correctly
+  // even if the active driver setting changes later.
+  storageDriver String    @map("storage_driver")
+  storageKey    String    @map("storage_key")
+  originalName  String    @map("original_name")
+  mimeType      String    @map("mime_type")
+  sizeBytes     Int       @map("size_bytes")
+  width         Int?
+  height        Int?
+  blurDataUrl   String?   @map("blur_data_url")
+  focalX        Float?    @map("focal_x")
+  focalY        Float?    @map("focal_y")
+  // { thumb: { key, width, height }, md: {...}, lg: {...} } — generated sizes.
+  variants      Json?
+  altText       Json?     @map("alt_text")
+  uploadedBy    String?   @map("uploaded_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  folder        MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  usages        MediaUsage[]
+  staffAvatarOf StaffUser[]
+
+  @@map("media")
+  @@index([folderId])
+  @@index([kind])
+}
+
+model MediaUsage {
+  id         String   @id @default(cuid(2))
+  mediaId    String   @map("media_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("media_usages")
+  @@unique([mediaId, entityType, entityId])
+  @@index([entityType, entityId])
 }

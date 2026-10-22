@@ -1,7 +1,7 @@
 {
   "extends": "@clothing/config/tsconfig/nestjs.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "multer"],
     "rootDir": "./src",
     "outDir": "./dist",
     "incremental": true

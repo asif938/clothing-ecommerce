@@ -2,14 +2,14 @@ import { Test } from "@nestjs/testing";
 import { TerminusModule } from "@nestjs/terminus";
 import { describe, expect, it, vi } from "vitest";
 import { HealthController } from "./health.controller";
-import { PRISMA_CLIENT } from "./prisma-client.token";
+import { PrismaService } from "../prisma/prisma.service";
 
 describe("HealthController", () => {
   it("reports up when the database is reachable", async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TerminusModule],
       controllers: [HealthController],
-      providers: [{ provide: PRISMA_CLIENT, useValue: { $queryRaw: vi.fn().mockResolvedValue([{ 1: 1 }]) } }],
+      providers: [{ provide: PrismaService, useValue: { $queryRaw: vi.fn().mockResolvedValue([{ 1: 1 }]) } }],
     }).compile();
 
     const controller = moduleRef.get(HealthController);
@@ -23,7 +23,7 @@ describe("HealthController", () => {
       imports: [TerminusModule],
       controllers: [HealthController],
       providers: [
-        { provide: PRISMA_CLIENT, useValue: { $queryRaw: vi.fn().mockRejectedValue(new Error("refused")) } },
+        { provide: PrismaService, useValue: { $queryRaw: vi.fn().mockRejectedValue(new Error("refused")) } },
       ],
     }).compile();
 
@@ -35,7 +35,7 @@ describe("HealthController", () => {
     const moduleRef = await Test.createTestingModule({
       imports: [TerminusModule],
       controllers: [HealthController],
-      providers: [{ provide: PRISMA_CLIENT, useValue: {} }],
+      providers: [{ provide: PrismaService, useValue: {} }],
     }).compile();
 
     const controller = moduleRef.get(HealthController);

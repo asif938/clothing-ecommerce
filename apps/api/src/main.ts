@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import cookieParser from "cookie-parser";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -7,10 +8,12 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
+  app.use(cookieParser());
 
-  // /health and /ready stay unprefixed for load balancers / uptime checks
-  // (docs/PROJECT_SPEC.md §11.2). Everything else lives under /api/v1/{store,admin,webhooks,public}.
-  app.setGlobalPrefix("api/v1", { exclude: ["health", "ready"] });
+  // /health, /ready (uptime checks, §11.2) and /media/* (public file serving,
+  // see MediaFilesController) stay unprefixed. Everything else lives under
+  // /api/v1/{store,admin,webhooks,public}.
+  app.setGlobalPrefix("api/v1", { exclude: ["health", "ready", "media/*splat"] });
 
   const allowedOrigins = [process.env.STOREFRONT_URL, process.env.ADMIN_URL].filter(
     (origin): origin is string => Boolean(origin),

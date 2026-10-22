@@ -13,7 +13,17 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "declaration": false,
-    "incremental": true
+    "incremental": true,
+    // @clothing/shared (and any other "type": "module" workspace package
+    // consumed as raw TS with no build step) writes its own relative
+    // imports with a literal `.ts` extension — Node's native type-stripping
+    // requires the written specifier to resolve to a real file, which only
+    // `.ts` does. Every consumer's program pulls those files in too, so
+    // this has to be set here, not just on that package's own tsconfig.
+    // `rewriteRelativeImportExtensions` keeps a real `tsc` emit (e.g.
+    // `nest build`) correct by rewriting `.ts` -> `.js` in its output.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "exclude": ["node_modules", "dist", ".next"]
 }

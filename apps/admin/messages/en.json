@@ -1,0 +1,80 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading…",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "auth": {
+    "loginTitle": "Log in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "invalidCredentials": "Incorrect email or password",
+    "accountDisabled": "This account has been disabled",
+    "totpTitle": "Two-factor verification",
+    "totpPrompt": "Enter the 6-digit code from your app",
+    "invalidCode": "That code isn't right",
+    "logout": "Log out",
+    "forbidden": "You don't have permission to do that"
+  },
+  "setup": {
+    "welcomeTitle": "Welcome",
+    "welcomeBody": "Create a Super Admin account to set up your store.",
+    "superAdminTitle": "Create the Super Admin",
+    "name": "Name",
+    "totpTitle": "Set up two-factor authentication",
+    "totpPrompt": "Scan the QR code with your authenticator app",
+    "doneTitle": "Setup complete",
+    "doneBody": "You can log in now.",
+    "goToLogin": "Go to login"
+  },
+  "settings": {
+    "title": "Settings",
+    "saved": "Settings saved",
+    "secretReplace": "Replace"
+  },
+  "staff": {
+    "title": "Staff",
+    "rolesTitle": "Roles",
+    "permissions": "Permissions",
+    "createRole": "New role",
+    "createStaff": "New staff",
+    "statusActive": "Active",
+    "statusDisabled": "Disabled"
+  },
+  "media": {
+    "title": "Media library",
+    "upload": "Upload",
+    "folders": "Folders",
+    "usageNone": "Not used anywhere yet"
+  },
+  "audit": {
+    "title": "Audit log",
+    "noChanges": "No changes recorded"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "testConnection": "Test connection",
+    "testSuccess": "Connection succeeded",
+    "testFailure": "Connection failed"
+  },
+  "shell": {
+    "searchPlaceholder": "Search or run a command…",
+    "navDashboard": "Dashboard",
+    "navSettings": "Settings",
+    "navStaff": "Staff & roles",
+    "navMedia": "Media",
+    "navIntegrations": "Integrations",
+    "navAudit": "Audit log"
+  }
+}

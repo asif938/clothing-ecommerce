@@ -1,0 +1,4763 @@
+{
+  "source": "Wikipedia: \"Divisions of Bangladesh\", \"Districts of Bangladesh\", \"Dhaka Metropolitan Police\" (thana list), and \"Upazilas of Bangladesh\", cross-referenced with the Bangladesh National Portal (bangladesh.gov.bd) administrative hierarchy and general knowledge of Bangladesh's administrative geography as of 2024-2025 reorganizations (e.g. Karnaphuli, Osmani Nagar, Rangabali, Bijoynagar, Lalmai upazilas).",
+  "license": "Wikipedia text is licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); attribution: Wikipedia contributors. Administrative facts (division/district/upazila names and hierarchy) are not independently copyrightable; names/boundaries are also published by the Bangladesh Bureau of Statistics (BBS) and bangladesh.gov.bd as public government data.",
+  "retrievedDate": "2026-10-22",
+  "divisions": [
+    {
+      "code": "DHA",
+      "nameEn": "Dhaka",
+      "nameBn": "ঢাকা"
+    },
+    {
+      "code": "CTG",
+      "nameEn": "Chattogram",
+      "nameBn": "চট্টগ্রাম"
+    },
+    {
+      "code": "RAJ",
+      "nameEn": "Rajshahi",
+      "nameBn": "রাজশাহী"
+    },
+    {
+      "code": "KHU",
+      "nameEn": "Khulna",
+      "nameBn": "খুলনা"
+    },
+    {
+      "code": "BAR",
+      "nameEn": "Barishal",
+      "nameBn": "বরিশাল"
+    },
+    {
+      "code": "SYL",
+      "nameEn": "Sylhet",
+      "nameBn": "সিলেট"
+    },
+    {
+      "code": "RAN",
+      "nameEn": "Rangpur",
+      "nameBn": "রংপুর"
+    },
+    {
+      "code": "MYM",
+      "nameEn": "Mymensingh",
+      "nameBn": "ময়মনসিংহ"
+    }
+  ],
+  "districts": [
+    {
+      "code": "DHA-DHAKA",
+      "divisionCode": "DHA",
+      "nameBn": "ঢাকা",
+      "nameEn": "Dhaka"
+    },
+    {
+      "code": "DHA-FARIDPUR",
+      "divisionCode": "DHA",
+      "nameBn": "ফরিদপুর",
+      "nameEn": "Faridpur"
+    },
+    {
+      "code": "DHA-GAZIPUR",
+      "divisionCode": "DHA",
+      "nameBn": "গাজীপুর",
+      "nameEn": "Gazipur"
+    },
+    {
+      "code": "DHA-GOPALGANJ",
+      "divisionCode": "DHA",
+      "nameBn": "গোপালগঞ্জ",
+      "nameEn": "Gopalganj"
+    },
+    {
+      "code": "DHA-KISHOREGANJ",
+      "divisionCode": "DHA",
+      "nameBn": "কিশোরগঞ্জ",
+      "nameEn": "Kishoreganj"
+    },
+    {
+      "code": "DHA-MADARIPUR",
+      "divisionCode": "DHA",
+      "nameBn": "মাদারীপুর",
+      "nameEn": "Madaripur"
+    },
+    {
+      "code": "DHA-MANIKGANJ",
+      "divisionCode": "DHA",
+      "nameBn": "মানিকগঞ্জ",
+      "nameEn": "Manikganj"
+    },
+    {
+      "code": "DHA-MUNSHIGANJ",
+      "divisionCode": "DHA",
+      "nameBn": "মুন্সিগঞ্জ",
+      "nameEn": "Munshiganj"
+    },
+    {
+      "code": "DHA-NARAYANGANJ",
+      "divisionCode": "DHA",
+      "nameBn": "নারায়ণগঞ্জ",
+      "nameEn": "Narayanganj"
+    },
+    {
+      "code": "DHA-NARSINGDI",
+      "divisionCode": "DHA",
+      "nameBn": "নরসিংদী",
+      "nameEn": "Narsingdi"
+    },
+    {
+      "code": "DHA-RAJBARI",
+      "divisionCode": "DHA",
+      "nameBn": "রাজবাড়ী",
+      "nameEn": "Rajbari"
+    },
+    {
+      "code": "DHA-SHARIATPUR",
+      "divisionCode": "DHA",
+      "nameBn": "শরীয়তপুর",
+      "nameEn": "Shariatpur"
+    },
+    {
+      "code": "DHA-TANGAIL",
+      "divisionCode": "DHA",
+      "nameBn": "টাঙ্গাইল",
+      "nameEn": "Tangail"
+    },
+    {
+      "code": "CTG-BANDARBAN",
+      "divisionCode": "CTG",
+      "nameBn": "বান্দরবান",
+      "nameEn": "Bandarban"
+    },
+    {
+      "code": "CTG-BRAHMANBARIA",
+      "divisionCode": "CTG",
+      "nameBn": "ব্রাহ্মণবাড়িয়া",
+      "nameEn": "Brahmanbaria"
+    },
+    {
+      "code": "CTG-CHANDPUR",
+      "divisionCode": "CTG",
+      "nameBn": "চাঁদপুর",
+      "nameEn": "Chandpur"
+    },
+    {
+      "code": "CTG-CHATTOGRAM",
+      "divisionCode": "CTG",
+      "nameBn": "চট্টগ্রাম",
+      "nameEn": "Chattogram"
+    },
+    {
+      "code": "CTG-COXSBAZAR",
+      "divisionCode": "CTG",
+      "nameBn": "কক্সবাজার",
+      "nameEn": "Cox's Bazar"
+    },
+    {
+      "code": "CTG-CUMILLA",
+      "divisionCode": "CTG",
+      "nameBn": "কুমিল্লা",
+      "nameEn": "Cumilla"
+    },
+    {
+      "code": "CTG-FENI",
+      "divisionCode": "CTG",
+      "nameBn": "ফেনী",
+      "nameEn": "Feni"
+    },
+    {
+      "code": "CTG-KHAGRACHHARI",
+      "divisionCode": "CTG",
+      "nameBn": "খাগড়াছড়ি",
+      "nameEn": "Khagrachhari"
+    },
+    {
+      "code": "CTG-LAKSHMIPUR",
+      "divisionCode": "CTG",
+      "nameBn": "লক্ষ্মীপুর",
+      "nameEn": "Lakshmipur"
+    },
+    {
+      "code": "CTG-NOAKHALI",
+      "divisionCode": "CTG",
+      "nameBn": "নোয়াখালী",
+      "nameEn": "Noakhali"
+    },
+    {
+      "code": "CTG-RANGAMATI",
+      "divisionCode": "CTG",
+      "nameBn": "রাঙ্গামাটি",
+      "nameEn": "Rangamati"
+    },
+    {
+      "code": "RAJ-BOGURA",
+      "divisionCode": "RAJ",
+      "nameBn": "বগুড়া",
+      "nameEn": "Bogura"
+    },
+    {
+      "code": "RAJ-JOYPURHAT",
+      "divisionCode": "RAJ",
+      "nameBn": "জয়পুরহাট",
+      "nameEn": "Joypurhat"
+    },
+    {
+      "code": "RAJ-NAOGAON",
+      "divisionCode": "RAJ",
+      "nameBn": "নওগাঁ",
+      "nameEn": "Naogaon"
+    },
+    {
+      "code": "RAJ-NATORE",
+      "divisionCode": "RAJ",
+      "nameBn": "নাটোর",
+      "nameEn": "Natore"
+    },
+    {
+      "code": "RAJ-CHAPAINAWABGANJ",
+      "divisionCode": "RAJ",
+      "nameBn": "চাঁপাইনবাবগঞ্জ",
+      "nameEn": "Chapainawabganj"
+    },
+    {
+      "code": "RAJ-PABNA",
+      "divisionCode": "RAJ",
+      "nameBn": "পাবনা",
+      "nameEn": "Pabna"
+    },
+    {
+      "code": "RAJ-RAJSHAHI",
+      "divisionCode": "RAJ",
+      "nameBn": "রাজশাহী",
+      "nameEn": "Rajshahi"
+    },
+    {
+      "code": "RAJ-SIRAJGANJ",
+      "divisionCode": "RAJ",
+      "nameBn": "সিরাজগঞ্জ",
+      "nameEn": "Sirajganj"
+    },
+    {
+      "code": "KHU-BAGERHAT",
+      "divisionCode": "KHU",
+      "nameBn": "বাগেরহাট",
+      "nameEn": "Bagerhat"
+    },
+    {
+      "code": "KHU-CHUADANGA",
+      "divisionCode": "KHU",
+      "nameBn": "চুয়াডাঙ্গা",
+      "nameEn": "Chuadanga"
+    },
+    {
+      "code": "KHU-JASHORE",
+      "divisionCode": "KHU",
+      "nameBn": "যশোর",
+      "nameEn": "Jashore"
+    },
+    {
+      "code": "KHU-JHENAIDAH",
+      "divisionCode": "KHU",
+      "nameBn": "ঝিনাইদহ",
+      "nameEn": "Jhenaidah"
+    },
+    {
+      "code": "KHU-KHULNA",
+      "divisionCode": "KHU",
+      "nameBn": "খুলনা",
+      "nameEn": "Khulna"
+    },
+    {
+      "code": "KHU-KUSHTIA",
+      "divisionCode": "KHU",
+      "nameBn": "কুষ্টিয়া",
+      "nameEn": "Kushtia"
+    },
+    {
+      "code": "KHU-MAGURA",
+      "divisionCode": "KHU",
+      "nameBn": "মাগুরা",
+      "nameEn": "Magura"
+    },
+    {
+      "code": "KHU-MEHERPUR",
+      "divisionCode": "KHU",
+      "nameBn": "মেহেরপুর",
+      "nameEn": "Meherpur"
+    },
+    {
+      "code": "KHU-NARAIL",
+      "divisionCode": "KHU",
+      "nameBn": "নড়াইল",
+      "nameEn": "Narail"
+    },
+    {
+      "code": "KHU-SATKHIRA",
+      "divisionCode": "KHU",
+      "nameBn": "সাতক্ষীরা",
+      "nameEn": "Satkhira"
+    },
+    {
+      "code": "BAR-BARGUNA",
+      "divisionCode": "BAR",
+      "nameBn": "বরগুনা",
+      "nameEn": "Barguna"
+    },
+    {
+      "code": "BAR-BARISHAL",
+      "divisionCode": "BAR",
+      "nameBn": "বরিশাল",
+      "nameEn": "Barishal"
+    },
+    {
+      "code": "BAR-BHOLA",
+      "divisionCode": "BAR",
+      "nameBn": "ভোলা",
+      "nameEn": "Bhola"
+    },
+    {
+      "code": "BAR-JHALOKATHI",
+      "divisionCode": "BAR",
+      "nameBn": "ঝালকাঠি",
+      "nameEn": "Jhalokathi"
+    },
+    {
+      "code": "BAR-PATUAKHALI",
+      "divisionCode": "BAR",
+      "nameBn": "পটুয়াখালী",
+      "nameEn": "Patuakhali"
+    },
+    {
+      "code": "BAR-PIROJPUR",
+      "divisionCode": "BAR",
+      "nameBn": "পিরোজপুর",
+      "nameEn": "Pirojpur"
+    },
+    {
+      "code": "SYL-HABIGANJ",
+      "divisionCode": "SYL",
+      "nameBn": "হবিগঞ্জ",
+      "nameEn": "Habiganj"
+    },
+    {
+      "code": "SYL-MOULVIBAZAR",
+      "divisionCode": "SYL",
+      "nameBn": "মৌলভীবাজার",
+      "nameEn": "Moulvibazar"
+    },
+    {
+      "code": "SYL-SUNAMGANJ",
+      "divisionCode": "SYL",
+      "nameBn": "সুনামগঞ্জ",
+      "nameEn": "Sunamganj"
+    },
+    {
+      "code": "SYL-SYLHET",
+      "divisionCode": "SYL",
+      "nameBn": "সিলেট",
+      "nameEn": "Sylhet"
+    },
+    {
+      "code": "RAN-DINAJPUR",
+      "divisionCode": "RAN",
+      "nameBn": "দিনাজপুর",
+      "nameEn": "Dinajpur"
+    },
+    {
+      "code": "RAN-GAIBANDHA",
+      "divisionCode": "RAN",
+      "nameBn": "গাইবান্ধা",
+      "nameEn": "Gaibandha"
+    },
+    {
+      "code": "RAN-KURIGRAM",
+      "divisionCode": "RAN",
+      "nameBn": "কুড়িগ্রাম",
+      "nameEn": "Kurigram"
+    },
+    {
+      "code": "RAN-LALMONIRHAT",
+      "divisionCode": "RAN",
+      "nameBn": "লালমনিরহাট",
+      "nameEn": "Lalmonirhat"
+    },
+    {
+      "code": "RAN-NILPHAMARI",
+      "divisionCode": "RAN",
+      "nameBn": "নীলফামারী",
+      "nameEn": "Nilphamari"
+    },
+    {
+      "code": "RAN-PANCHAGARH",
+      "divisionCode": "RAN",
+      "nameBn": "পঞ্চগড়",
+      "nameEn": "Panchagarh"
+    },
+    {
+      "code": "RAN-RANGPUR",
+      "divisionCode": "RAN",
+      "nameBn": "রংপুর",
+      "nameEn": "Rangpur"
+    },
+    {
+      "code": "RAN-THAKURGAON",
+      "divisionCode": "RAN",
+      "nameBn": "ঠাকুরগাঁও",
+      "nameEn": "Thakurgaon"
+    },
+    {
+      "code": "MYM-JAMALPUR",
+      "divisionCode": "MYM",
+      "nameBn": "জামালপুর",
+      "nameEn": "Jamalpur"
+    },
+    {
+      "code": "MYM-MYMENSINGH",
+      "divisionCode": "MYM",
+      "nameBn": "ময়মনসিংহ",
+      "nameEn": "Mymensingh"
+    },
+    {
+      "code": "MYM-NETROKONA",
+      "divisionCode": "MYM",
+      "nameBn": "নেত্রকোণা",
+      "nameEn": "Netrokona"
+    },
+    {
+      "code": "MYM-SHERPUR",
+      "divisionCode": "MYM",
+      "nameBn": "শেরপুর",
+      "nameEn": "Sherpur"
+    }
+  ],
+  "areas": [
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "সাভার",
+      "nameEn": "Savar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1340"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ধামরাই",
+      "nameEn": "Dhamrai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1350"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কেরানীগঞ্জ",
+      "nameEn": "Keraniganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1310"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "নবাবগঞ্জ",
+      "nameEn": "Nawabganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1320"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "দোহার",
+      "nameEn": "Dohar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1330"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "আদাবর",
+      "nameEn": "Adabor",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1207"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "এয়ারপোর্ট",
+      "nameEn": "Airport",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "বাড্ডা",
+      "nameEn": "Badda",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1212"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "বনানী",
+      "nameEn": "Banani",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1213"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "বংশাল",
+      "nameEn": "Bangshal",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1100"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "বসুন্ধরা",
+      "nameEn": "Bashundhara",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1229"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ভাষানটেক",
+      "nameEn": "Bhashantek",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ক্যান্টনমেন্ট",
+      "nameEn": "Cantonment",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1206"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "চকবাজার",
+      "nameEn": "Chackbazar",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1211"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "দক্ষিণখান",
+      "nameEn": "Dakshin Khan",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1230"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "দারুস সালাম",
+      "nameEn": "Darus-Salam",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ডেমরা",
+      "nameEn": "Demra",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1361"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ধানমন্ডি",
+      "nameEn": "Dhanmondi",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1205"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "গেন্ডারিয়া",
+      "nameEn": "Gandaria",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1204"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "গুলশান",
+      "nameEn": "Gulshan",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1212"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "হাতিরঝিল",
+      "nameEn": "Hatirjheel",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "হাজারীবাগ",
+      "nameEn": "Hazaribagh",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1209"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "যাত্রাবাড়ী",
+      "nameEn": "Jatrabari",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1204"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কদমতলী",
+      "nameEn": "Kadamtoli",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1204"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কাফরুল",
+      "nameEn": "Kafrul",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1206"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কলাবাগান",
+      "nameEn": "Kalabagan",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1205"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কামরাঙ্গীরচর",
+      "nameEn": "Kamrangirchar",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1211"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "খিলগাঁও",
+      "nameEn": "Khilgaon",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1219"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "খিলক্ষেত",
+      "nameEn": "Khilkhet",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1229"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "কোতোয়ালী",
+      "nameEn": "Kotwali",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1100"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "লালবাগ",
+      "nameEn": "Lalbagh",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1211"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "মিরপুর মডেল",
+      "nameEn": "Mirpur Model",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "মোহাম্মদপুর",
+      "nameEn": "Mohammadpur",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1207"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "মতিঝিল",
+      "nameEn": "Motijheel",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1000"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "মুগদা",
+      "nameEn": "Mugda",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1214"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "নিউমার্কেট",
+      "nameEn": "New Market",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1205"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "পল্লবী",
+      "nameEn": "Pallabi",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "পল্টন মডেল",
+      "nameEn": "Paltan Model",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1000"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "রমনা মডেল",
+      "nameEn": "Ramna Model",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1000"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "রামপুরা",
+      "nameEn": "Rampura",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1219"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "রূপনগর",
+      "nameEn": "Rupnagar",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "সবুজবাগ",
+      "nameEn": "Sabujbag",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1214"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "শাহ আলী",
+      "nameEn": "Shah Ali",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1216"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "শাহবাগ",
+      "nameEn": "Shahbag",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1000"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "শাহজাহানপুর",
+      "nameEn": "Shahjahanpur",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1217"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "শেরে বাংলা নগর",
+      "nameEn": "Sher-e-Bangla Nagar",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1207"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "শ্যামপুর",
+      "nameEn": "Shyampur",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1204"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "সূত্রাপুর",
+      "nameEn": "Sutrapur",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1100"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "তেজগাঁও",
+      "nameEn": "Tejgaon",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1215"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "তেজগাঁও শিল্পাঞ্চল",
+      "nameEn": "Tejgaon Industrial Area",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1208"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "তুরাগ",
+      "nameEn": "Turag",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1230"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "উত্তরখান",
+      "nameEn": "Uttar Khan",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1230"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "উত্তরা পূর্ব",
+      "nameEn": "Uttara East",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1230"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "উত্তরা পশ্চিম",
+      "nameEn": "Uttara West",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1230"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ভাটারা",
+      "nameEn": "Vatara",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1212"
+    },
+    {
+      "districtCode": "DHA-DHAKA",
+      "nameBn": "ওয়ারী",
+      "nameEn": "Wari",
+      "type": "city_area",
+      "isDhakaCity": true,
+      "postcode": "1203"
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "ফরিদপুর সদর",
+      "nameEn": "Faridpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7800"
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "আলফাডাঙ্গা",
+      "nameEn": "Alfadanga",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "ভাঙ্গা",
+      "nameEn": "Bhanga",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7830"
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "বোয়ালমারী",
+      "nameEn": "Boalmari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7820"
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "চরভদ্রাসন",
+      "nameEn": "Charbhadrasan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "মধুখালী",
+      "nameEn": "Madhukhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "নগরকান্দা",
+      "nameEn": "Nagarkanda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "সদরপুর",
+      "nameEn": "Sadarpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-FARIDPUR",
+      "nameBn": "সালথা",
+      "nameEn": "Saltha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-GAZIPUR",
+      "nameBn": "গাজীপুর সদর",
+      "nameEn": "Gazipur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1700"
+    },
+    {
+      "districtCode": "DHA-GAZIPUR",
+      "nameBn": "কালিয়াকৈর",
+      "nameEn": "Kaliakair",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1750"
+    },
+    {
+      "districtCode": "DHA-GAZIPUR",
+      "nameBn": "কালীগঞ্জ",
+      "nameEn": "Kaliganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1710"
+    },
+    {
+      "districtCode": "DHA-GAZIPUR",
+      "nameBn": "কাপাসিয়া",
+      "nameEn": "Kapasia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1730"
+    },
+    {
+      "districtCode": "DHA-GAZIPUR",
+      "nameBn": "শ্রীপুর",
+      "nameEn": "Sreepur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1740"
+    },
+    {
+      "districtCode": "DHA-GOPALGANJ",
+      "nameBn": "গোপালগঞ্জ সদর",
+      "nameEn": "Gopalganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8100"
+    },
+    {
+      "districtCode": "DHA-GOPALGANJ",
+      "nameBn": "কাশিয়ানী",
+      "nameEn": "Kashiani",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-GOPALGANJ",
+      "nameBn": "কোটালীপাড়া",
+      "nameEn": "Kotalipara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-GOPALGANJ",
+      "nameBn": "মুকসুদপুর",
+      "nameEn": "Muksudpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-GOPALGANJ",
+      "nameBn": "টুঙ্গিপাড়া",
+      "nameEn": "Tungipara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "কিশোরগঞ্জ সদর",
+      "nameEn": "Kishoreganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2300"
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "অষ্টগ্রাম",
+      "nameEn": "Austagram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "বাজিতপুর",
+      "nameEn": "Bajitpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "ভৈরব",
+      "nameEn": "Bhairab",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2350"
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "হোসেনপুর",
+      "nameEn": "Hossainpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "ইটনা",
+      "nameEn": "Itna",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "করিমগঞ্জ",
+      "nameEn": "Karimganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "কটিয়াদী",
+      "nameEn": "Katiadi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "কুলিয়ারচর",
+      "nameEn": "Kuliarchar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "মিঠামইন",
+      "nameEn": "Mithamain",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "নিকলী",
+      "nameEn": "Nikli",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "পাকুন্দিয়া",
+      "nameEn": "Pakundia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-KISHOREGANJ",
+      "nameBn": "তারাইল",
+      "nameEn": "Tarail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MADARIPUR",
+      "nameBn": "মাদারীপুর সদর",
+      "nameEn": "Madaripur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7900"
+    },
+    {
+      "districtCode": "DHA-MADARIPUR",
+      "nameBn": "কালকিনি",
+      "nameEn": "Kalkini",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MADARIPUR",
+      "nameBn": "রাজৈর",
+      "nameEn": "Rajoir",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MADARIPUR",
+      "nameBn": "শিবচর",
+      "nameEn": "Shibchar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MADARIPUR",
+      "nameBn": "ডাসার",
+      "nameEn": "Dasar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "মানিকগঞ্জ সদর",
+      "nameEn": "Manikganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1800"
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "দৌলতপুর",
+      "nameEn": "Daulatpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "ঘিওর",
+      "nameEn": "Ghior",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "হরিরামপুর",
+      "nameEn": "Harirampur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "সাটুরিয়া",
+      "nameEn": "Saturia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "শিবালয়",
+      "nameEn": "Shivalaya",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MANIKGANJ",
+      "nameBn": "সিংগাইর",
+      "nameEn": "Singair",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "মুন্সিগঞ্জ সদর",
+      "nameEn": "Munshiganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1500"
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "গজারিয়া",
+      "nameEn": "Gazaria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "লৌহজং",
+      "nameEn": "Lauhajong",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "সিরাজদিখান",
+      "nameEn": "Sirajdikhan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "শ্রীনগর",
+      "nameEn": "Sreenagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-MUNSHIGANJ",
+      "nameBn": "টংগিবাড়ী",
+      "nameEn": "Tongibari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARAYANGANJ",
+      "nameBn": "নারায়ণগঞ্জ সদর",
+      "nameEn": "Narayanganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1400"
+    },
+    {
+      "districtCode": "DHA-NARAYANGANJ",
+      "nameBn": "আড়াইহাজার",
+      "nameEn": "Araihazar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARAYANGANJ",
+      "nameBn": "বন্দর",
+      "nameEn": "Bandar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARAYANGANJ",
+      "nameBn": "রূপগঞ্জ",
+      "nameEn": "Rupganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARAYANGANJ",
+      "nameBn": "সোনারগাঁ",
+      "nameEn": "Sonargaon",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "নরসিংদী সদর",
+      "nameEn": "Narsingdi Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1600"
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "বেলাবো",
+      "nameEn": "Belabo",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "মনোহরদী",
+      "nameEn": "Monohardi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "পলাশ",
+      "nameEn": "Palash",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "রায়পুরা",
+      "nameEn": "Raipura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-NARSINGDI",
+      "nameBn": "শিবপুর",
+      "nameEn": "Shibpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-RAJBARI",
+      "nameBn": "রাজবাড়ী সদর",
+      "nameEn": "Rajbari Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7700"
+    },
+    {
+      "districtCode": "DHA-RAJBARI",
+      "nameBn": "বালিয়াকান্দি",
+      "nameEn": "Baliakandi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-RAJBARI",
+      "nameBn": "গোয়ালন্দ",
+      "nameEn": "Goalanda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-RAJBARI",
+      "nameBn": "পাংশা",
+      "nameEn": "Pangsha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-RAJBARI",
+      "nameBn": "কালুখালী",
+      "nameEn": "Kalukhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "শরীয়তপুর সদর",
+      "nameEn": "Shariatpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8000"
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "ভেদরগঞ্জ",
+      "nameEn": "Bhedarganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "ডামুড্যা",
+      "nameEn": "Damudya",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "গোসাইরহাট",
+      "nameEn": "Gosairhat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "নড়িয়া",
+      "nameEn": "Naria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-SHARIATPUR",
+      "nameBn": "জাজিরা",
+      "nameEn": "Zajira",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "টাঙ্গাইল সদর",
+      "nameEn": "Tangail Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "1900"
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "বাসাইল",
+      "nameEn": "Basail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "ভূঞাপুর",
+      "nameEn": "Bhuapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "দেলদুয়ার",
+      "nameEn": "Delduar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "ধনবাড়ী",
+      "nameEn": "Dhanbari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "ঘাটাইল",
+      "nameEn": "Ghatail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "গোপালপুর",
+      "nameEn": "Gopalpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "কালিহাতী",
+      "nameEn": "Kalihati",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "মধুপুর",
+      "nameEn": "Madhupur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "মির্জাপুর",
+      "nameEn": "Mirzapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "নাগরপুর",
+      "nameEn": "Nagarpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "DHA-TANGAIL",
+      "nameBn": "সখীপুর",
+      "nameEn": "Sakhipur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "বান্দরবান সদর",
+      "nameEn": "Bandarban Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "4600"
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "আলীকদম",
+      "nameEn": "Alikadam",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "লামা",
+      "nameEn": "Lama",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "নাইক্ষ্যংছড়ি",
+      "nameEn": "Naikhongchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "রোয়াংছড়ি",
+      "nameEn": "Rowangchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "রুমা",
+      "nameEn": "Ruma",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BANDARBAN",
+      "nameBn": "থানচি",
+      "nameEn": "Thanchi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "ব্রাহ্মণবাড়িয়া সদর",
+      "nameEn": "Brahmanbaria Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3400"
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "আখাউড়া",
+      "nameEn": "Akhaura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "বাঞ্ছারামপুর",
+      "nameEn": "Bancharampur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "বিজয়নগর",
+      "nameEn": "Bijoynagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "কসবা",
+      "nameEn": "Kasba",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "নবীনগর",
+      "nameEn": "Nabinagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "নাসিরনগর",
+      "nameEn": "Nasirnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "সরাইল",
+      "nameEn": "Sarail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-BRAHMANBARIA",
+      "nameBn": "আশুগঞ্জ",
+      "nameEn": "Ashuganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "চাঁদপুর সদর",
+      "nameEn": "Chandpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3600"
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "ফরিদগঞ্জ",
+      "nameEn": "Faridganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "হাইমচর",
+      "nameEn": "Haimchar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "হাজীগঞ্জ",
+      "nameEn": "Haziganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "কচুয়া",
+      "nameEn": "Kachua",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "মতলব উত্তর",
+      "nameEn": "Matlab Uttar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "মতলব দক্ষিণ",
+      "nameEn": "Matlab Dakshin",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHANDPUR",
+      "nameBn": "শাহরাস্তি",
+      "nameEn": "Shahrasti",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "আনোয়ারা",
+      "nameEn": "Anwara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "বাঁশখালী",
+      "nameEn": "Banshkhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "বোয়ালখালী",
+      "nameEn": "Boalkhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "চন্দনাইশ",
+      "nameEn": "Chandanaish",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "ফটিকছড়ি",
+      "nameEn": "Fatikchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "হাটহাজারী",
+      "nameEn": "Hathazari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "কর্ণফুলী",
+      "nameEn": "Karnaphuli",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "লোহাগাড়া",
+      "nameEn": "Lohagara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "মীরসরাই",
+      "nameEn": "Mirsharai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "পটিয়া",
+      "nameEn": "Patiya",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "রাঙ্গুনিয়া",
+      "nameEn": "Rangunia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "রাউজান",
+      "nameEn": "Raozan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "সন্দ্বীপ",
+      "nameEn": "Sandwip",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "সাতকানিয়া",
+      "nameEn": "Satkania",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CHATTOGRAM",
+      "nameBn": "সীতাকুণ্ড",
+      "nameEn": "Sitakunda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "কক্সবাজার সদর",
+      "nameEn": "Cox's Bazar Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "4700"
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "চকরিয়া",
+      "nameEn": "Chakaria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "কুতুবদিয়া",
+      "nameEn": "Kutubdia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "মহেশখালী",
+      "nameEn": "Maheshkhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "পেকুয়া",
+      "nameEn": "Pekua",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "রামু",
+      "nameEn": "Ramu",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "টেকনাফ",
+      "nameEn": "Teknaf",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-COXSBAZAR",
+      "nameBn": "উখিয়া",
+      "nameEn": "Ukhia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "কুমিল্লা আদর্শ সদর",
+      "nameEn": "Cumilla Adarsha Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3500"
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "কুমিল্লা সদর দক্ষিণ",
+      "nameEn": "Cumilla Sadar Dakshin",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "বরুড়া",
+      "nameEn": "Barura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "ব্রাহ্মণপাড়া",
+      "nameEn": "Brahmanpara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "বুড়িচং",
+      "nameEn": "Burichang",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "চান্দিনা",
+      "nameEn": "Chandina",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "চৌদ্দগ্রাম",
+      "nameEn": "Chauddagram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "দাউদকান্দি",
+      "nameEn": "Daudkandi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "দেবিদ্বার",
+      "nameEn": "Debidwar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "হোমনা",
+      "nameEn": "Homna",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "লাকসাম",
+      "nameEn": "Laksam",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "লালমাই",
+      "nameEn": "Lalmai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "মেঘনা",
+      "nameEn": "Meghna",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "মনোহরগঞ্জ",
+      "nameEn": "Monohorganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "মুরাদনগর",
+      "nameEn": "Muradnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "নাঙ্গলকোট",
+      "nameEn": "Nangalkot",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-CUMILLA",
+      "nameBn": "তিতাস",
+      "nameEn": "Titas",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "ফেনী সদর",
+      "nameEn": "Feni Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3900"
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "ছাগলনাইয়া",
+      "nameEn": "Chhagalnaiya",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "দাগনভূঞা",
+      "nameEn": "Daganbhuiyan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "পরশুরাম",
+      "nameEn": "Parshuram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "ফুলগাজী",
+      "nameEn": "Fulgazi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-FENI",
+      "nameBn": "সোনাগাজী",
+      "nameEn": "Sonagazi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "খাগড়াছড়ি সদর",
+      "nameEn": "Khagrachhari Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "4400"
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "দীঘিনালা",
+      "nameEn": "Dighinala",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "লক্ষ্মীছড়ি",
+      "nameEn": "Lakshmichhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "মহালছড়ি",
+      "nameEn": "Mahalchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "মানিকছড়ি",
+      "nameEn": "Manikchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "মাটিরাঙ্গা",
+      "nameEn": "Matiranga",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "পানছড়ি",
+      "nameEn": "Panchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-KHAGRACHHARI",
+      "nameBn": "রামগড়",
+      "nameEn": "Ramgarh",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-LAKSHMIPUR",
+      "nameBn": "লক্ষ্মীপুর সদর",
+      "nameEn": "Lakshmipur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3700"
+    },
+    {
+      "districtCode": "CTG-LAKSHMIPUR",
+      "nameBn": "রায়পুর",
+      "nameEn": "Raipur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-LAKSHMIPUR",
+      "nameBn": "রামগঞ্জ",
+      "nameEn": "Ramganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-LAKSHMIPUR",
+      "nameBn": "রামগতি",
+      "nameEn": "Ramgati",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-LAKSHMIPUR",
+      "nameBn": "কমলনগর",
+      "nameEn": "Kamalnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "নোয়াখালী সদর",
+      "nameEn": "Noakhali Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3800"
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "বেগমগঞ্জ",
+      "nameEn": "Begumganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "চাটখিল",
+      "nameEn": "Chatkhil",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "কোম্পানীগঞ্জ",
+      "nameEn": "Companiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "হাতিয়া",
+      "nameEn": "Hatiya",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "কবিরহাট",
+      "nameEn": "Kabirhat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "সেনবাগ",
+      "nameEn": "Senbagh",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "সোনাইমুড়ী",
+      "nameEn": "Sonaimuri",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-NOAKHALI",
+      "nameBn": "সুবর্ণচর",
+      "nameEn": "Subarnachar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "রাঙ্গামাটি সদর",
+      "nameEn": "Rangamati Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "4500"
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "বাঘাইছড়ি",
+      "nameEn": "Baghaichhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "বরকল",
+      "nameEn": "Barkal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "বিলাইছড়ি",
+      "nameEn": "Belaichhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "জুরাছড়ি",
+      "nameEn": "Juraichhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "কাপ্তাই",
+      "nameEn": "Kaptai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "লংগদু",
+      "nameEn": "Langadu",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "নানিয়ারচর",
+      "nameEn": "Nannerchar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "CTG-RANGAMATI",
+      "nameBn": "রাজস্থলী",
+      "nameEn": "Rajasthali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "বগুড়া সদর",
+      "nameEn": "Bogura Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5800"
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "আদমদীঘি",
+      "nameEn": "Adamdighi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "ধুনট",
+      "nameEn": "Dhunat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "ধুপচাঁচিয়া",
+      "nameEn": "Dhupchanchia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "গাবতলী",
+      "nameEn": "Gabtali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "কাহালু",
+      "nameEn": "Kahaloo",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "নন্দীগ্রাম",
+      "nameEn": "Nandigram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "সারিয়াকান্দি",
+      "nameEn": "Sariakandi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "শাজাহানপুর",
+      "nameEn": "Shajahanpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "শেরপুর",
+      "nameEn": "Sherpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "শিবগঞ্জ",
+      "nameEn": "Shibganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-BOGURA",
+      "nameBn": "সোনাতলা",
+      "nameEn": "Sonatola",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-JOYPURHAT",
+      "nameBn": "জয়পুরহাট সদর",
+      "nameEn": "Joypurhat Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5900"
+    },
+    {
+      "districtCode": "RAJ-JOYPURHAT",
+      "nameBn": "আক্কেলপুর",
+      "nameEn": "Akkelpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-JOYPURHAT",
+      "nameBn": "কালাই",
+      "nameEn": "Kalai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-JOYPURHAT",
+      "nameBn": "ক্ষেতলাল",
+      "nameEn": "Khetlal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-JOYPURHAT",
+      "nameBn": "পাঁচবিবি",
+      "nameEn": "Panchbibi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "নওগাঁ সদর",
+      "nameEn": "Naogaon Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6500"
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "আত্রাই",
+      "nameEn": "Atrai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "বদলগাছী",
+      "nameEn": "Badalgachhi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "ধামইরহাট",
+      "nameEn": "Dhamoirhat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "মান্দা",
+      "nameEn": "Manda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "মহাদেবপুর",
+      "nameEn": "Mohadevpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "নিয়ামতপুর",
+      "nameEn": "Niamatpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "পত্নীতলা",
+      "nameEn": "Patnitala",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "পোরশা",
+      "nameEn": "Porsha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "রাণীনগর",
+      "nameEn": "Raninagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NAOGAON",
+      "nameBn": "সাপাহার",
+      "nameEn": "Sapahar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "নাটোর সদর",
+      "nameEn": "Natore Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6400"
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "বাগাতিপাড়া",
+      "nameEn": "Bagatipara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "বড়াইগ্রাম",
+      "nameEn": "Baraigram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "গুরুদাসপুর",
+      "nameEn": "Gurudaspur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "লালপুর",
+      "nameEn": "Lalpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "নলডাঙ্গা",
+      "nameEn": "Naldanga",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-NATORE",
+      "nameBn": "সিংড়া",
+      "nameEn": "Singra",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-CHAPAINAWABGANJ",
+      "nameBn": "চাঁপাইনবাবগঞ্জ সদর",
+      "nameEn": "Chapainawabganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6300"
+    },
+    {
+      "districtCode": "RAJ-CHAPAINAWABGANJ",
+      "nameBn": "ভোলাহাট",
+      "nameEn": "Bholahat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-CHAPAINAWABGANJ",
+      "nameBn": "গোমস্তাপুর",
+      "nameEn": "Gomastapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-CHAPAINAWABGANJ",
+      "nameBn": "নাচোল",
+      "nameEn": "Nachole",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-CHAPAINAWABGANJ",
+      "nameBn": "শিবগঞ্জ",
+      "nameEn": "Shibganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "পাবনা সদর",
+      "nameEn": "Pabna Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6600"
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "আটঘরিয়া",
+      "nameEn": "Atgharia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "বেড়া",
+      "nameEn": "Bera",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "ভাঙ্গুড়া",
+      "nameEn": "Bhangura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "চাটমোহর",
+      "nameEn": "Chatmohar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "ফরিদপুর",
+      "nameEn": "Faridpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "ঈশ্বরদী",
+      "nameEn": "Ishwardi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6610"
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "সাঁথিয়া",
+      "nameEn": "Santhia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-PABNA",
+      "nameBn": "সুজানগর",
+      "nameEn": "Sujanagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "বাঘা",
+      "nameEn": "Bagha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "বাগমারা",
+      "nameEn": "Bagmara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "চারঘাট",
+      "nameEn": "Charghat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "দুর্গাপুর",
+      "nameEn": "Durgapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "গোদাগাড়ী",
+      "nameEn": "Godagari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "মোহনপুর",
+      "nameEn": "Mohanpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "পবা",
+      "nameEn": "Paba",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "পুঠিয়া",
+      "nameEn": "Puthia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-RAJSHAHI",
+      "nameBn": "তানোর",
+      "nameEn": "Tanore",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "সিরাজগঞ্জ সদর",
+      "nameEn": "Sirajganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "6700"
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "বেলকুচি",
+      "nameEn": "Belkuchi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "চৌহালী",
+      "nameEn": "Chauhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "কামারখন্দ",
+      "nameEn": "Kamarkhanda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "কাজিপুর",
+      "nameEn": "Kazipur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "রায়গঞ্জ",
+      "nameEn": "Raiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "শাহজাদপুর",
+      "nameEn": "Shahjadpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "তারাশ",
+      "nameEn": "Tarash",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAJ-SIRAJGANJ",
+      "nameBn": "উল্লাপাড়া",
+      "nameEn": "Ullahpara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "বাগেরহাট সদর",
+      "nameEn": "Bagerhat Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "9300"
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "চিতলমারী",
+      "nameEn": "Chitalmari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "ফকিরহাট",
+      "nameEn": "Fakirhat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "কচুয়া",
+      "nameEn": "Kachua",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "মোল্লাহাট",
+      "nameEn": "Mollahat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "মোংলা",
+      "nameEn": "Mongla",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "মোরেলগঞ্জ",
+      "nameEn": "Morrelganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "রামপাল",
+      "nameEn": "Rampal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-BAGERHAT",
+      "nameBn": "শরণখোলা",
+      "nameEn": "Sarankhola",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-CHUADANGA",
+      "nameBn": "চুয়াডাঙ্গা সদর",
+      "nameEn": "Chuadanga Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7200"
+    },
+    {
+      "districtCode": "KHU-CHUADANGA",
+      "nameBn": "আলমডাঙ্গা",
+      "nameEn": "Alamdanga",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-CHUADANGA",
+      "nameBn": "দামুড়হুদা",
+      "nameEn": "Damurhuda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-CHUADANGA",
+      "nameBn": "জীবননগর",
+      "nameEn": "Jibannagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "যশোর সদর",
+      "nameEn": "Jashore Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7400"
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "অভয়নগর",
+      "nameEn": "Abhaynagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "বাঘারপাড়া",
+      "nameEn": "Bagherpara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "চৌগাছা",
+      "nameEn": "Chaugachha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "ঝিকরগাছা",
+      "nameEn": "Jhikargachha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "কেশবপুর",
+      "nameEn": "Keshabpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "মনিরামপুর",
+      "nameEn": "Manirampur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JASHORE",
+      "nameBn": "শার্শা",
+      "nameEn": "Sharsha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "ঝিনাইদহ সদর",
+      "nameEn": "Jhenaidah Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7300"
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "হরিণাকুণ্ডু",
+      "nameEn": "Harinakunda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "কালীগঞ্জ",
+      "nameEn": "Kaliganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "কোটচাঁদপুর",
+      "nameEn": "Kotchandpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "মহেশপুর",
+      "nameEn": "Maheshpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-JHENAIDAH",
+      "nameBn": "শৈলকুপা",
+      "nameEn": "Shailkupa",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "বটিয়াঘাটা",
+      "nameEn": "Batiaghata",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "দাকোপ",
+      "nameEn": "Dacope",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "দিঘলিয়া",
+      "nameEn": "Dighalia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "ডুমুরিয়া",
+      "nameEn": "Dumuria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "ফুলতলা",
+      "nameEn": "Fultala",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "কয়রা",
+      "nameEn": "Koyra",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "পাইকগাছা",
+      "nameEn": "Paikgachha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "রূপসা",
+      "nameEn": "Rupsa",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KHULNA",
+      "nameBn": "তেরখাদা",
+      "nameEn": "Terokhada",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "কুষ্টিয়া সদর",
+      "nameEn": "Kushtia Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7000"
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "ভেড়ামারা",
+      "nameEn": "Bheramara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "দৌলতপুর",
+      "nameEn": "Daulatpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "খোকসা",
+      "nameEn": "Khoksa",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "কুমারখালী",
+      "nameEn": "Kumarkhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-KUSHTIA",
+      "nameBn": "মিরপুর",
+      "nameEn": "Mirpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-MAGURA",
+      "nameBn": "মাগুরা সদর",
+      "nameEn": "Magura Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7600"
+    },
+    {
+      "districtCode": "KHU-MAGURA",
+      "nameBn": "মোহাম্মদপুর",
+      "nameEn": "Mohammadpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-MAGURA",
+      "nameBn": "শালিখা",
+      "nameEn": "Shalikha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-MAGURA",
+      "nameBn": "শ্রীপুর",
+      "nameEn": "Sreepur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-MEHERPUR",
+      "nameBn": "মেহেরপুর সদর",
+      "nameEn": "Meherpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7100"
+    },
+    {
+      "districtCode": "KHU-MEHERPUR",
+      "nameBn": "গাংনী",
+      "nameEn": "Gangni",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-MEHERPUR",
+      "nameBn": "মুজিবনগর",
+      "nameEn": "Mujibnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-NARAIL",
+      "nameBn": "নড়াইল সদর",
+      "nameEn": "Narail Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "7500"
+    },
+    {
+      "districtCode": "KHU-NARAIL",
+      "nameBn": "কালিয়া",
+      "nameEn": "Kalia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-NARAIL",
+      "nameBn": "লোহাগড়া",
+      "nameEn": "Lohagara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "সাতক্ষীরা সদর",
+      "nameEn": "Satkhira Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "9400"
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "আশাশুনি",
+      "nameEn": "Assasuni",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "দেবহাটা",
+      "nameEn": "Debhata",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "কলারোয়া",
+      "nameEn": "Kalaroa",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "কালীগঞ্জ",
+      "nameEn": "Kaliganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "শ্যামনগর",
+      "nameEn": "Shyamnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "KHU-SATKHIRA",
+      "nameBn": "তালা",
+      "nameEn": "Tala",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "বরগুনা সদর",
+      "nameEn": "Barguna Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8700"
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "আমতলী",
+      "nameEn": "Amtali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "বামনা",
+      "nameEn": "Bamna",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "বেতাগী",
+      "nameEn": "Betagi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "পাথরঘাটা",
+      "nameEn": "Patharghata",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARGUNA",
+      "nameBn": "তালতলী",
+      "nameEn": "Taltali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "বরিশাল সদর",
+      "nameEn": "Barishal Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8200"
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "আগৈলঝাড়া",
+      "nameEn": "Agailjhara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "বাবুগঞ্জ",
+      "nameEn": "Babuganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "বাকেরগঞ্জ",
+      "nameEn": "Bakerganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "বানারীপাড়া",
+      "nameEn": "Banaripara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "গৌরনদী",
+      "nameEn": "Gaurnadi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "হিজলা",
+      "nameEn": "Hizla",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "মেহেন্দিগঞ্জ",
+      "nameEn": "Mehendiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "মুলাদী",
+      "nameEn": "Muladi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BARISHAL",
+      "nameBn": "উজিরপুর",
+      "nameEn": "Wazirpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "ভোলা সদর",
+      "nameEn": "Bhola Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8300"
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "বোরহানউদ্দিন",
+      "nameEn": "Burhanuddin",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "চরফ্যাশন",
+      "nameEn": "Char Fasson",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "দৌলতখান",
+      "nameEn": "Daulatkhan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "লালমোহন",
+      "nameEn": "Lalmohan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "মনপুরা",
+      "nameEn": "Manpura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-BHOLA",
+      "nameBn": "তজুমদ্দিন",
+      "nameEn": "Tazumuddin",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-JHALOKATHI",
+      "nameBn": "ঝালকাঠি সদর",
+      "nameEn": "Jhalokathi Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8400"
+    },
+    {
+      "districtCode": "BAR-JHALOKATHI",
+      "nameBn": "কাঁঠালিয়া",
+      "nameEn": "Kathalia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-JHALOKATHI",
+      "nameBn": "নলছিটি",
+      "nameEn": "Nalchity",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-JHALOKATHI",
+      "nameBn": "রাজাপুর",
+      "nameEn": "Rajapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "পটুয়াখালী সদর",
+      "nameEn": "Patuakhali Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8600"
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "বাউফল",
+      "nameEn": "Bauphal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "দশমিনা",
+      "nameEn": "Dashmina",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "দুমকি",
+      "nameEn": "Dumki",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "গলাচিপা",
+      "nameEn": "Galachipa",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "কলাপাড়া",
+      "nameEn": "Kalapara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "মির্জাগঞ্জ",
+      "nameEn": "Mirzaganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PATUAKHALI",
+      "nameBn": "রাঙ্গাবালী",
+      "nameEn": "Rangabali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "পিরোজপুর সদর",
+      "nameEn": "Pirojpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "8500"
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "ভাণ্ডারিয়া",
+      "nameEn": "Bhandaria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "কাউখালী",
+      "nameEn": "Kawkhali",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "মঠবাড়িয়া",
+      "nameEn": "Mathbaria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "নাজিরপুর",
+      "nameEn": "Nazirpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "নেসারাবাদ",
+      "nameEn": "Nesarabad",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "BAR-PIROJPUR",
+      "nameBn": "জিয়ানগর",
+      "nameEn": "Zianagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "হবিগঞ্জ সদর",
+      "nameEn": "Habiganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3300"
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "আজমিরীগঞ্জ",
+      "nameEn": "Ajmiriganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "বাহুবল",
+      "nameEn": "Bahubal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "বানিয়াচং",
+      "nameEn": "Baniyachong",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "চুনারুঘাট",
+      "nameEn": "Chunarughat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "লাখাই",
+      "nameEn": "Lakhai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "মাধবপুর",
+      "nameEn": "Madhabpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "নবীগঞ্জ",
+      "nameEn": "Nabiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-HABIGANJ",
+      "nameBn": "শায়েস্তাগঞ্জ",
+      "nameEn": "Sayestaganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "মৌলভীবাজার সদর",
+      "nameEn": "Moulvibazar Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3200"
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "জুড়ী",
+      "nameEn": "Juri",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "কমলগঞ্জ",
+      "nameEn": "Kamalganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "কুলাউড়া",
+      "nameEn": "Kulaura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "রাজনগর",
+      "nameEn": "Rajnagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-MOULVIBAZAR",
+      "nameBn": "শ্রীমঙ্গল",
+      "nameEn": "Sreemangal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "সুনামগঞ্জ সদর",
+      "nameEn": "Sunamganj Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3000"
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "বিশ্বম্ভরপুর",
+      "nameEn": "Bishwamvarpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "ছাতক",
+      "nameEn": "Chhatak",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "দিরাই",
+      "nameEn": "Derai",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "ধরমপাশা",
+      "nameEn": "Dharampasha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "দোয়ারাবাজার",
+      "nameEn": "Dowarabazar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "জগন্নাথপুর",
+      "nameEn": "Jagannathpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "জামালগঞ্জ",
+      "nameEn": "Jamalganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "সুল্লা",
+      "nameEn": "Sullah",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "দক্ষিণ সুনামগঞ্জ",
+      "nameEn": "South Sunamganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SUNAMGANJ",
+      "nameBn": "তাহিরপুর",
+      "nameEn": "Tahirpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "সিলেট সদর",
+      "nameEn": "Sylhet Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "3100"
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "বালাগঞ্জ",
+      "nameEn": "Balaganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "বিয়ানীবাজার",
+      "nameEn": "Beanibazar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "বিশ্বনাথ",
+      "nameEn": "Bishwanath",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "কোম্পানীগঞ্জ",
+      "nameEn": "Companiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "দক্ষিণ সুরমা",
+      "nameEn": "Dakshin Surma",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "ফেঞ্চুগঞ্জ",
+      "nameEn": "Fenchuganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "গোলাপগঞ্জ",
+      "nameEn": "Golapganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "গোয়াইনঘাট",
+      "nameEn": "Gowainghat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "জৈন্তাপুর",
+      "nameEn": "Jaintiapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "কানাইঘাট",
+      "nameEn": "Kanaighat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "জকিগঞ্জ",
+      "nameEn": "Zakiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "SYL-SYLHET",
+      "nameBn": "ওসমানীনগর",
+      "nameEn": "Osmani Nagar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "দিনাজপুর সদর",
+      "nameEn": "Dinajpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5200"
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "বিরামপুর",
+      "nameEn": "Birampur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "বীরগঞ্জ",
+      "nameEn": "Birganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "বিরল",
+      "nameEn": "Biral",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "বোচাগঞ্জ",
+      "nameEn": "Bochaganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "চিরিরবন্দর",
+      "nameEn": "Chirirbandar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "ফুলবাড়ী",
+      "nameEn": "Phulbari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "ঘোড়াঘাট",
+      "nameEn": "Ghoraghat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "হাকিমপুর",
+      "nameEn": "Hakimpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "কাহারোল",
+      "nameEn": "Kaharole",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "খানসামা",
+      "nameEn": "Khansama",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "নবাবগঞ্জ",
+      "nameEn": "Nawabganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-DINAJPUR",
+      "nameBn": "পার্বতীপুর",
+      "nameEn": "Parbatipur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "গাইবান্ধা সদর",
+      "nameEn": "Gaibandha Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5700"
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "ফুলছড়ি",
+      "nameEn": "Fulchhari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "গোবিন্দগঞ্জ",
+      "nameEn": "Gobindaganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "পলাশবাড়ী",
+      "nameEn": "Palashbari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "সাঘাটা",
+      "nameEn": "Saghata",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "সুন্দরগঞ্জ",
+      "nameEn": "Sundarganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-GAIBANDHA",
+      "nameBn": "সাদুল্লাপুর",
+      "nameEn": "Sadullapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "কুড়িগ্রাম সদর",
+      "nameEn": "Kurigram Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5600"
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "ভূরুঙ্গামারী",
+      "nameEn": "Bhurungamari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "চর রাজিবপুর",
+      "nameEn": "Char Rajibpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "চিলমারী",
+      "nameEn": "Chilmari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "ফুলবাড়ী",
+      "nameEn": "Phulbari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "নাগেশ্বরী",
+      "nameEn": "Nageshwari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "রাজারহাট",
+      "nameEn": "Rajarhat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "রৌমারী",
+      "nameEn": "Raomari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-KURIGRAM",
+      "nameBn": "উলিপুর",
+      "nameEn": "Ulipur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-LALMONIRHAT",
+      "nameBn": "লালমনিরহাট সদর",
+      "nameEn": "Lalmonirhat Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5500"
+    },
+    {
+      "districtCode": "RAN-LALMONIRHAT",
+      "nameBn": "আদিতমারী",
+      "nameEn": "Aditmari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-LALMONIRHAT",
+      "nameBn": "হাতীবান্ধা",
+      "nameEn": "Hatibandha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-LALMONIRHAT",
+      "nameBn": "কালীগঞ্জ",
+      "nameEn": "Kaliganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-LALMONIRHAT",
+      "nameBn": "পাটগ্রাম",
+      "nameEn": "Patgram",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "নীলফামারী সদর",
+      "nameEn": "Nilphamari Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5300"
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "ডিমলা",
+      "nameEn": "Dimla",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "ডোমার",
+      "nameEn": "Domar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "জলঢাকা",
+      "nameEn": "Jaldhaka",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "কিশোরগঞ্জ",
+      "nameEn": "Kishoreganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-NILPHAMARI",
+      "nameBn": "সৈয়দপুর",
+      "nameEn": "Saidpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5310"
+    },
+    {
+      "districtCode": "RAN-PANCHAGARH",
+      "nameBn": "পঞ্চগড় সদর",
+      "nameEn": "Panchagarh Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5000"
+    },
+    {
+      "districtCode": "RAN-PANCHAGARH",
+      "nameBn": "আটোয়ারী",
+      "nameEn": "Atwari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-PANCHAGARH",
+      "nameBn": "বোদা",
+      "nameEn": "Boda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-PANCHAGARH",
+      "nameBn": "দেবীগঞ্জ",
+      "nameEn": "Debiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-PANCHAGARH",
+      "nameBn": "তেতুলিয়া",
+      "nameEn": "Tetulia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "রংপুর সদর",
+      "nameEn": "Rangpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5400"
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "বদরগঞ্জ",
+      "nameEn": "Badarganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "গংগাচড়া",
+      "nameEn": "Gangachara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "কাউনিয়া",
+      "nameEn": "Kaunia",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "মিঠাপুকুর",
+      "nameEn": "Mithapukur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "পীরগাছা",
+      "nameEn": "Pirgachha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "পীরগঞ্জ",
+      "nameEn": "Pirganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-RANGPUR",
+      "nameBn": "তারাগঞ্জ",
+      "nameEn": "Taraganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-THAKURGAON",
+      "nameBn": "ঠাকুরগাঁও সদর",
+      "nameEn": "Thakurgaon Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "5100"
+    },
+    {
+      "districtCode": "RAN-THAKURGAON",
+      "nameBn": "বালিয়াডাঙ্গী",
+      "nameEn": "Baliadangi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-THAKURGAON",
+      "nameBn": "হরিপুর",
+      "nameEn": "Haripur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-THAKURGAON",
+      "nameBn": "পীরগঞ্জ",
+      "nameEn": "Pirganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "RAN-THAKURGAON",
+      "nameBn": "রাণীশংকৈল",
+      "nameEn": "Ranisankail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "জামালপুর সদর",
+      "nameEn": "Jamalpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2000"
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "বকশীগঞ্জ",
+      "nameEn": "Baksiganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "দেওয়ানগঞ্জ",
+      "nameEn": "Dewanganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "ইসলামপুর",
+      "nameEn": "Islampur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "মাদারগঞ্জ",
+      "nameEn": "Madarganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "মেলান্দহ",
+      "nameEn": "Melandaha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-JAMALPUR",
+      "nameBn": "সরিষাবাড়ী",
+      "nameEn": "Sarishabari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ময়মনসিংহ সদর",
+      "nameEn": "Mymensingh Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2200"
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ভালুকা",
+      "nameEn": "Bhaluka",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ধোবাউড়া",
+      "nameEn": "Dhobaura",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ফুলবাড়ীয়া",
+      "nameEn": "Fulbaria",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "গফরগাঁও",
+      "nameEn": "Gaffargaon",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "গৌরীপুর",
+      "nameEn": "Gauripur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "হালুয়াঘাট",
+      "nameEn": "Haluaghat",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ঈশ্বরগঞ্জ",
+      "nameEn": "Ishwarganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "মুক্তাগাছা",
+      "nameEn": "Muktagachha",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "নান্দাইল",
+      "nameEn": "Nandail",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ফুলপুর",
+      "nameEn": "Phulpur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "ত্রিশাল",
+      "nameEn": "Trishal",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-MYMENSINGH",
+      "nameBn": "তারাকান্দা",
+      "nameEn": "Tarakanda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "নেত্রকোণা সদর",
+      "nameEn": "Netrokona Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2400"
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "আটপাড়া",
+      "nameEn": "Atpara",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "বারহাট্টা",
+      "nameEn": "Barhatta",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "দুর্গাপুর",
+      "nameEn": "Durgapur",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "খালিয়াজুরী",
+      "nameEn": "Khaliajuri",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "কলমাকান্দা",
+      "nameEn": "Kalmakanda",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "কেন্দুয়া",
+      "nameEn": "Kendua",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "মদন",
+      "nameEn": "Madan",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "মোহনগঞ্জ",
+      "nameEn": "Mohanganj",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-NETROKONA",
+      "nameBn": "পূর্বধলা",
+      "nameEn": "Purbadhala",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-SHERPUR",
+      "nameBn": "শেরপুর সদর",
+      "nameEn": "Sherpur Sadar",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": "2100"
+    },
+    {
+      "districtCode": "MYM-SHERPUR",
+      "nameBn": "ঝিনাইগাতী",
+      "nameEn": "Jhenaigati",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-SHERPUR",
+      "nameBn": "নকলা",
+      "nameEn": "Nakla",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-SHERPUR",
+      "nameBn": "নালিতাবাড়ী",
+      "nameEn": "Nalitabari",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    },
+    {
+      "districtCode": "MYM-SHERPUR",
+      "nameBn": "শ্রীবরদী",
+      "nameEn": "Sreebardi",
+      "type": "upazila",
+      "isDhakaCity": false,
+      "postcode": null
+    }
+  ]
+}

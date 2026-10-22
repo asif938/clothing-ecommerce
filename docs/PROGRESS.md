@@ -8,7 +8,10 @@ reasoning behind choices made along the way.
 
 ## Milestone 0 — Repository and tooling
 
-**Status: in progress.**
+**Status: complete**, with one caveat carried forward: the Docker Compose
+stack (`docker-compose.dev.yml`) has still never been run against real
+containers — Docker isn't available in this implementation environment. All
+other acceptance criteria met; see "Known issues" below.
 
 ### Built
 
@@ -116,16 +119,140 @@ globals.css, next.config.mjs) built and ran fine as-is, but **read that
 guide before writing real routing/data-fetching/image/revalidation code**
 in Milestone 1/3/4 — Next 16 is a full major ahead of whatever's familiar.
 
+---
+
+## Milestone 1 — Platform foundations
+
+**Status: complete**, with the same Docker/live-Postgres caveat as M0 — see
+"Known issues" below. Prisma 6→7 was re-evaluated at the start of this
+milestone as planned and deferred again (docs/DECISIONS.md: moving to v7
+means moving `apps/api` to ESM, a bigger, separate change).
+
+### Built
+
+- **Prisma schema** (`packages/db/prisma/schema.prisma`): `Setting`,
+  `UiString`, `StaffUser`/`StaffSession`/`Role`/`RolePermission`/
+  `StaffRole`, `AuditLog`, `ProviderInstance`/`ProviderLog`,
+  `ScheduledTask`, `Division`/`District`/`Area`, `MediaFolder`/`Media`/
+  `MediaUsage` — one hand-written init migration
+  (`prisma/migrations/20261022102633_init`, generated via `prisma migrate
+  diff --from-empty` since no live DB was available to run `migrate dev`
+  against; includes `CREATE EXTENSION citext`).
+- **`packages/db/src/seed.ts`**: seeds the "Super Admin" system role with
+  every permission in the catalog, every default UI string, and the full
+  BD locations tree from `seed-data/bd-locations.json` (8 divisions, 64
+  districts, 541 areas — see DECISIONS.md for source/license/verification
+  scope). Settings rows are deliberately *not* seeded (missing keys fall
+  back to the registry default, so seeding them would be redundant).
+  `--demo` additionally sets a few "Demo Fashion" brand settings; full demo
+  catalog/pages/orders wait for the milestones that create that data.
+- **`packages/shared`**: settings registry (`defineSetting`/
+  `validateSettingValue`/registry) + the actual M1 setting definitions
+  (brand, locale, theme-minimal, security groups); the permission catalog
+  (`PERMISSIONS`); `LocalizedText`/`t()`/UI-string defaults; AES-256-GCM
+  encryption + Argon2 password hashing + TOTP (otplib v13) helpers; the
+  provider framework's capability types + static driver catalog, with real
+  `local`/`s3` storage drivers and `mock`/`smtp` email + `mock` SMS drivers.
+  40 unit tests.
+- **`apps/api`** — new modules: `PrismaModule` (global, lazy-connect),
+  `CacheModule` (in-memory, tag-based invalidation), `AuditModule` (global,
+  append-only), `SettingsModule` (registry-backed CRUD + public
+  `GET /store/config`, cached+invalidated), `AuthModule` (password + TOTP
+  2FA login/logout/session, httpOnly cookie), `StaffModule`/`RbacModule`
+  (staff CRUD, role + permission-matrix CRUD), `UiStringsModule`,
+  `LocationsModule`, `StorageModule` (env-driven driver selection),
+  `MediaModule` (upload with `sharp`-generated thumb/md/lg WEBP variants,
+  blur-placeholder data URL, default-center focal point, folders, usage
+  tracking, local-file serving route), `ProvidersModule`
+  (`provider_instances` CRUD + encrypted config + test-connection +
+  `provider_logs`), `QueueModule` (pg-boss, non-fatal if unreachable) +
+  `SchedulerService` (handler registry, embedded `setInterval` tick when
+  `WORKER_MODE=embedded`, external `POST /public/cron/:task` with
+  `CRON_SECRET` for free-tier hosts that spin down), `SetupModule`
+  (bootstrap-only Super Admin creation + mandatory first-login 2FA
+  confirmation). `PermissionsGuard` + `@RequirePermissions` +
+  `StaffAuthGuard` + `ZodValidationPipe` in `common/`. 25 unit tests.
+- **`apps/admin`**: next-intl locale routing (`bn` unprefixed, `en` at
+  `/en/...`, per §4.5) via `proxy.ts` (Next 16 renamed `middleware.ts`);
+  `next.config.mjs` rewrites `/api/*` to the real API server-side (no
+  `NEXT_PUBLIC_*` env, no CORS, "config only" per golden rule 8); setup
+  wizard (Super Admin creation → QR/TOTP confirm → done), login (password →
+  TOTP when enabled), authenticated shell (sidebar, per-locale nav, logout),
+  generated Settings page (reads the registry metadata, renders
+  per-widget controls), Staff & Roles page (permission-matrix role
+  creation, staff creation/role-assignment/disable), Media Library page
+  (upload, grid, delete), Integrations page (provider-instance create +
+  test-connection, email/sms capabilities), Audit Log page (paginated
+  table).
+- **`apps/storefront`**: same next-intl locale routing + `/api/*` rewrite,
+  wired but not yet used for anything beyond the existing placeholder home
+  page (real storefront content is M3/M4, unchanged from the M0 scope
+  boundary).
+
+### Verified
+
+- `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`
+  all pass across all 11 workspace packages (72 unit tests total:
+  40 `@clothing/shared`, 7 `@clothing/db`, 25 `apps/api`).
+- **Ran the real API dev server with no database available** and confirmed:
+  the full module graph resolves (no DI errors) and every route maps
+  correctly; `/health` is 200; `/ready` is a clean 503; `GET /store/config`,
+  `/setup/status`, `POST /public/cron/:task` (with the right secret) all
+  fail with the actual "can't reach database" error rather than crashing
+  the process; `POST /auth/login` validation errors return the expected
+  zod issue list; `GET /admin/providers/catalog` (requires auth) is a clean
+  401; `GET /media/*path` resolves through the Express-5 named-wildcard
+  route correctly (confirmed via a standalone Express 5 probe before
+  relying on it, then against the real route). The queue backend logs a
+  warning and the app still starts when pg-boss can't reach Postgres.
+- **Ran the real admin + storefront dev servers together with the API**,
+  hit them with curl, and confirmed: `/` on each app redirects correctly
+  (admin: to `/setup` when no Super Admin exists yet); the setup wizard page
+  renders real Bangla copy at `/setup` and real English copy at `/en/setup`
+  (confirms the `bn` default-unprefixed / `en`-prefixed locale strategy
+  actually works end-to-end, not just in config); the admin app's `/api/*`
+  rewrite correctly proxies to the real API (reaches it, gets the same
+  "can't reach database" error as calling the API directly — confirms the
+  proxy, not just the API, is wired correctly).
+- **Not verified in this environment** (same root cause as M0): the setup
+  wizard → Super Admin login-with-2FA → setting-change-is-audited →
+  image-upload-generates-sizes → role-denies-elsewhere flow described in
+  §16 M1's acceptance line has never been run against a real Postgres
+  instance, because none is available here. Every piece of it was
+  exercised individually against the real (schema-validated, DI-correct)
+  code wherever that didn't require a live database (see above and the
+  unit test suite); the one thing that's never happened is the full flow,
+  live, end to end. **Next session with Docker/a real Postgres available:
+  run `docker compose -f infra/compose/docker-compose.dev.yml up -d`, copy
+  `.env.example` to `.env` + `apps/api/.env` (fill in `APP_ENCRYPTION_KEY`
+  and `apps/admin/.env.local`'s `API_URL`), `pnpm db:migrate:deploy &&
+  pnpm db:seed`, then actually click through the M1 acceptance scenario in
+  a browser.**
+
+### Known issues / explicitly deferred (see docs/DECISIONS.md for the reasoning)
+
+- Docker still unavailable in this environment — same caveat as M0, now
+  also blocking the one live end-to-end run described above.
+- Deferred from §5.1's table: `approval_requests`, `notifications_admin`,
+  `saved_views`, `api_keys`, `outbound_webhooks`/`webhook_events`,
+  `courier_area_mappings` — added with the milestone that needs them.
+- Settings UI: `json`/`image` widgets use a generic JSON textarea / plain
+  media-ID text field in M1, not bespoke editors or a media-picker modal.
+- Provider-call wrapper has timing + logging only; retries/backoff/circuit
+  breaking (§4.3 rule 3) wait for the first real network-calling driver
+  (M5/M6 payment/courier).
+- Config export/import (§4.4 item 5) not built — nothing worth exporting
+  exists yet (no CMS/menus/templates/categories until later milestones).
+- `MediaService` has no "set as my avatar" endpoint yet (the
+  `staff_users.avatar_media_id` relation exists; nothing writes to it).
+- No git remote is configured in this environment, so this milestone's
+  commit could not be pushed (same situation flagged at the end of M0,
+  still unresolved — needs the project owner to add one).
+
 ### Next up
 
-Milestone 1 — platform foundations (§4, §16 M1). **First task of M1: decide
-whether to move `packages/db` from Prisma 6.19.3 to Prisma 7 (driver
-adapters, `prisma.config.ts`) before migrating the real schema in — see
-`docs/DECISIONS.md`.** Then: Prisma schema for system/
-staff/settings/ui_strings/locations/media/audit, settings registry +
-generated settings UI, secret encryption, provider framework + mock drivers
-+ Integrations UI, queue (pg-boss) + cache + scheduler + external-cron
-endpoint, storage provider (local + S3), media library, i18n (next-intl,
-LocalizedText, UI strings table/editor), staff auth (password + TOTP 2FA),
-RBAC + permission matrix UI, audit log + viewer, setup wizard, admin shell,
-BD location seed + area management.
+Milestone 2 — catalog and inventory (§16 M2): categories tree, attributes,
+size systems/charts, options & variant matrix, products editor, collections,
+price schedules, product versions, stock locations/levels/adjustments,
+CSV/Excel import-export with dry run, barcode labels, search provider
+(Postgres FTS + trigram + editable Banglish synonyms table).
