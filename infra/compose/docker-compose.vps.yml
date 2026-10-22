@@ -1,0 +1,120 @@
+name: clothing-ecommerce
+
+# Production, self-hosted VPS mode (docs/PROJECT_SPEC.md §15.3). Switching
+# from free-tier mode to this is an env-var change, not a code change.
+# Needs a `.env` next to this file (copy repo root .env.example) plus a
+# `Caddyfile` — see docs/DEPLOYMENT.md once it is written in Milestone 9.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - storefront
+      - admin
+      - api
+
+  storefront:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.storefront
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOSTING_TIER: vps
+    expose:
+      - "3000"
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.admin
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOSTING_TIER: vps
+    expose:
+      - "3001"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOSTING_TIER: vps
+      WORKER_MODE: separate
+    expose:
+      - "4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOSTING_TIER: vps
+      WORKER_MODE: separate
+      WORKER_ONLY: "true"
+    command: ["node", "dist/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional — omit REDIS_URL from .env to stay on pg-boss + in-memory cache.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: ["redis"]
+    volumes:
+      - redis_data:/data
+
+  # Optional — omit MEILI_URL from .env to stay on Postgres full-text + trigram.
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    profiles: ["meilisearch"]
+    env_file: .env
+    volumes:
+      - meili_data:/meili_data
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["/scripts/backup-cron.sh"]
+    volumes:
+      - ../scripts:/scripts:ro
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,17 @@
+# Copy to Caddyfile next to docker-compose.vps.yml and fill in the real
+# domains. docs/DEPLOYMENT.md (written in Milestone 9) documents DNS setup.
+
+storefront.example.com {
+  reverse_proxy storefront:3000
+  encode gzip
+}
+
+admin.example.com {
+  reverse_proxy admin:3001
+  encode gzip
+}
+
+api.example.com {
+  reverse_proxy api:4000
+  encode gzip
+}

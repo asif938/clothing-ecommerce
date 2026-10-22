@@ -1,0 +1,22 @@
+# VPS mode only (docs/PROJECT_SPEC.md §15.3).
+FROM node:22-alpine AS base
+RUN corepack enable
+WORKDIR /repo
+
+FROM base AS deps
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages ./packages
+COPY apps/storefront ./apps/storefront
+RUN pnpm install --frozen-lockfile --filter storefront...
+
+FROM deps AS build
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter storefront build
+
+FROM base AS runner
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=build /repo /repo
+WORKDIR /repo/apps/storefront
+EXPOSE 3000
+CMD ["pnpm", "start"]

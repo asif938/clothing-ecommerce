@@ -1,0 +1,23 @@
+{
+  "name": "@clothing/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-app zod schemas, types, enums, money/phone/date utils, permission list, settings registry.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@clothing/config": "workspace:*",
+    "eslint": "10.13.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

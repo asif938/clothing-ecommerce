@@ -1,0 +1,24 @@
+/*
+ * Shared Tailwind v4 theme. `@theme` tokens compile to real CSS custom
+ * properties on :root *and* generate utilities that reference those
+ * properties (e.g. `.bg-brand { background-color: var(--color-brand) }`),
+ * never the resolved value — so the admin can override any token at
+ * runtime (theme-tokens settings group, docs/PROJECT_SPEC.md §4.4.2)
+ * without a rebuild. These are developer-facing fallbacks only; the real
+ * values always come from settings. Full token set lands in Milestone 3.
+ */
+@theme {
+  --color-brand: #111111;
+  --color-brand-foreground: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-foreground: #111111;
+  --color-muted: #f5f5f4;
+  --color-border: #e5e5e5;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+
+  --radius-theme: 0.5rem;
+
+  --font-bangla: var(--font-bangla-family, sans-serif);
+  --font-latin: var(--font-latin-family, sans-serif);
+}

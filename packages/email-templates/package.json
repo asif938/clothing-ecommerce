@@ -1,0 +1,26 @@
+{
+  "name": "@clothing/email-templates",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React Email templates rendered with DB-provided content (message_templates).",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"no unit tests in @clothing/email-templates yet\""
+  },
+  "dependencies": {
+    "@react-email/components": "1.0.12"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@clothing/config": "workspace:*",
+    "@types/react": "19.3.0",
+    "eslint": "10.13.0",
+    "react": "19.3.1",
+    "typescript": "6.0.3"
+  }
+}
