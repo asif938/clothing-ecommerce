@@ -657,12 +657,149 @@ limitation as every prior milestone.
 
 ---
 
+## Milestone 4 — Storefront catalog experience
+
+Status: complete (§16 M4) at the code/test level. The acceptance
+criterion itself — a Lighthouse run against a local production build with
+a seeded demo catalog — cannot be executed in this environment at all (no
+Postgres, no browser); see "Not verified" below.
+
+### Built
+
+- **`packages/db`**: `notify_me_requests` (variant + contact + channel,
+  no customer required), `analytics_events` (append-only, like
+  `audit_logs`) — hand-written migration `20261023180000_storefront_
+  catalog`, same reasoning as every prior milestone's.
+- **`apps/api`**:
+  - `StoreCatalogService`/`Controller` grew from M3's CMS-block-only
+    helpers into the real public catalog API: category detail (+ root-
+    first breadcrumb), collection detail (schedule-aware), a filterable/
+    sorted/paginated/faceted product listing (`/store/catalog/listing`),
+    full PDP data (`/store/catalog/products/:slug` — options/values with
+    swatch URLs, variants with per-variant `available`/`lowStock` summed
+    from real inventory, grouped media, size chart, attributes, relations
+    by type, root-first breadcrumb), and instant-suggestion search
+    (`/store/catalog/suggest`).
+  - `SearchService` (M2) now returns the same product-card shape as every
+    other listing endpoint, resolving its image URL the same way — a
+    consistency fix made while wiring the storefront's `/search` page.
+  - `NotifyMeModule`/`AnalyticsModule` (new, public) — "notify me when
+    back in stock" and first-party event capture respectively; both
+    customer-less by design (no customer model exists before M5).
+  - `StoreContentController` gained `/store/sitemap` — one aggregated,
+    type-split list (pages/products/categories/collections) for the
+    storefront's `app/sitemap.ts`.
+- **`apps/storefront`** (the bulk of this milestone):
+  - `/c/[...slug]` (category) and `/collections/[slug]` share one
+    `CatalogListing` component — breadcrumb, attribute/price/stock
+    filters and sort (`CatalogFilters`, URL-driven so every filter state
+    is a shareable/bookmarkable link, never client-only state), a
+    product grid, and real anchor-tag pagination (`Pagination` — crawlable
+    "load more," not a client-only button, per §7.3).
+  - `/p/[slug]` (PDP): `ProductDetailView` — color swatches that swap the
+    gallery, size buttons disabled exactly when no active/in-stock
+    variant exists for the current selection (the acceptance scenario's
+    two UI behaviors), a size chart modal, a notify-me form for
+    out-of-stock variants, WhatsApp order link (prefilled text + page
+    URL), related-products sections by relation type, a reviews summary
+    from `Product.ratingAvg`/`ratingCount`, and a sticky mobile
+    add-to-cart bar. Product/Offer/AggregateRating/BreadcrumbList JSON-LD;
+    Organization + WebSite(`SearchAction`) JSON-LD in the root layout.
+  - `/search` (M2's `/store/search`, not the listing endpoint — a
+    free-text query isn't a facet/scope filter) with instant suggestions
+    wired into the header's new `SearchBox` (debounced, product
+    thumbnails + categories).
+  - Guest wishlist (`WishlistButton`, `/wishlist`) and "recently viewed"
+    (`RecentlyViewedTracker`/`Section`) — both `lib/use-local-list.ts`
+    (localStorage), by design (see docs/DECISIONS.md — no customer model
+    before M5).
+  - `app/sitemap.ts` + `app/robots.ts` (Next's own conventions — real
+    `/sitemap.xml`/`/robots.txt` routes, confirmed in the build's route
+    table); `hreflang` via each catalog page's `alternates.languages`.
+  - `lib/analytics.ts` — `trackEvent()` pushes to `window.dataLayer` *and*
+    relays to `/store/events`; wired on the PDP's `view_item`.
+
+### Verified
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` all pass across
+  the whole workspace (125 `apps/api` unit tests — 6 new this milestone,
+  covering price-sort order/pagination, cross-location stock summing, and
+  the category breadcrumb walk incl. a cycle guard; 10 `storefront` tests
+  — 7 new, covering the listing search-param parser incl. the
+  repeated-query-key/unknown-sort-value edge cases). Running the whole
+  workspace's lint in parallel via Turbo still intermittently OOMs on this
+  machine (a Windows resource limit, not a code issue, flagged since M3);
+  every package lints clean run individually, which is how this was
+  re-confirmed again this milestone.
+- **Ran the real API dev server with no database available**: the full DI
+  graph resolves, every new route maps (`/store/catalog/categories/:slug`,
+  `/store/catalog/collections/:slug`, `/store/catalog/listing`,
+  `/store/catalog/products/:slug`, `/store/catalog/suggest`,
+  `/store/sitemap`, `/store/notify-me`, `/store/events`), a bad
+  `notify-me` body correctly 400s from Zod validation *before* touching
+  Prisma, `/health` stays 200, and every DB-dependent route returns the
+  real `PrismaClientInitializationError` rather than crashing or 500ing
+  on a code bug.
+- All three apps build cleanly together, including every new storefront
+  route (confirmed in the build's own route table: `/c/[...slug]`,
+  `/collections/[slug]`, `/p/[slug]`, `/search`, `/wishlist`,
+  `/sitemap.xml`, `/robots.txt`).
+
+### Not verified in this environment
+
+- **The acceptance criterion itself cannot run here at all**: a Lighthouse
+  mobile performance/SEO audit needs a seeded demo catalog behind a live
+  Postgres, a local *production* build actually serving traffic, and a
+  real Chrome/Lighthouse run — none of which this sandbox has. Every page
+  was built to the spec's named techniques (SSR, pre-sized images via the
+  existing media/`getMediaUrl` pipeline, semantic HTML and headings, real
+  `<a>`-tag pagination, JSON-LD, minimal client JS — the PDP's option/
+  gallery interactivity is the one unavoidably client-rendered piece) but
+  the actual score needs that environment to measure.
+- "Selecting a color switches images" and "unavailable size combinations
+  are disabled" (the acceptance scenario's two concrete UI behaviors) are
+  implemented and type/lint/build-clean, but not clicked through in a
+  real browser against real seeded variant data — no database to seed.
+- The full publishing-pipeline tag set this milestone added
+  (`category:*`, `product:*`, `listing`, `search`, `suggest`, `sitemap`)
+  hasn't been exercised against a real `RevalidationService` call the
+  way M3's page/settings tags were tested — same reasoning, no live stack
+  to run it against.
+
+### Known issues / explicitly deferred
+
+- Delivery estimate, delivery fee preview, COD availability on the PDP —
+  need M5's shipping zones & rates.
+- Add to cart / Buy now are real, reachable buttons with correct pricing,
+  but their handler shows a "coming soon" message instead of mutating a
+  cart — cart itself is M5.
+- Dynamic per-product OG images (image + price, composed + cached) — the
+  PDP's OG tags reuse the product's own first photo instead.
+- `FAQPage`/`Article` structured data (no FAQ system or blog yet).
+- A real search/facet engine's "count as if this facet were also
+  selected" — facet counts are scoped to category/collection/tag only.
+- The listing's "in stock only" filter is "has an active variant," not a
+  real per-location inventory join.
+- Account-synced wishlist/recently-viewed (needs M5's customer auth).
+- No admin viewer for notify-me requests yet, and nothing actually sends
+  the "back in stock" message (needs M7's notification drivers) — the
+  requests are captured and that's it.
+- `robots.txt` is static code, not a settings-registry entry, despite
+  §13.2 naming it as settings-driven — no admin screen would ever edit
+  it yet.
+- The k6 load-test scripts and the 500-VU load test (§13.1) — a
+  deployment-time exercise this environment can't run.
+
+---
+
 ### Next up
 
-Milestone 4 — Storefront catalog experience (§16 M4): category/collection
-listing with filters/sort/pagination/facet counts, the search page +
-instant suggestions (building on M2's Postgres FTS/synonyms), the full
-PDP (gallery, options, size chart, delivery estimate, reviews display,
-related, sticky ATC, share, WhatsApp order), wishlist (guest + account),
-recently viewed, SEO (meta, structured data, sitemaps, robots, hreflang,
-canonical), and first-party analytics events + dataLayer.
+Milestone 5 — Cart, checkout, shipping, payment rules, customer auth
+(§16 M5): cart (drawer + page) with the pricing pipeline (§6.3, automatic
++ code discounts, basic flash sales), shipping zones & rates editor and
+calculation (§6.4), the payment rules editor and engine (§6.5), risk
+scoring (§6.6), stock reservation (§6.7), the one-page checkout (§7.5),
+OTP (mock SMS) + Google login, guest checkout, account area, order
+placement with idempotency, payment drivers (COD + mock gateway +
+SSLCommerz/bKash/Nagad against sandbox docs), success/failure flows,
+payment reconciliation, Turnstile.

@@ -10,7 +10,7 @@ all business logic and integrations). One codebase, single-tenant per
 deployment, reusable for any clothing brand via a setup wizard and config
 export/import — no code changes per brand. Full scope is specified in
 `docs/PROJECT_SPEC.md`; it is built milestone by milestone (§16), currently
-starting Milestone 4. Check `docs/PROGRESS.md` before starting work to see
+starting Milestone 5. Check `docs/PROGRESS.md` before starting work to see
 exactly what exists.
 
 ## Golden rules

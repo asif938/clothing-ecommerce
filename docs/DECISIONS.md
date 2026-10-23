@@ -869,3 +869,142 @@ narrowed what else was needed:
   scheduled banner appears/disappears; version restore) against a real
   Postgres and a running storefront process — no database is available
   in this environment (same root cause flagged throughout M0–M2).
+
+## 2026-10-23 — Milestone 4: storefront catalog experience
+
+**Context.** §16 M4: category/collection listing with filters/sort/
+pagination/facets, search + instant suggestions, the full PDP, wishlist,
+recently viewed, notify-me, SEO (meta/structured data/sitemaps/robots/
+hreflang/canonical), first-party analytics. Acceptance: Lighthouse mobile
+≥90 performance / ≥95 SEO on home/category/PDP with demo data on a local
+production build; selecting a color switches images; unavailable size
+combinations are disabled.
+
+**Decision — `/c/[...slug]` only looks up the *last* path segment against
+the (flat, unique) category slug.** §13.2 wants clean-looking nested URLs
+(`/c/men/panjabi`); the `categories` table has no stored hierarchical path,
+just a single unique slug per category (§5.3, unchanged since M2). A
+catch-all route that only resolves the final segment gets the same URL
+shape without adding path-building/validation for every ancestor — a
+category that moves to a new parent doesn't need its own slug to change,
+and a wrong ancestor segment in the URL still resolves (rather than 404s),
+which is an acceptable trade-off for a single-brand storefront.
+
+**Decision — wishlist and "recently viewed" are client-only (localStorage),
+full stop, this milestone.** §7.2/§7.4 ask for "guest + account" wishlist
+and "local storage + account sync" for recently viewed — but customer
+accounts don't exist before M5 (customer auth). Building the guest half
+now and the account-sync half later is the natural split, not a
+workaround: `lib/use-local-list.ts` is written so that "read this list and
+merge it into the account's stored one on login" is the obvious extension
+point once a customer model exists.
+
+**Decision — a menu item's `targetId` is expected to already be a slug**
+for `category`/`collection`/`product`/`page` types, not a database id,
+despite the field's name. There's no menu admin UI yet (deferred in M3)
+to write a real id into it, and resolving id→slug per render for every
+menu item would mean either N extra queries per page load or a cache this
+milestone doesn't need yet. When the menu admin UI is built, it should
+write (or resolve to) the slug directly — see the comment on
+`apps/storefront/components/header.tsx`'s `menuHref`.
+
+**Decision — price-sorted listings sort in application code, not SQL.**
+Prisma's `orderBy` can sort a parent query by a related list's `_count`,
+but not by `_min`/`_max` — and this listing's `where` is assembled
+dynamically from whichever filters the shopper picked, so a hand-written
+raw-SQL equivalent would have to duplicate all of that filter-building
+logic just for one sort order. Instead, `price_asc`/`price_desc` load
+every matching product's id + variant prices (bounded by the same
+`where`), sort by min price in memory, and paginate the *id list* before
+fetching full rows for just that page. Correct and fine at the free-tier/
+single-category scale this is built for; a real search engine's sort
+(when/if one gets added) is the answer at a scale where loading every
+candidate id stops being cheap.
+
+**Decision — facet counts are scoped to the category/collection/tag
+alone, never re-filtered by the shopper's own attribute selections.**
+A shopper can always broaden a filter (every facet count stays accurate
+against the base scope), at the cost of not showing "count if this facet
+were also applied" the way a dedicated search/facet engine would. A
+simpler, honestly-scoped facet model, not the full thing.
+
+**Decision — the listing's "in stock only" filter is approximated as "has
+an active variant"**, not a real inventory join (`available > 0` per
+variant, summed across locations) — the PDP's own availability data *is*
+real (see below), but doing that join for every row of a paginated
+listing query is a cost this milestone's scope doesn't justify yet.
+
+**Decision — `SearchService` (M2) now returns the same card shape
+(`id, slug, title, imageUrl, priceFrom, compareAtFrom`) as every other
+public listing endpoint**, resolving the image URL via
+`MediaProvidersService` like `StoreCatalogService` does, instead of the
+raw Prisma rows (with an unresolved `media.media` relation) it returned
+before M4 had a reason to care. A drive-by consistency fix while wiring
+the storefront's search results page, not a new feature.
+
+**Decision — the PDP's "Add to cart"/"Buy now" buttons are real, visible,
+reachable UI — not disabled — but their handler just shows a "coming
+soon" message instead of mutating anything.** §16 M4's own bullet list
+names "sticky ATC" as a PDP part to build in *this* milestone, while cart
+mutation itself is explicitly M5's ("Cart (drawer + page) with pricing
+pipeline"). Rendering the real button now (full width, sticky bar on
+mobile, correct price) means M5 only has to wire the handler, not design
+a screen; showing a message rather than failing silently or looking
+broken makes the current limit honest to whoever clicks it.
+
+**Decision — reviews on the PDP read `Product.ratingAvg`/`ratingCount`**
+(denormalized columns that have existed on `products` since M2) rather
+than a `reviews` table — that table, and the moderation/photo-review/
+fit-feedback UI around it, is M8's ("Marketing basics, customers,
+reviews..."). "No reviews yet" is the honest empty state until M8 ships
+real reviews that update those two columns.
+
+**Decision — delivery estimate, delivery fee preview, and COD
+availability are not on the PDP**, despite being named as PDP MVP parts
+in §7.4. All three need shipping zones/rates, which don't exist before
+M5 ("shipping zones & rates editor and calculation"). Flagged below as
+deferred rather than stubbed with fake numbers.
+
+**Decision — `robots.txt` is a static, code-defined rule set
+(`app/robots.ts`), not driven by a settings-registry entry**, despite
+§13.2 saying "robots.txt from settings." There's no admin screen that
+would ever edit custom robots rules yet, and a setting nobody can change
+is no better than a constant — this is one for whenever that screen
+exists, not a silent gap (the `sitemap.xml` URL inside it, and the
+disallow list, are both correct and real for what's built so far).
+
+**Decision — Organization + WebSite (`SearchAction`) JSON-LD lives in the
+root layout (site-wide), Product/Offer/AggregateRating/BreadcrumbList
+live on the PDP** — matching §13.2's list except `FAQPage` (no FAQ system
+exists yet) and `Article` (blog is phase 2, M10). Dynamic per-product OG
+images (image + price, cached) are not built; PDP Open Graph tags reuse
+the product's own first photo instead — a real image, just not the
+composed price-overlay variant §13.2 describes.
+
+**Deferred (documented, not silently dropped):**
+- Delivery estimate/fee preview/COD availability on the PDP (needs M5's
+  shipping zones & rates).
+- Dynamic price-overlay OG images for products.
+- `FAQPage`/`Article` structured data (no FAQ/blog system yet).
+- A real search/facet engine's "count as if this facet were also
+  selected" — the current facet model is scoped to category/collection/
+  tag only (see above).
+- A genuine inventory join for the listing's "in stock only" filter
+  (currently approximated as "has an active variant").
+- Account-synced wishlist/recently-viewed (needs M5's customer auth).
+- A notify-me admin viewer (the requests are recorded; nothing reads them
+  back in the admin yet) and actually sending the "back in stock" message
+  (needs M7's notification drivers).
+- The k6 load-test scripts and the 500-VU load test itself (§13.1) — a
+  deployment-time exercise, not something this environment can run.
+- **Cannot verify in this environment at all**: the acceptance criterion
+  itself (Lighthouse mobile ≥90 performance / ≥95 SEO on home/category/PDP
+  with demo data, on a local *production* build) needs a seeded demo
+  catalog behind a live Postgres and a real Lighthouse/Chrome run — none
+  of which exist here. Every page was built to the documented performance/
+  SEO techniques (SSR, pre-sized images via the existing media pipeline,
+  semantic HTML, real anchor-tag pagination, structured data, minimal
+  client JS — product option/gallery interactivity is the one unavoidably
+  client-rendered piece), but the actual score needs that environment to
+  measure. Re-run Lighthouse against a real deployment with demo data
+  before launch.

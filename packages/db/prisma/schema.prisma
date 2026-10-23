@@ -716,9 +716,10 @@ model ProductVariant {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryLevels InventoryLevel[]
-  stockMovements  StockMovement[]
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryLevels   InventoryLevel[]
+  stockMovements    StockMovement[]
+  notifyMeRequests  NotifyMeRequest[]
 
   @@map("product_variants")
   @@index([productId])
@@ -1135,4 +1136,57 @@ model NewsletterSubscriber {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("newsletter_subscribers")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 4 (docs/PROJECT_SPEC.md §16 M4) — storefront catalog experience.
+// No `customers`/`addresses` tables yet (that's M5's customer auth) — both
+// models below are deliberately customer-less: notify-me only ever needs a
+// phone/email to message, and analytics events are anonymous-id scoped.
+// Wishlist and "recently viewed" are guest-only, client-side (localStorage)
+// for the same reason — see docs/DECISIONS.md.
+// ---------------------------------------------------------------------------
+
+enum NotifyMeChannel {
+  sms
+  email
+}
+
+enum NotifyMeStatus {
+  pending
+  notified
+  cancelled
+}
+
+model NotifyMeRequest {
+  id              String          @id @default(cuid(2))
+  variantId       String          @map("variant_id")
+  contactPhone    String?         @map("contact_phone")
+  contactEmail    String?         @map("contact_email")
+  channel         NotifyMeChannel
+  status          NotifyMeStatus  @default(pending)
+  notifiedAt      DateTime?       @map("notified_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@map("notify_me_requests")
+  @@index([variantId, status])
+}
+
+/**
+ * First-party analytics (§13.3) — append-only, like `audit_logs`. Deliberately
+ * minimal: a funnel/live-dashboard reader and the Meta/GA4/TikTok server-side
+ * relays are Phase 2 (M8) consumers of this same table, not built yet.
+ */
+model AnalyticsEvent {
+  id          String   @id @default(cuid(2))
+  type        String
+  payload     Json?
+  anonymousId String?  @map("anonymous_id")
+  path        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("analytics_events")
+  @@index([type, createdAt])
 }

@@ -29,6 +29,8 @@ import { CmsModule } from "./cms/cms.module";
 import { StoreCatalogModule } from "./store-catalog/store-catalog.module";
 import { StoreContentModule } from "./store-content/store-content.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
+import { NotifyMeModule } from "./notify-me/notify-me.module";
+import { AnalyticsModule } from "./analytics/analytics.module";
 
 @Module({
   imports: [
@@ -76,6 +78,9 @@ import { NewsletterModule } from "./newsletter/newsletter.module";
     StoreCatalogModule,
     StoreContentModule,
     NewsletterModule,
+    // Milestone 4 (docs/PROJECT_SPEC.md §16 M4) — storefront catalog experience.
+    NotifyMeModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

@@ -63,11 +63,20 @@ export default async function LocaleLayout({
   }
 
   const [announcements, headerMenu, footerMenu] = await Promise.all([getAnnouncements(), getMenu("header"), getMenu("footer")]);
+  const baseUrl = process.env.STOREFRONT_URL ?? "http://localhost:3000";
+  // Organization + WebSite(SearchAction) structured data (§13.2) — site-wide, so it lives here rather than on any one page.
+  const siteLd = [
+    { "@context": "https://schema.org", "@type": "Organization", name: brandName, url: baseUrl },
+    { "@context": "https://schema.org", "@type": "WebSite", name: brandName, url: baseUrl, potentialAction: { "@type": "SearchAction", target: `${baseUrl}/search?q={search_term_string}`, "query-input": "required name=search_term_string" } },
+  ];
 
   return (
     <html lang={locale}>
       <body className="flex min-h-screen flex-col">
         <style dangerouslySetInnerHTML={{ __html: themeStyle }} />
+        {siteLd.map((data, index) => (
+          <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+        ))}
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} />

@@ -9,6 +9,8 @@ export type {
   Media,
   MediaKind,
   MediaMigrationJobStatus,
+  NotifyMeChannel,
+  NotifyMeStatus,
   PageStatus,
   PopupTrigger,
   PriceScheduleStatus,

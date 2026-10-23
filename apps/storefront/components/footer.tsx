@@ -1,10 +1,6 @@
+import { t } from "@clothing/shared";
 import { Link } from "../i18n/navigation";
 import type { MenuData } from "../lib/store-api";
-
-function text(value: { bn?: string; en?: string } | undefined, locale: string): string {
-  if (!value) return "";
-  return value[locale as "bn" | "en"] ?? value.bn ?? value.en ?? "";
-}
 
 interface FooterProps {
   brandName: string;
@@ -26,10 +22,10 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale }:
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {items.map((item) => (
               <div key={item.id} className="flex flex-col gap-2">
-                <span className="font-medium text-surface-foreground">{text(item.label, locale)}</span>
+                <span className="font-medium text-surface-foreground">{t(item.label, locale as "bn" | "en")}</span>
                 {item.children?.map((child) => (
                   <Link key={child.id} href={child.url ?? "#"} className="text-xs">
-                    {text(child.label, locale)}
+                    {t(child.label, locale as "bn" | "en")}
                   </Link>
                 ))}
               </div>
@@ -43,7 +39,7 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale }:
           <div className="flex flex-wrap gap-4">
             {items.map((item) => (
               <Link key={item.id} href={item.url ?? "#"} className="text-xs">
-                {text(item.label, locale)}
+                {t(item.label, locale as "bn" | "en")}
               </Link>
             ))}
           </div>

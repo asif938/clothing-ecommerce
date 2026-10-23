@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@clothing/db";
+import { Prisma, type Media } from "@clothing/db";
+import { getMediaUrl } from "@clothing/shared/media";
 import { PrismaService } from "../prisma/prisma.service";
+import { MediaProvidersService } from "../media/media-providers.service";
+import type { MediaVariantMap } from "../media/media-driver";
 import { buildTsQuery } from "./search-query";
 import type { SearchQueryDto } from "./dto";
 
 interface RankedRow {
   id: string;
 }
+
+const CARD_IMAGE_WIDTH = 480;
 
 /**
  * Store-facing product search (docs/PROJECT_SPEC.md §16 M2): Postgres FTS
@@ -19,10 +24,24 @@ interface RankedRow {
  * that order. Not exercised against a live Postgres in this environment
  * (no DB available here, see docs/PROGRESS.md) — `search-query.spec.ts`
  * covers the part that doesn't need one.
+ *
+ * Returns the same card shape (`StoreCatalogService`'s `ProductCard`) as
+ * every other public listing endpoint — the storefront's search results
+ * page is just another product grid.
  */
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaProviders: MediaProvidersService,
+  ) {}
+
+  private async resolveImageUrl(media: Media | null): Promise<string | null> {
+    if (!media) return null;
+    const driver = await this.mediaProviders.resolveDriverForAsset(media);
+    const ref = driver.toMediaRef({ ...media, variants: media.variants as MediaVariantMap | null });
+    return getMediaUrl(ref, { width: CARD_IMAGE_WIDTH });
+  }
 
   async search(query: SearchQueryDto) {
     const page = query.page ?? 1;
@@ -51,10 +70,25 @@ export class SearchService {
     const ids = rows.map((row) => row.id);
     const products = await this.prisma.product.findMany({
       where: { id: { in: ids } },
-      include: { category: true, variants: { select: { id: true, price: true, compareAtPrice: true }, take: 1 }, media: { take: 1, include: { media: true } } },
+      include: { variants: { select: { price: true, compareAtPrice: true } }, media: { take: 1, orderBy: { position: "asc" }, include: { media: true } } },
     });
     const byId = new Map(products.map((product) => [product.id, product]));
-    const data = ids.map((id) => byId.get(id)).filter((product): product is NonNullable<typeof product> => !!product);
+    const ordered = ids.map((id) => byId.get(id)).filter((product): product is NonNullable<typeof product> => !!product);
+
+    const data = await Promise.all(
+      ordered.map(async (product) => {
+        const prices = product.variants.map((v) => v.price);
+        const compareAtPrices = product.variants.map((v) => v.compareAtPrice).filter((p): p is number => p !== null);
+        return {
+          id: product.id,
+          slug: product.slug,
+          title: product.title,
+          imageUrl: await this.resolveImageUrl(product.media[0]?.media ?? null),
+          priceFrom: prices.length > 0 ? Math.min(...prices) : 0,
+          compareAtFrom: compareAtPrices.length > 0 ? Math.min(...compareAtPrices) : null,
+        };
+      }),
+    );
 
     return { data, meta: { page, pageSize, total: Number(totalRows[0]?.count ?? 0) } };
   }

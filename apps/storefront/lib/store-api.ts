@@ -108,3 +108,217 @@ export async function getRedirect(path: string): Promise<RedirectData | null> {
   const result = await storeGet<RedirectData>(`/store/redirects/lookup?path=${encodeURIComponent(path)}`, ["redirects"]);
   return result && result.toPath ? result : null;
 }
+
+export interface SitemapData {
+  pages: { slug: string; updatedAt: string }[];
+  products: { slug: string; updatedAt: string }[];
+  categories: { slug: string; updatedAt: string }[];
+  collections: { slug: string; updatedAt: string }[];
+}
+
+const EMPTY_SITEMAP: SitemapData = { pages: [], products: [], categories: [], collections: [] };
+
+/** §13.2 "sitemap.xml index split by type" — read by `app/sitemap.ts`. */
+export async function getSitemapData(): Promise<SitemapData> {
+  return (await storeGet<SitemapData>("/store/sitemap", ["sitemap"])) ?? EMPTY_SITEMAP;
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 4 (docs/PROJECT_SPEC.md §16 M4) — storefront catalog experience.
+// ---------------------------------------------------------------------------
+
+export type LocalizedTextLike = { bn?: string; en?: string };
+type LocalizedText = LocalizedTextLike;
+
+export interface CategoryBreadcrumbEntry {
+  id: string;
+  slug: string;
+  name: LocalizedText;
+}
+
+export interface CategoryDetail {
+  id: string;
+  slug: string;
+  name: LocalizedText;
+  description: LocalizedText | null;
+  imageUrl: string | null;
+  bannerUrl: string | null;
+  seoTitle: LocalizedText | null;
+  seoDescription: LocalizedText | null;
+  breadcrumb: CategoryBreadcrumbEntry[];
+}
+
+export async function getCategory(slug: string): Promise<CategoryDetail | null> {
+  return await storeGet<CategoryDetail>(`/store/catalog/categories/${slug}`, [`category:${slug}`, "categories"]);
+}
+
+export interface CollectionDetail {
+  id: string;
+  slug: string;
+  name: LocalizedText;
+  description: LocalizedText | null;
+  imageUrl: string | null;
+  bannerUrl: string | null;
+  seoTitle: LocalizedText | null;
+  seoDescription: LocalizedText | null;
+}
+
+export async function getCollection(slug: string): Promise<CollectionDetail | null> {
+  return await storeGet<CollectionDetail>(`/store/catalog/collections/${slug}`, [`collection:${slug}`, "collections"]);
+}
+
+export interface ProductCard {
+  id: string;
+  slug: string;
+  title: LocalizedText;
+  imageUrl: string | null;
+  priceFrom: number;
+  compareAtFrom: number | null;
+}
+
+export interface ListingFacetValue {
+  valueId: string;
+  label: LocalizedText;
+  count: number;
+}
+
+export interface ListingFacetAttribute {
+  attributeId: string;
+  attributeName: LocalizedText;
+  values: ListingFacetValue[];
+}
+
+export interface ListingResult {
+  data: ProductCard[];
+  meta: { page: number; pageSize: number; total: number };
+  facets: { attributes: ListingFacetAttribute[]; priceRange: { min: number; max: number } | null };
+}
+
+export interface ListingParams {
+  categoryId?: string;
+  collectionId?: string;
+  tag?: string;
+  priceMin?: number;
+  priceMax?: number;
+  inStockOnly?: boolean;
+  sort?: "relevance" | "newest" | "price_asc" | "price_desc" | "bestselling";
+  page?: number;
+  attributes?: Record<string, string[]>;
+}
+
+const EMPTY_LISTING: ListingResult = { data: [], meta: { page: 1, pageSize: 24, total: 0 }, facets: { attributes: [], priceRange: null } };
+
+export async function getListing(params: ListingParams): Promise<ListingResult> {
+  const query = new URLSearchParams();
+  if (params.categoryId) query.set("categoryId", params.categoryId);
+  if (params.collectionId) query.set("collectionId", params.collectionId);
+  if (params.tag) query.set("tag", params.tag);
+  if (params.priceMin !== undefined) query.set("priceMin", String(params.priceMin));
+  if (params.priceMax !== undefined) query.set("priceMax", String(params.priceMax));
+  if (params.inStockOnly) query.set("inStockOnly", "true");
+  if (params.sort) query.set("sort", params.sort);
+  if (params.page) query.set("page", String(params.page));
+  for (const [attributeId, valueIds] of Object.entries(params.attributes ?? {})) {
+    query.set(`attr_${attributeId}`, valueIds.join(","));
+  }
+  const tag = params.categoryId ? `category:${params.categoryId}` : params.collectionId ? `collection:${params.collectionId}` : "listing";
+  return (await storeGet<ListingResult>(`/store/catalog/listing?${query.toString()}`, [tag, "listing"])) ?? EMPTY_LISTING;
+}
+
+export interface SizeChartData {
+  id: string;
+  name: LocalizedText;
+  unitDefault: "inch" | "cm";
+  columns: { key: string; label: LocalizedText }[];
+  rows: { size: string; measurements: Record<string, number> }[];
+  howToMeasure: { content?: LocalizedText; imageMediaId?: string | null } | null;
+  notes: LocalizedText | null;
+}
+
+export interface ProductOptionValueData {
+  id: string;
+  value: LocalizedText;
+  colorHex: string | null;
+  swatchImageUrl: string | null;
+}
+
+export interface ProductOptionData {
+  id: string;
+  name: LocalizedText;
+  type: "size" | "color" | "generic";
+  sizeSystem: { id: string; name: LocalizedText; values: { code: string; label: LocalizedText }[] } | null;
+  values: ProductOptionValueData[];
+}
+
+export interface ProductVariantData {
+  id: string;
+  sku: string;
+  barcode: string | null;
+  optionValueIds: string[];
+  price: number;
+  compareAtPrice: number | null;
+  weightGrams: number | null;
+  isActive: boolean;
+  available: boolean;
+  lowStock: boolean;
+}
+
+export interface ProductMediaData {
+  id: string;
+  url: string | null;
+  alt: LocalizedText | null;
+  optionValueId: string | null;
+}
+
+export interface ProductDetail {
+  id: string;
+  slug: string;
+  title: LocalizedText;
+  subtitle: LocalizedText | null;
+  description: LocalizedText | null;
+  shortDescription: LocalizedText | null;
+  tags: string[];
+  productType: string;
+  careInstructions: LocalizedText | null;
+  fabric: LocalizedText | null;
+  modelInfo: LocalizedText | null;
+  videoUrl: string | null;
+  requiresShipping: boolean;
+  ratingAvg: number;
+  ratingCount: number;
+  seoTitle: LocalizedText | null;
+  seoDescription: LocalizedText | null;
+  category: { id: string; slug: string; name: LocalizedText } | null;
+  breadcrumb: CategoryBreadcrumbEntry[];
+  sizeChart: SizeChartData | null;
+  attributes: { attributeId: string; name: LocalizedText; value: unknown }[];
+  options: ProductOptionData[];
+  variants: ProductVariantData[];
+  media: ProductMediaData[];
+  relations: Record<string, ProductCard[]>;
+}
+
+export async function getProduct(slug: string): Promise<ProductDetail | null> {
+  return await storeGet<ProductDetail>(`/store/catalog/products/${slug}`, [`product:${slug}`, "products"]);
+}
+
+export interface SuggestResult {
+  products: { id: string; slug: string; title: LocalizedText; imageUrl: string | null; price: number | null }[];
+  categories: { id: string; slug: string; name: LocalizedText }[];
+}
+
+export async function getSuggestions(q: string): Promise<SuggestResult> {
+  return (await storeGet<SuggestResult>(`/store/catalog/suggest?q=${encodeURIComponent(q)}`, ["suggest"])) ?? { products: [], categories: [] };
+}
+
+export interface SearchResult {
+  data: ProductCard[];
+  meta: { page: number; pageSize: number; total: number };
+}
+
+const EMPTY_SEARCH: SearchResult = { data: [], meta: { page: 1, pageSize: 20, total: 0 } };
+
+/** M2's Postgres FTS + trigram + Banglish synonyms (§16 M2/M4) — a free-text query, not a category/collection scope filter, so it's `/store/search`, not `/store/catalog/listing`. */
+export async function getSearchResults(q: string): Promise<SearchResult> {
+  return (await storeGet<SearchResult>(`/store/search?q=${encodeURIComponent(q)}`, ["search"])) ?? EMPTY_SEARCH;
+}

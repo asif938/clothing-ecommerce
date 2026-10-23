@@ -1,5 +1,6 @@
 import { Controller, Get, NotFoundException, Param, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { PrismaService } from "../prisma/prisma.service";
 import { AnnouncementsService } from "../cms/announcements.service";
 import { MenusService } from "../cms/menus.service";
 import { PagesService } from "../cms/pages.service";
@@ -11,6 +12,7 @@ import { RedirectsService } from "../cms/redirects.service";
 @Controller("store")
 export class StoreContentController {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly pages: PagesService,
     private readonly menus: MenusService,
     private readonly announcements: AnnouncementsService,
@@ -46,5 +48,17 @@ export class StoreContentController {
   async lookupRedirect(@Query("path") path: string) {
     const redirect = await this.redirects.findActiveByFromPath(path);
     return redirect ?? { found: false };
+  }
+
+  /** Index split by type (docs/PROJECT_SPEC.md §13.2 "sitemap.xml index split by type") — the storefront's `app/sitemap.ts` reads this one aggregated list rather than needing 4 separate round trips. */
+  @Get("sitemap")
+  async getSitemap() {
+    const [pages, products, categories, collections] = await Promise.all([
+      this.prisma.page.findMany({ where: { status: "published", deletedAt: null, noindex: false }, select: { slug: true, updatedAt: true } }),
+      this.prisma.product.findMany({ where: { status: "active", deletedAt: null }, select: { slug: true, updatedAt: true } }),
+      this.prisma.category.findMany({ where: { isActive: true, deletedAt: null }, select: { slug: true, updatedAt: true } }),
+      this.prisma.collection.findMany({ where: { isActive: true, deletedAt: null }, select: { slug: true, updatedAt: true } }),
+    ]);
+    return { pages, products, categories, collections };
   }
 }

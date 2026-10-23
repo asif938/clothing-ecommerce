@@ -1,11 +1,17 @@
+import { t } from "@clothing/shared";
 import { Link } from "../i18n/navigation";
+import { SearchBox } from "./search-box";
 import type { MenuData } from "../lib/store-api";
 
-function text(value: { bn?: string; en?: string } | undefined, locale: string): string {
-  if (!value) return "";
-  return value[locale as "bn" | "en"] ?? value.bn ?? value.en ?? "";
-}
-
+/**
+ * `/c/[slug]`, `/p/[slug]` etc. look products/categories/collections/pages
+ * up by slug, not database id — so a menu item's `targetId` is expected to
+ * already hold that slug for every type except `url`. There's no menu
+ * admin UI yet (deferred in M3, see docs/DECISIONS.md) to write a real
+ * database id into it in the first place; when that UI exists, it should
+ * either store the slug directly or resolve to one at save time, not
+ * leave this route doing an id→slug lookup per render.
+ */
 function menuHref(item: MenuData["items"][number]): string {
   if (item.type === "url") return item.url ?? "#";
   if (item.type === "page") return `/pages/${item.targetId ?? ""}`;
@@ -40,12 +46,12 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale }: Head
       <nav className="flex flex-wrap items-center gap-5 text-sm text-surface-foreground/80">
         {menu?.items.map((item) => (
           <div key={item.id} className="group relative">
-            <Link href={menuHref(item)}>{text(item.label, locale)}</Link>
+            <Link href={menuHref(item)}>{t(item.label, locale as "bn" | "en")}</Link>
             {headerVariant === "mega" && item.children && item.children.length > 0 && (
               <div className="absolute left-0 top-full z-10 hidden min-w-40 flex-col gap-1 rounded-theme border border-border bg-surface p-3 shadow-lg group-hover:flex">
                 {item.children.map((child) => (
                   <Link key={child.id} href={menuHref(child)} className="text-xs text-surface-foreground/70">
-                    {text(child.label, locale)}
+                    {t(child.label, locale as "bn" | "en")}
                   </Link>
                 ))}
               </div>
@@ -57,9 +63,10 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale }: Head
 
   return (
     <header className="border-b border-border bg-surface px-4 py-3 sm:px-8">
-      <div className={`mx-auto flex max-w-6xl items-center ${headerVariant === "centered" ? "flex-col gap-2" : "justify-between gap-4"}`}>
+      <div className={`mx-auto flex max-w-6xl items-center gap-4 ${headerVariant === "centered" ? "flex-col" : "justify-between"}`}>
         {logo}
         {nav}
+        <SearchBox locale={locale} />
       </div>
     </header>
   );
