@@ -269,3 +269,194 @@ export const SECURITY_PASSWORD_MIN_LENGTH = defineSetting({
   permission: "settings.security.write",
   ui: { widget: "text" },
 });
+
+/**
+ * Milestone 3 (docs/PROJECT_SPEC.md §4.4.3/§7.2/§7.6): layout variants,
+ * fonts, maintenance mode, cookie consent, chat buttons, SEO title
+ * template. All `public: true` — the storefront layout reads every one of
+ * these from `GET /store/config` on every request (no caching beyond
+ * what the revalidation pipeline controls), which is how a brand color,
+ * header variant, or hero text change reaches the live site without a
+ * deploy (§16 M3 acceptance scenario).
+ */
+export const THEME_HEADER_VARIANT = defineSetting({
+  key: "theme.headerVariant",
+  group: "theme",
+  type: z.enum(["centered", "left", "mega", "minimal"]),
+  default: "left",
+  label: { bn: "হেডার ভ্যারিয়েন্ট", en: "Header variant" },
+  secret: false,
+  public: true,
+  permission: "settings.theme.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "centered", label: { bn: "মাঝখানে লোগো", en: "Centered logo" } },
+      { value: "left", label: { bn: "বামে লোগো", en: "Left logo" } },
+      { value: "mega", label: { bn: "মেগা মেনু সহ", en: "With mega menu" } },
+      { value: "minimal", label: { bn: "মিনিমাল", en: "Minimal" } },
+    ],
+  },
+});
+
+export const THEME_FOOTER_VARIANT = defineSetting({
+  key: "theme.footerVariant",
+  group: "theme",
+  type: z.enum(["columns", "compact"]),
+  default: "columns",
+  label: { bn: "ফুটার ভ্যারিয়েন্ট", en: "Footer variant" },
+  secret: false,
+  public: true,
+  permission: "settings.theme.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "columns", label: { bn: "কলাম", en: "Columns" } },
+      { value: "compact", label: { bn: "কম্প্যাক্ট", en: "Compact" } },
+    ],
+  },
+});
+
+export const THEME_PRODUCT_CARD_VARIANT = defineSetting({
+  key: "theme.productCardVariant",
+  group: "theme",
+  type: z.enum(["standard", "hoverImage", "quickAdd"]),
+  default: "standard",
+  label: { bn: "প্রোডাক্ট কার্ড ভ্যারিয়েন্ট", en: "Product card variant" },
+  secret: false,
+  public: true,
+  permission: "settings.theme.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "standard", label: { bn: "স্ট্যান্ডার্ড", en: "Standard" } },
+      { value: "hoverImage", label: { bn: "হোভার ইমেজ", en: "With hover image" } },
+      { value: "quickAdd", label: { bn: "কুইক-অ্যাড", en: "With quick-add" } },
+    ],
+  },
+});
+
+export const THEME_FONT_BANGLA = defineSetting({
+  key: "theme.fontBangla",
+  group: "theme",
+  type: z.enum(["hind-siliguri", "noto-sans-bengali", "noto-serif-bengali"]),
+  default: "hind-siliguri",
+  label: { bn: "বাংলা ফন্ট", en: "Bangla font" },
+  secret: false,
+  public: true,
+  permission: "settings.theme.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "hind-siliguri", label: { bn: "Hind Siliguri", en: "Hind Siliguri" } },
+      { value: "noto-sans-bengali", label: { bn: "Noto Sans Bengali", en: "Noto Sans Bengali" } },
+      { value: "noto-serif-bengali", label: { bn: "Noto Serif Bengali", en: "Noto Serif Bengali" } },
+    ],
+  },
+});
+
+export const THEME_FONT_LATIN = defineSetting({
+  key: "theme.fontLatin",
+  group: "theme",
+  type: z.enum(["inter", "poppins", "system"]),
+  default: "inter",
+  label: { bn: "ল্যাটিন ফন্ট", en: "Latin font" },
+  secret: false,
+  public: true,
+  permission: "settings.theme.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "inter", label: { bn: "Inter", en: "Inter" } },
+      { value: "poppins", label: { bn: "Poppins", en: "Poppins" } },
+      { value: "system", label: { bn: "সিস্টেম ফন্ট", en: "System font" } },
+    ],
+  },
+});
+
+export const FEATURES_MAINTENANCE_MODE = defineSetting({
+  key: "features.maintenanceMode",
+  group: "features",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "মেইনটেন্যান্স মোড", en: "Maintenance mode" },
+  help: { bn: "চালু করলে স্টোরফ্রন্টে সবার জন্য মেইনটেন্যান্স পেজ দেখানো হবে।", en: "When on, every storefront visitor sees the maintenance page." },
+  secret: false,
+  public: true,
+  permission: "settings.features.write",
+  ui: { widget: "toggle" },
+});
+
+export const FEATURES_COOKIE_CONSENT = defineSetting({
+  key: "features.cookieConsent",
+  group: "features",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "কুকি সম্মতি ব্যানার", en: "Cookie consent banner" },
+  secret: false,
+  public: true,
+  permission: "settings.features.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHAT_WHATSAPP_ENABLED = defineSetting({
+  key: "chat.whatsappEnabled",
+  group: "chat",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "হোয়াটসঅ্যাপ চ্যাট বাটন", en: "WhatsApp chat button" },
+  secret: false,
+  public: true,
+  permission: "settings.chat.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHAT_WHATSAPP_NUMBER = defineSetting({
+  key: "chat.whatsappNumber",
+  group: "chat",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "হোয়াটসঅ্যাপ নম্বর", en: "WhatsApp number" },
+  help: { bn: "আন্তর্জাতিক ফরম্যাটে, যেমন 8801700000000", en: "International format, e.g. 8801700000000" },
+  secret: false,
+  public: true,
+  permission: "settings.chat.write",
+  ui: { widget: "text" },
+});
+
+export const CHAT_MESSENGER_ENABLED = defineSetting({
+  key: "chat.messengerEnabled",
+  group: "chat",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "মেসেঞ্জার চ্যাট বাটন", en: "Messenger chat button" },
+  secret: false,
+  public: true,
+  permission: "settings.chat.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHAT_MESSENGER_PAGE_URL = defineSetting({
+  key: "chat.messengerPageUrl",
+  group: "chat",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "মেসেঞ্জার পেজ লিংক", en: "Messenger page link" },
+  secret: false,
+  public: true,
+  permission: "settings.chat.write",
+  ui: { widget: "text" },
+});
+
+export const SEO_TITLE_TEMPLATE = defineSetting({
+  key: "seo.titleTemplate",
+  group: "seo",
+  type: z.string().min(1),
+  default: "{title} | {brand}",
+  label: { bn: "SEO টাইটেল টেমপ্লেট", en: "SEO title template" },
+  help: { bn: "ব্যবহারযোগ্য ভ্যারিয়েবল: {title}, {brand}", en: "Available variables: {title}, {brand}" },
+  secret: false,
+  public: true,
+  permission: "settings.seo.write",
+  ui: { widget: "text" },
+});

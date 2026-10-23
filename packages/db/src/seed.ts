@@ -140,6 +140,68 @@ async function seedDefaultStockLocation() {
   console.log('[db:seed] Default stock location "Main warehouse" created.');
 }
 
+/**
+ * Milestone 3 (docs/PROJECT_SPEC.md §16 M3): system pages (home, 404, 500,
+ * maintenance — storefront looks these up by reserved slug) and policy
+ * placeholders (`needsContent: true`, drives the admin "content needed
+ * before launch" checklist, §9.3). Plain block JSON here, not imported
+ * from `@clothing/blocks`, so `@clothing/db` doesn't pick up a dependency
+ * on that package just for seed data.
+ */
+async function seedDefaultPages() {
+  const heroBlock = {
+    id: "seed-hero",
+    type: "hero",
+    props: {
+      heading: { bn: "নতুন কালেকশন এসেছে", en: "New collection is here" },
+      subheading: { bn: "", en: "" },
+      ctaText: { bn: "শপ করুন", en: "Shop now" },
+      ctaUrl: "/",
+      imageUrl: null,
+      align: "left",
+    },
+  };
+  const bestSellersBlock = {
+    id: "seed-best-sellers",
+    type: "product_grid",
+    props: { heading: { bn: "বেস্ট সেলার", en: "Best sellers" }, source: "best_sellers", limit: 8 },
+  };
+  const newArrivalsBlock = {
+    id: "seed-new-arrivals",
+    type: "product_grid",
+    props: { heading: { bn: "নতুন পণ্য", en: "New arrivals" }, source: "new_arrivals", limit: 8 },
+  };
+
+  const systemPages: { slug: string; title: string; blocks: object[] }[] = [
+    { slug: "home", title: "Home", blocks: [heroBlock, newArrivalsBlock, bestSellersBlock] },
+    { slug: "404", title: "Not found", blocks: [{ id: "seed-404", type: "rich_text", props: { content: { bn: "পেজটি খুঁজে পাওয়া যায়নি।", en: "This page could not be found." }, align: "center" } }] },
+    { slug: "500", title: "Server error", blocks: [{ id: "seed-500", type: "rich_text", props: { content: { bn: "কিছু ভুল হয়েছে। পরে আবার চেষ্টা করুন।", en: "Something went wrong. Please try again shortly." }, align: "center" } }] },
+    { slug: "maintenance", title: "Maintenance", blocks: [{ id: "seed-maintenance", type: "rich_text", props: { content: { bn: "আমরা রক্ষণাবেক্ষণের জন্য সাময়িকভাবে বন্ধ আছি।", en: "We're down for maintenance — back shortly." }, align: "center" } }] },
+  ];
+
+  for (const page of systemPages) {
+    const existing = await prisma.page.findUnique({ where: { slug: page.slug } });
+    if (existing) continue;
+    await prisma.page.create({
+      data: { slug: page.slug, title: page.title, status: "published", isSystem: true, blocksDraft: page.blocks, blocksPublished: page.blocks },
+    });
+  }
+
+  const policyPlaceholders = [
+    { slug: "privacy-policy", title: "Privacy policy" },
+    { slug: "terms", title: "Terms & conditions" },
+    { slug: "returns-exchange", title: "Return & exchange policy" },
+    { slug: "shipping-policy", title: "Shipping policy" },
+  ];
+  for (const page of policyPlaceholders) {
+    const existing = await prisma.page.findUnique({ where: { slug: page.slug } });
+    if (existing) continue;
+    await prisma.page.create({ data: { slug: page.slug, title: page.title, status: "draft", needsContent: true, blocksDraft: [] } });
+  }
+
+  console.log(`[db:seed] CMS: ${systemPages.length} system page(s), ${policyPlaceholders.length} policy placeholder(s) ensured.`);
+}
+
 async function seedDemoBrand() {
   const overrides: [string, unknown][] = [
     ["brand.name", { bn: "ডেমো ফ্যাশন", en: "Demo Fashion" }],
@@ -165,6 +227,7 @@ async function main() {
   await seedUiStrings();
   await seedLocations();
   await seedDefaultStockLocation();
+  await seedDefaultPages();
   if (isDemo) {
     await seedDemoBrand();
   }

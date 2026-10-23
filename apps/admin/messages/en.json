@@ -87,6 +87,24 @@
     "warningNear80": "Credit usage is above 80% — consider the usage soon.",
     "dangerNear95": "Credit usage is above 95% — new uploads are falling back to the default storage."
   },
+  "cms": {
+    "pagesTitle": "Pages",
+    "addPage": "New page",
+    "pageTitle": "Title",
+    "pageSlug": "Slug",
+    "pageStatus": "Status",
+    "needsContentChecklist": "{count} page(s) still need content before launch",
+    "backToPages": "Back to pages",
+    "draftSaved": "Draft saved",
+    "publish": "Publish",
+    "scheduleAt": "Schedule for",
+    "endsAt": "Ends",
+    "schedule": "Schedule",
+    "addBlock": "Add block",
+    "versionsTitle": "Version history",
+    "restore": "Restore",
+    "announcementsTitle": "Announcement bars"
+  },
   "catalog": {
     "categoriesTitle": "Categories",
     "attributesTitle": "Attributes",
@@ -222,6 +240,8 @@
     "navSystemHealth": "System health",
     "navAudit": "Audit log",
     "navCatalog": "Catalog",
+    "navCmsPages": "Pages",
+    "navCmsAnnouncements": "Announcements",
     "navProducts": "Products",
     "navCollections": "Collections",
     "navPriceSchedules": "Price schedules",

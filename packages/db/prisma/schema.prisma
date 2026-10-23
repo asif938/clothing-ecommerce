@@ -995,3 +995,144 @@ model CatalogImportJob {
 
   @@map("catalog_import_jobs")
 }
+
+// ---------------------------------------------------------------------------
+// CMS (Milestone 3, docs/PROJECT_SPEC.md §9/§16 M3)
+//
+// Block instances are kept as an ordered JSON array on the page itself
+// (`{ id, type, props, visibility?, schedule? }[]`), not normalized into
+// their own table — nothing ever queries "all pages using block type X" at
+// this milestone's scale, and the alternative (a polymorphic per-block-type
+// props table) buys nothing here. `blocksDraft`/`blocksPublished` are two
+// separate columns so "draft vs published" (§9.2) is just which column is
+// read, instead of a status flag that a half-finished edit could flip early.
+// ---------------------------------------------------------------------------
+
+enum PageStatus {
+  draft
+  scheduled
+  published
+}
+
+model Page {
+  id              String     @id @default(cuid(2))
+  slug            String     @unique
+  title           String
+  status          PageStatus @default(draft)
+  publishAt       DateTime?  @map("publish_at")
+  blocksDraft     Json       @map("blocks_draft")
+  blocksPublished Json?      @map("blocks_published")
+  seoTitle        Json?      @map("seo_title")
+  seoDescription  Json?      @map("seo_description")
+  ogImageMediaId  String?    @map("og_image_media_id")
+  noindex         Boolean    @default(false)
+  // Reserved pages (home, 404, 500, maintenance) — protected from deletion
+  // and from a slug change that would break the routes that look them up.
+  isSystem        Boolean    @default(false) @map("is_system")
+  // Policy placeholders (§9.3): seeded with needsContent=true; cleared the
+  // first time an editor publishes real content, drives the admin
+  // "content needed before launch" checklist.
+  needsContent    Boolean    @default(false) @map("needs_content")
+  lockedBy        String?    @map("locked_by")
+  lockedAt        DateTime?  @map("locked_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+
+  versions PageVersion[]
+
+  @@map("pages")
+  @@index([status])
+}
+
+model PageVersion {
+  id             String   @id @default(cuid(2))
+  pageId         String   @map("page_id")
+  blocks         Json
+  seoTitle       Json?    @map("seo_title")
+  seoDescription Json?    @map("seo_description")
+  note           String?
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_versions")
+  @@index([pageId])
+}
+
+model Menu {
+  id        String   @id @default(cuid(2))
+  // Stable key a layout slot looks up by, e.g. "header", "footer", "mobile".
+  key       String   @unique
+  name      String
+  // Tree, depth <= 3 (§9.3): [{ id, label: LocalizedText, type: "category"
+  // | "collection" | "product" | "page" | "url", targetId?, url?, children? }].
+  items     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("menus")
+}
+
+model AnnouncementBar {
+  id        String    @id @default(cuid(2))
+  message   Json
+  linkUrl   String?   @map("link_url")
+  linkText  Json?     @map("link_text")
+  startsAt  DateTime? @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  isActive  Boolean   @default(true) @map("is_active")
+  position  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("announcement_bars")
+}
+
+enum PopupTrigger {
+  immediate
+  delay
+  exit_intent
+}
+
+model Popup {
+  id           String       @id @default(cuid(2))
+  name         String
+  title        Json
+  body         Json
+  imageMediaId String?      @map("image_media_id")
+  ctaText      Json?        @map("cta_text")
+  ctaUrl       String?      @map("cta_url")
+  trigger      PopupTrigger @default(delay)
+  delaySeconds Int?         @map("delay_seconds")
+  startsAt     DateTime?    @map("starts_at")
+  endsAt       DateTime?    @map("ends_at")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("popups")
+}
+
+model Redirect {
+  id         String   @id @default(cuid(2))
+  fromPath   String   @unique @map("from_path")
+  toPath     String   @map("to_path")
+  statusCode Int      @default(301) @map("status_code")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("redirects")
+}
+
+/** `newsletter_signup` block (docs/PROJECT_SPEC.md §9.1) — minimal capture; broadcast/segmentation is a marketing feature for a later milestone. */
+model NewsletterSubscriber {
+  id        String   @id @default(cuid(2))
+  email     String   @unique
+  locale    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("newsletter_subscribers")
+}

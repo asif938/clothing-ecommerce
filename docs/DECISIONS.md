@@ -721,3 +721,151 @@ for M1's settings UI and provider config forms.
   CSV import job against a live Postgres and a real 500-row file — no
   database is available in this environment (same root cause flagged
   throughout M0/M1 and the Cloudinary change).
+
+## 2026-10-23 — Milestone 3: theme, CMS core, storefront shell
+
+**Context.** §16 M3: theme tokens/presets/layout variants, the block
+system with an MVP library, the page builder (drafts, publish, schedule,
+versions, edit lock, autosave), menus, announcement bars, popups, UI text,
+redirects, the storefront shell (header/footer/mega menu/chat/announcement
+bar), the CMS-driven home page, CMS pages, policy placeholders, the
+revalidation pipeline, `/_styleguide`, and 404/500/maintenance. The
+acceptance scenario is: change brand color + header variant + home hero
+text in admin, see all three on the storefront within 10s with no deploy;
+a scheduled banner appears/disappears at its times; restoring an older
+page version works.
+
+**Decision — a page's blocks live as a JSON array directly on `pages`
+(`blocksDraft`/`blocksPublished`, two separate columns), not normalized
+into their own table.** Nothing at this milestone's scale ever queries
+"every page using block type X"; a polymorphic per-block-type props table
+would add real complexity for no present benefit. Two columns (rather than
+one plus a status flag) make "draft vs published" (§9.2) structural: the
+storefront only ever reads `blocksPublished`, the editor only ever writes
+`blocksDraft`, and "Publish" is just the one place that copies one into
+the other — there's no code path that can accidentally leak an in-progress
+edit onto the live site.
+
+**Decision — `@clothing/blocks` has two entry points: `.` (React
+components, for the storefront) and `./schemas` (zod schema + defaults +
+`validateBlocks()`, no React import at all, for the API).** `PagesService`
+validates saved block props against `./schemas` — pulling in React (and
+every block's JSX) just to run `nest build` and serve JSON would be a
+needless coupling, and this split costs nothing since the two concerns
+(validate props vs. render a component) were already separate.
+
+**Decision — a block's image props store an already-resolved URL
+(`imageUrl: string`), not a `mediaId` reference.** The admin's media
+picker resolves the URL once, at save time, and it's just a plain string
+in the block's JSON from then on — no public "resolve a media id to a URL"
+endpoint needed, and the storefront's block Components stay pure/
+presentational (no data fetching for images). The trade-off, accepted
+deliberately: if that asset is later migrated to a different storage
+provider (the Cloudinary change's migration job), a block referencing it
+by URL doesn't follow — re-saving the block re-resolves it. Narrow enough
+a case to accept for now; recorded here so it isn't a silent surprise.
+
+**Decision — `category_tiles`/`product_grid` fetch live catalog data at
+render time from new, minimal, public `/store/catalog/categories` and
+`/store/catalog/products` endpoints — deliberately not the filterable/
+faceted/paginated storefront catalog experience.** That's Milestone 4's
+own job; these two endpoints exist only to give those two block types
+card-sized data to render on the CMS-driven home page. `on_sale` is
+approximated as "any variant with `compareAtPrice` set" rather than a
+column-to-column SQL comparison — the normal way that field is used in
+practice.
+
+**Decision — the publishing pipeline (§9.6) is a real cross-process HTTP
+call, not same-process cache invalidation.** `RevalidationService` (API)
+posts `{ tags }` to the storefront's `POST /api/revalidate` with a shared
+secret (`REVALIDATE_SECRET`); the storefront calls Next's `revalidateTag`
+for each one. Every storefront data fetch (`lib/store-api.ts`,
+`@clothing/blocks`'s `store-api.ts`) is also tagged and carries its own
+60s `revalidate` fallback, so a missed or failed revalidation call still
+self-heals shortly rather than serving stale data indefinitely. Next 16
+changed `revalidateTag`'s signature to require a second argument (a
+`cacheLife` profile or `{ expire }`); `{ expire: 0 }` reproduces the old
+"expire this tag's cache immediately" behavior.
+
+**Decision — announcement bars and popups compute their active-now window
+at *read* time** (`isActive` AND inside `startsAt`/`endsAt`), not via a
+scheduler sweep that flips a status field. This is both simpler and more
+correct than a sweep for "appears/disappears at its times": there's no
+window where a sweep hasn't run yet and the bar is stale, and no extra
+job to register. Scheduled *page* publishing still needs a sweep (M2's
+`SchedulerService.registerRecurring`, reused here) because publishing is
+a one-time state transition with side effects (snapshot a version,
+revalidate) — reading an announcement bar has none.
+
+**Decision — the page editor's edit lock (§9.2) expires on inactivity
+(2 minutes) rather than needing an explicit unlock, and "restore a
+version" only ever writes `blocksDraft`, never `blocksPublished`.** A
+staff member who closes their laptop mid-edit shouldn't lock a page for
+everyone else indefinitely; and restoring a version is explicitly staged
+for review before it goes live (§9.2 "restore as draft"), matching the
+acceptance scenario's "restoring an older page version works" without
+also silently re-publishing whatever the editor was last looking at.
+
+**Decision — `custom_html` is sanitized once, server-side, at save time**
+(`sanitize-html`'s default allow-list, in `PagesService.updateBlocks`),
+not re-sanitized at render time in the storefront. It's also the one
+block type gated to Super Admin (`validateBlocks`'s `superAdminOnly`,
+checked against `actor.isSuperAdmin` — the same mechanism as the
+Cloudinary change's `SuperAdminGuard`). Together these mean the
+storefront's `CustomHtmlBlock` can use `dangerouslySetInnerHTML` and
+genuinely never see attacker-controlled markup (§12).
+
+**Decision — `react/prop-types` is now off in the shared
+`@clothing/config/eslint/next` config.** It fired for the first time on
+the page-block editor's `HeroFields` component, which destructures a
+cast, typed object inline in JSX; eslint-plugin-react's own guidance for
+TypeScript projects is to disable this rule, since TS's static types
+already check props far more strictly than `React.PropTypes` ever could.
+
+**Decision — the storefront's `/_styleguide` route lives in a folder
+literally named `%5Fstyleguide`.** Next.js treats any `_`-prefixed folder
+as a private, unroutable implementation detail by convention; `%5F` (the
+URL-encoded underscore) is Next's own documented escape hatch for a route
+segment that must start with a literal underscore.
+
+**Decision — the admin UI built this milestone is Pages (list + editor:
+friendly fields for `hero`, a JSON textarea for every other block type's
+props, add/reorder/remove, publish, schedule, version history + restore)
+and Announcement bars (CRUD with a schedule).** Menus, Popups, Redirects
+and UI Text have a complete API (CmsModule) but no admin page yet — a
+real, but honestly scoped, gap, not a silent one. Two things significantly
+narrowed what else was needed:
+1. The Settings page (`docs/PROJECT_SPEC.md` §4.1: "the admin Settings
+   area is generated from the registry") already renders every new
+   `theme.*`/`features.*`/`chat.*`/`seo.*` setting with zero new admin
+   code — so brand color *and* header variant (the acceptance scenario's
+   first two changes) needed no new UI at all.
+2. A full per-block-type visual form (one bespoke widget set per block
+   type, `form.ts` per §9.1) is substantial standalone work that doesn't
+   change what's achievable here — the JSON-textarea fallback (matching
+   the Integrations screen's existing "config as JSON" pattern) still
+   lets every block type be authored; only `hero` gets friendly fields,
+   since it's the one the acceptance scenario exercises directly ("home
+   hero text").
+
+**Deferred (documented, not silently dropped):**
+- Admin UI for menus, popups, redirects, UI text (backend complete).
+- Per-block-type visual forms beyond `hero`'s friendly fields.
+- A real interactive popup component on the storefront (timed/exit-intent
+  modal) — the API and public read endpoint exist; nothing renders it yet.
+- Brand logo resolution to a URL (the header renders the brand name as
+  text) and actual font loading/self-hosting for `theme.fontBangla`/
+  `fontLatin` (the settings exist; nothing serves the fonts yet).
+- The live-preview iframe + `postMessage` editing experience (§9.2) — the
+  editor writes `blocksDraft` directly instead; a true live preview is a
+  separate, substantial piece of storefront/admin wiring.
+- Global blocks (save as global, propagate to every page using it) and
+  page templates (§9.2) — neither changes what a single page can do.
+- Mega-menu dropdown rendering exists in `Header`, but full "up to 3
+  levels" nested menu editing in the admin isn't built (no menu admin UI
+  yet, per above).
+- Re-verify the full acceptance scenario (brand color/header
+  variant/hero text change → visible on a live storefront within 10s;
+  scheduled banner appears/disappears; version restore) against a real
+  Postgres and a running storefront process — no database is available
+  in this environment (same root cause flagged throughout M0–M2).

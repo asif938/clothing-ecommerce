@@ -57,6 +57,13 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "catalog.cost.read", group: "catalog", label: { bn: "পণ্যের ক্রয়মূল্য দেখুন", en: "View product cost price" } },
   { key: "inventory.manage", group: "inventory", label: { bn: "ইনভেন্টরি পরিচালনা করুন", en: "Manage inventory" } },
   { key: "search.manage", group: "search", label: { bn: "সার্চ সেটিংস পরিচালনা করুন", en: "Manage search settings" } },
+
+  // CMS (docs/PROJECT_SPEC.md §16 M3)
+  { key: "cms.manage", group: "cms", label: { bn: "CMS পরিচালনা করুন", en: "Manage CMS content" } },
+  { key: "cms.publish", group: "cms", label: { bn: "প্রকাশ করুন", en: "Publish CMS content" } },
+  { key: "settings.features.write", group: "settings", label: { bn: "ফিচার সেটিংস পরিবর্তন করুন", en: "Edit feature settings" } },
+  { key: "settings.chat.write", group: "settings", label: { bn: "চ্যাট সেটিংস পরিবর্তন করুন", en: "Edit chat settings" } },
+  { key: "settings.seo.write", group: "settings", label: { bn: "SEO সেটিংস পরিবর্তন করুন", en: "Edit SEO settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

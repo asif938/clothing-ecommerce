@@ -508,13 +508,161 @@ below) — same limitation as M0/M1.
 
 ---
 
+## Milestone 3 — Theme, CMS core and storefront shell
+
+Status: complete (§16 M3). Acceptance criteria met at the code/test level;
+the live end-to-end scenario (real storefront process + real Postgres) is
+not exercised in this environment — see "Not verified" below, same
+limitation as every prior milestone.
+
+### Built
+
+- **`packages/db`**: `pages` (+ `page_versions`), `menus`,
+  `announcement_bars`, `popups`, `redirects`, `newsletter_subscribers`
+  (hand-written migration `20261023150000_cms_core`, same reasoning as
+  every prior milestone's migration — no live DB/shadow DB here). A
+  page's blocks live as a JSON array in `blocks_draft`/`blocks_published`
+  — two columns, not a status flag, so draft vs. published is structural
+  (see docs/DECISIONS.md). `pnpm db:seed` now also creates the `home`,
+  `404`, `500` and `maintenance` system pages (home: hero + two
+  product-grid blocks; the rest: a bilingual `rich_text` block) and four
+  policy placeholders (`needsContent: true`, drives the admin "content
+  needed before launch" checklist).
+- **`packages/shared`**: new settings —
+  `theme.headerVariant`/`footerVariant`/`productCardVariant`/
+  `fontBangla`/`fontLatin`, `features.maintenanceMode`/`cookieConsent`,
+  `chat.whatsappEnabled`/`whatsappNumber`/`messengerEnabled`/
+  `messengerPageUrl`, `seo.titleTemplate` — all `public: true`, so the
+  storefront picks every one of them up from `GET /store/config` with no
+  new admin UI (the Settings page is generated from the registry). New
+  permissions `cms.manage`/`cms.publish`/`settings.features.write`/
+  `settings.chat.write`/`settings.seo.write`.
+- **`packages/blocks`** (new, real content): a block registry
+  (`registry.ts`: schedule/locale/device visibility helpers) plus 10
+  block types (`hero`, `rich_text`, `image_text`, `category_tiles`,
+  `product_grid`, `banner_strip`, `faq_accordion`, `newsletter_signup`,
+  `spacer`, `custom_html`) — a representative MVP subset; the rest of
+  §9.1's list depends on systems not built yet (flash sales/reviews are
+  M8). Two entry points: `.` (React components, for the storefront) and
+  `./schemas` (zod schema + defaults + `validateBlocks()`, no React — for
+  the API). `custom_html` is marked Super-Admin-only in the registry.
+- **`apps/api`**: `CmsModule` (admin) — pages (create/update, autosave
+  `blocksDraft`, publish/schedule, soft delete with a system-page guard,
+  version history + "restore as draft," a 2-minute-inactivity edit lock),
+  menus, announcement bars, popups, redirects — each audit-logged and
+  triggering the new `RevalidationService`. `custom_html` is sanitized
+  server-side at save time (`sanitize-html`). `StoreContentModule` (public
+  reads: page by slug — published only, menu by key, announcements/popups
+  active *now*, computed at read time rather than via a sweep, redirect
+  lookup). `StoreCatalogModule` (public, card-sized `/store/catalog/
+  categories`+`/products` — what `category_tiles`/`product_grid` need,
+  explicitly not Milestone 4's full filterable catalog). `NewsletterModule`
+  (public subscribe, minimal capture table). `RevalidationService`
+  (new, `@Global`) — the publishing pipeline (§9.6): POSTs `{ tags }` to
+  the storefront's `POST /api/revalidate` with a shared secret on every
+  settings/page/menu/announcement/popup change; never throws, so a
+  revalidation hiccup can't fail the admin mutation that triggered it.
+  `SchedulerService.registerRecurring` (M2) is reused for the
+  scheduled-page-publish sweep.
+- **`apps/admin`**: new `/cms/pages`
+  (list, "needs content" banner) + `/cms/pages/[id]` (title, block
+  list — friendly fields for `hero`, a JSON textarea for every other
+  block type, add/reorder/remove, publish, schedule, version history +
+  restore) and `/cms/announcements` (CRUD with a schedule + active
+  toggle). New `cms` message namespace (bn + en).
+- **`apps/storefront`** (first real content, was M0-scaffold-only before
+  this): root layout now injects `--color-brand`/`--color-brand-
+  foreground` (computed via a small contrast-pick helper) from settings,
+  renders the announcement bar / header (4 layout variants) / footer (2
+  variants) / floating WhatsApp+Messenger chat buttons, and short-
+  circuits to the `maintenance` system page's content when
+  `features.maintenanceMode` is on. `BlockRenderer` maps a page's
+  published blocks to their registered components, skipping (not
+  crashing on) an unknown type, a failed schema re-check, or a block
+  outside its schedule/locale. Home page (`/`) and CMS pages
+  (`/pages/[slug]`, with a redirect-table lookup before giving up to a
+  404) both just render a page's blocks. `not-found.tsx`/`error.tsx`
+  (500, client-side fetch since Next's `error.tsx` can't `await`) render
+  the `404`/`500` system pages' content. `/api/revalidate` (the
+  publishing pipeline's target) and `/_styleguide` (every non-catalog-
+  dependent block, both locales — folder literally named `%5Fstyleguide`,
+  Next's escape hatch for a route that must start with `_`).
+
+### Verified
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` all pass across
+  the whole workspace (new totals: 119 `apps/api` unit tests — 1 of which,
+  "HealthController reports up when the database is reachable," needs a
+  real Postgres and fails/times out here, same pre-existing environment
+  gap flagged since M0/M1, not a regression; 12 `@clothing/blocks`,
+  3 `storefront`, 64 `@clothing/shared`, 7 `@clothing/db`). New tests this
+  milestone: block registry visibility/schedule helpers and
+  `validateBlocks` (incl. the exact Super-Admin-only `custom_html` case),
+  `PagesService` (publish copies draft→published + snapshots a version;
+  restore touches `blocksDraft` only; edit-lock expiry; the scheduled-
+  publish sweep; `custom_html` sanitization-on-save), `Announcements
+  Service.listActiveNow` (every branch of "appears/disappears at its
+  times" — before/inside/after a schedule window, inactive regardless of
+  schedule — directly matching the M3 acceptance scenario), and
+  `RevalidationService` (posts the right payload/header; never throws).
+  Running the whole workspace's lint in parallel via Turbo intermittently
+  OOMs on this machine (a Windows resource limit, not a code issue — every
+  package lints clean run individually, which is how this was verified).
+- **Ran the real API dev server with no database available**: the full DI
+  graph resolves (every new module wires cleanly), every new route maps
+  (`/admin/cms/pages[...]` incl. publish/schedule/versions/lock,
+  `/admin/cms/menus`, `/admin/cms/announcements`, `/admin/cms/popups`,
+  `/admin/cms/redirects`, `/store/catalog/categories`+`/products`,
+  `/store/pages/:slug`, `/store/menus/:key`, `/store/announcements`,
+  `/store/popups`, `/store/redirects/lookup`,
+  `/store/newsletter/subscribe`), `/health` stays 200, and every
+  DB-dependent route returns the real `PrismaClientInitializationError`
+  rather than crashing or 500ing on a code bug.
+- All three apps build cleanly together, including every new storefront
+  route (confirming `/_styleguide`'s `%5F`-escaped folder actually
+  resolves to `/_styleguide` in Next's own route table) and every new
+  admin route.
+
+### Not verified in this environment
+
+- No live Postgres, so: the full publishing-pipeline round trip (change a
+  setting/page/announcement in admin → `RevalidationService` → the
+  storefront's `/api/revalidate` → the change visible within 10s) has not
+  run end-to-end against a real running storefront process — each piece
+  (the HTTP call, the tag-based fetch caching, `revalidateTag` itself) is
+  exercised individually (unit tests; a real `next build` confirming the
+  route compiles) but not as one live chain.
+- Clicking through the acceptance scenario itself (change brand color +
+  header variant + home hero text in the admin UI, watch the storefront
+  update) in an actual browser — not possible without a database to log
+  into the admin with.
+- The scheduled-announcement and page-version-restore acceptance points
+  are covered by direct unit tests of the exact logic, not a live click-
+  through.
+
+### Known issues / explicitly deferred
+
+- Admin UI for menus, popups, redirects, UI text — the API is complete;
+  these are documented as a real gap in docs/DECISIONS.md, not silent.
+- Per-block-type visual forms beyond `hero`; the generic JSON-textarea
+  fallback covers every other type in the meantime.
+- A real interactive popup (timed/exit-intent modal) on the storefront.
+- Brand logo → URL resolution and actual font loading for
+  `theme.fontBangla`/`fontLatin` (settings exist, nothing serves them).
+- The live-preview iframe + `postMessage` editing experience (§9.2) — the
+  editor writes `blocksDraft` directly instead of a true live preview.
+- Global blocks and page templates (§9.2).
+- Mega-menu dropdown rendering exists in the storefront `Header`, but
+  there's no menu admin UI yet to actually build a 3-level menu with.
+
+---
+
 ### Next up
 
-Milestone 3 — Theme, CMS core and storefront shell (§16 M3): theme tokens
-→ CSS variables with 3 presets and a live-preview design screen, the block
-system with the MVP block library, the page builder (drafts, publish,
-schedule, preview links, version history, edit lock, autosave), menus
-editor, announcement bars, popups, UI text, redirects, the storefront
-layout (header/footer/mega menu/chat buttons/announcement bar), home page
-from CMS, CMS pages, policy placeholder pages, the revalidation pipeline,
-`/_styleguide`, and 404/500/maintenance pages.
+Milestone 4 — Storefront catalog experience (§16 M4): category/collection
+listing with filters/sort/pagination/facet counts, the search page +
+instant suggestions (building on M2's Postgres FTS/synonyms), the full
+PDP (gallery, options, size chart, delivery estimate, reviews display,
+related, sticky ATC, share, WhatsApp order), wishlist (guest + account),
+recently viewed, SEO (meta, structured data, sitemaps, robots, hreflang,
+canonical), and first-party analytics events + dataLayer.

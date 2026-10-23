@@ -24,6 +24,11 @@ import { PriceSchedulesModule } from "./price-schedules/price-schedules.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { ImportExportModule } from "./import-export/import-export.module";
 import { SearchModule } from "./search/search.module";
+import { RevalidationModule } from "./revalidation/revalidation.module";
+import { CmsModule } from "./cms/cms.module";
+import { StoreCatalogModule } from "./store-catalog/store-catalog.module";
+import { StoreContentModule } from "./store-content/store-content.module";
+import { NewsletterModule } from "./newsletter/newsletter.module";
 
 @Module({
   imports: [
@@ -43,6 +48,7 @@ import { SearchModule } from "./search/search.module";
     PrismaModule,
     CacheModule,
     AuditModule,
+    RevalidationModule,
     SettingsModule,
     AuthModule,
     StorageModule,
@@ -65,6 +71,11 @@ import { SearchModule } from "./search/search.module";
     PriceSchedulesModule,
     ImportExportModule,
     SearchModule,
+    // Milestone 3 (docs/PROJECT_SPEC.md §16 M3) — theme, CMS core, storefront shell.
+    CmsModule,
+    StoreCatalogModule,
+    StoreContentModule,
+    NewsletterModule,
   ],
 })
 export class AppModule {}

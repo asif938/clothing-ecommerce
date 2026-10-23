@@ -37,24 +37,24 @@ describe("SettingsService", () => {
   });
 
   it("returns the registry default when no row exists", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     expect(await service.getValue("locale.default")).toBe("bn");
   });
 
   it("rejects a write from staff lacking the setting's own permission", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     const staff = makeStaff([]); // no settings.locale.write
     await expect(service.setValue("locale.default", "en", staff, { ip: null, userAgent: null })).rejects.toThrow(ForbiddenException);
   });
 
   it("rejects a write that fails the setting's zod validation", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     const staff = makeStaff(["settings.locale.write"]);
     await expect(service.setValue("locale.default", "fr", staff, { ip: null, userAgent: null })).rejects.toThrow(ForbiddenException);
   });
 
   it("writes a valid value, audit-logs it, and invalidates the public cache", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     const staff = makeStaff(["settings.locale.write"]);
     await service.setValue("locale.default", "en", staff, { ip: "1.2.3.4", userAgent: "vitest" });
 
@@ -66,7 +66,7 @@ describe("SettingsService", () => {
   });
 
   it("round-trips a secret setting through encryption and masks it in getAllWithMetadata", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     // security.staffSessionTtlHours isn't secret — use it only to confirm non-secret path,
     // then assert the generic secret-handling contract via a definition that *is* secret.
     const settingsList = await service.getAllWithMetadata();
@@ -75,7 +75,7 @@ describe("SettingsService", () => {
   });
 
   it("serves getPublicConfig from cache on the second call", async () => {
-    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, config as never);
+    const service = new SettingsService(makePrismaMock() as never, audit as never, cache as never, { revalidate: async () => {} } as never, config as never);
     await service.getPublicConfig();
     cache.get.mockReturnValueOnce({ cached: true });
     const second = await service.getPublicConfig();

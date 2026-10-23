@@ -87,6 +87,24 @@
     "warningNear80": "ক্রেডিট ব্যবহার ৮০%-এর বেশি — শীঘ্রই এটি বিবেচনা করুন।",
     "dangerNear95": "ক্রেডিট ব্যবহার ৯৫%-এর বেশি — নতুন আপলোড ডিফল্ট স্টোরেজে পাঠানো হচ্ছে।"
   },
+  "cms": {
+    "pagesTitle": "পেজ",
+    "addPage": "নতুন পেজ",
+    "pageTitle": "শিরোনাম",
+    "pageSlug": "স্লাগ",
+    "pageStatus": "স্ট্যাটাস",
+    "needsContentChecklist": "{count}টি পেজে এখনও কন্টেন্ট দরকার",
+    "backToPages": "পেজ তালিকায় ফিরুন",
+    "draftSaved": "ড্রাফট সংরক্ষিত হয়েছে",
+    "publish": "প্রকাশ করুন",
+    "scheduleAt": "প্রকাশের সময়",
+    "endsAt": "শেষ",
+    "schedule": "সময়সূচি করুন",
+    "addBlock": "ব্লক যুক্ত করুন",
+    "versionsTitle": "সংস্করণ ইতিহাস",
+    "restore": "পুনরুদ্ধার করুন",
+    "announcementsTitle": "ঘোষণা বার"
+  },
   "catalog": {
     "categoriesTitle": "ক্যাটাগরি",
     "attributesTitle": "অ্যাট্রিবিউট",
@@ -222,6 +240,8 @@
     "navSystemHealth": "সিস্টেম স্বাস্থ্য",
     "navAudit": "অডিট লগ",
     "navCatalog": "ক্যাটালগ",
+    "navCmsPages": "পেজ",
+    "navCmsAnnouncements": "ঘোষণা",
     "navProducts": "পণ্য",
     "navCollections": "কালেকশন",
     "navPriceSchedules": "মূল্য সময়সূচি",

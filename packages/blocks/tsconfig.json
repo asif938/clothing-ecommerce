@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["dom", "ES2022"],
     "jsx": "react-jsx",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "types": ["node"]
   },
   "include": ["src"]
 }

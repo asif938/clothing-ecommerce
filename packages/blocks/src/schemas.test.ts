@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import { validateBlocks } from "./schemas.ts";
+
+describe("validateBlocks", () => {
+  it("accepts a well-formed hero block and fills in schema defaults", () => {
+    const { valid, errors } = validateBlocks([{ id: "b1", type: "hero", props: { heading: { en: "Hi" } } }], false);
+    expect(errors).toEqual([]);
+    expect(valid).toHaveLength(1);
+    expect(valid[0]?.props).toMatchObject({ heading: { en: "Hi" }, align: "left" });
+  });
+
+  it("reports an unknown block type without throwing", () => {
+    const { valid, errors } = validateBlocks([{ id: "b1", type: "not_a_real_block", props: {} }], false);
+    expect(valid).toEqual([]);
+    expect(errors).toEqual([{ blockId: "b1", type: "not_a_real_block", message: 'Unknown block type "not_a_real_block"' }]);
+  });
+
+  it("reports a schema failure with the block id", () => {
+    const { valid, errors } = validateBlocks([{ id: "b1", type: "hero", props: { heading: "not an object" } }], false);
+    expect(valid).toEqual([]);
+    expect(errors[0]?.blockId).toBe("b1");
+  });
+
+  it("rejects custom_html for a non-Super-Admin and accepts it for one", () => {
+    const block = { id: "b1", type: "custom_html", props: { html: "<p>hi</p>" } };
+    expect(validateBlocks([block], false).errors).toEqual([{ blockId: "b1", type: "custom_html", message: 'Block type "custom_html" is Super Admin only' }]);
+    expect(validateBlocks([block], true).errors).toEqual([]);
+  });
+
+  it("validates multiple blocks independently, collecting every error", () => {
+    const { valid, errors } = validateBlocks(
+      [
+        { id: "b1", type: "hero", props: { heading: { en: "Hi" } } },
+        { id: "b2", type: "unknown", props: {} },
+      ],
+      false,
+    );
+    expect(valid).toHaveLength(1);
+    expect(errors).toHaveLength(1);
+  });
+});

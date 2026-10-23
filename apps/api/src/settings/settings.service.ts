@@ -11,6 +11,7 @@ import { decrypt, encrypt, isEncryptedPayload, maskSecret } from "@clothing/shar
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { CacheService } from "../cache/cache.service";
+import { RevalidationService } from "../revalidation/revalidation.service";
 import type { AuthenticatedStaff } from "../common/types";
 
 const PUBLIC_CONFIG_CACHE_KEY = "settings:public-config";
@@ -29,6 +30,7 @@ export class SettingsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly cache: CacheService,
+    private readonly revalidation: RevalidationService,
     @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
@@ -116,6 +118,10 @@ export class SettingsService {
 
     if (definition.public) {
       this.cache.invalidateTag(PUBLIC_CONFIG_CACHE_TAG);
+      // Publishing pipeline (docs/PROJECT_SPEC.md §9.6) — a public setting
+      // (brand color, header variant, …) reaches the live storefront
+      // without a deploy, within seconds.
+      await this.revalidation.revalidate(["settings"]);
     }
 
     await this.audit.record({
