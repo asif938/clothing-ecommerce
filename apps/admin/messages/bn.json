@@ -189,6 +189,37 @@
     "statusLabel": "স্ট্যাটাস",
     "cancel": "বাতিল"
   },
+  "shipping": {
+    "title": "শিপিং জোন ও রেট",
+    "zoneName": "জোনের নাম",
+    "priority": "অগ্রাধিকার",
+    "matchDivisionIds": "বিভাগ আইডি (কমা দিয়ে আলাদা)",
+    "matchDistrictIds": "জেলা আইডি (কমা দিয়ে আলাদা)",
+    "matchAreaIds": "এলাকা আইডি (কমা দিয়ে আলাদা)",
+    "matchDhakaCity": "ঢাকা সিটি মিলে",
+    "isCatchAll": "ক্যাচ-অল (বাকি বাংলাদেশ)",
+    "addZone": "জোন যুক্ত করুন",
+    "rates": "রেট",
+    "rateNameEn": "রেটের নাম (ইংরেজি)",
+    "rateNameBn": "রেটের নাম (বাংলা)",
+    "baseFee": "বেস ফি (টাকা)",
+    "includedWeight": "অন্তর্ভুক্ত ওজন (গ্রাম)",
+    "extraFeePerStep": "প্রতি স্টেপে অতিরিক্ত ফি (টাকা)",
+    "weightStep": "ওজন স্টেপ (গ্রাম)",
+    "estimatedDaysMin": "আনুমানিক দিন (সর্বনিম্ন)",
+    "estimatedDaysMax": "আনুমানিক দিন (সর্বোচ্চ)",
+    "addRate": "রেট যুক্ত করুন"
+  },
+  "paymentRules": {
+    "title": "পেমেন্ট রুল",
+    "name": "নাম",
+    "priority": "অগ্রাধিকার",
+    "stopProcessing": "পরবর্তী রুল বন্ধ করুন",
+    "conditions": "কন্ডিশন (JSON)",
+    "actions": "অ্যাকশন (JSON)",
+    "invalidJson": "কন্ডিশন ও অ্যাকশন বৈধ JSON হতে হবে",
+    "addRule": "রুল যুক্ত করুন"
+  },
   "inventory": {
     "title": "ইনভেন্টরি",
     "locationsTitle": "স্টক লোকেশন",
@@ -246,6 +277,8 @@
     "navCollections": "কালেকশন",
     "navPriceSchedules": "মূল্য সময়সূচি",
     "navInventory": "ইনভেন্টরি",
+    "navShipping": "শিপিং",
+    "navPaymentRules": "পেমেন্ট রুল",
     "navImportExport": "ইমপোর্ট / এক্সপোর্ট",
     "navSearch": "সার্চ সেটিংস"
   }

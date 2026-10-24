@@ -1008,3 +1008,186 @@ composed price-overlay variant §13.2 describes.
   client-rendered piece), but the actual score needs that environment to
   measure. Re-run Lighthouse against a real deployment with demo data
   before launch.
+
+## 2026-10-24 — Milestone 5: cart, checkout, shipping, payment rules, customer auth
+
+**Context.** §16 M5: cart pricing pipeline (§6.3), shipping zones/rates
+(§6.4), payment rules engine (§6.5), risk scoring (§6.6), stock reservation
+(§6.7), one-page checkout (§7.5), OTP + Google customer auth (§6.13),
+order placement with idempotency, payment drivers (COD + mock + SSLCommerz/
+bKash/Nagad), payment reconciliation, Turnstile. Acceptance: two buyers
+racing for the last unit → exactly one order succeeds; an admin shipping-
+fee change is reflected in checkout totals immediately; a high-risk rule
+forces an advance payment and the order starts `pending_payment` then
+moves to `pending` after the mock payment succeeds; expired unpaid orders
+release their stock reservation.
+
+**Decision — stock reservation is one conditional `UPDATE ... WHERE
+available >= :q` per line, inside the same transaction that creates the
+order, not a read-then-write check.** This is the one piece the whole
+acceptance scenario hinges on: Postgres takes a row lock on the first
+concurrent writer, and the second writer's `WHERE` clause is re-evaluated
+against the just-committed row once the lock releases — so it either
+finds enough `available` and reserves, or finds too little and the
+`UPDATE` affects zero rows, which `StockReservationService.reserve()`
+turns into a thrown `OUT_OF_STOCK` that rolls back the whole order-
+creation transaction. No read-then-write window exists for two requests
+to both believe they got the last unit. Payment-gateway network calls
+(`PaymentsService.initiate()`) happen strictly *after* this transaction
+commits, never inside it — holding a row lock across a network call to a
+third party would be its own outage risk.
+
+**Decision — risk scoring and the authoritative payment-rules evaluation
+both happen at order placement, not during cart pricing**, exactly as
+§6.6 says risk is "computed at order placement." The cart/checkout
+*quote* (`CartPricingService.price()`) still runs payment rules for a
+best-effort preview (so the checkout page can show "advance required" or
+a disabled payment method before the customer commits), using
+`riskLevel: null, riskScore: null, phoneBlocked: false` — rules that
+don't key off risk/blocklist behave identically in preview and at
+placement; rules that do are only authoritative the second time, after
+`CheckoutService` has computed the real risk score and blocklist match.
+`CartPricingResult.ruleContextBase` carries every other field the engine
+needs so placement doesn't have to re-run the whole pricing pipeline a
+second time just to re-evaluate payment rules.
+
+**Decision — `blocklist_entries` (spec table home: §5.10, nominally a
+later milestone) was built now instead**, because §6.5's default-seeded
+rule 1 ("blocklisted phone/IP/device → block order") and §6.6's risk
+signal 1 both need it to mean anything at all; a payment-rules engine
+that references a table that doesn't exist yet isn't a reasonable
+MVP. `BlocklistService.findMatch()` is the one method both consumers
+share.
+
+**Decision — combinable_with is two booleans (`automatic`, `codes`),
+not a full per-discount-pair matrix.** §5.8 describes combinability as
+"other discounts / codes / automatic" in the abstract; a real matrix
+(discount A explicitly allows/forbids combining with discount B
+specifically) is a lot of admin UI and data modeling for a rule that, in
+practice, almost every store expresses as "my automatic discounts can
+stack with each other" / "only one code at a time" / "codes and
+automatic discounts can/can't combine." The two-boolean model covers
+every real case named in the spec's own example (margin guard override
+aside) and is what `discount-math.ts`'s `canCombine()` implements and
+tests.
+
+**Decision — the margin guard blocks a discount *per line* by default
+(zeroing that line's allocation), not the whole discount, when
+`pricing.marginGuard.blockWholeDiscount` is off** (§6.3 step 5: "block
+the discount for that line (or the whole discount, per setting)"). Cost
+price is read from `ProductVariant.costPrice` (already permission-gated
+behind `catalog.cost.read` since M2) — margin guard itself runs server-
+side and never exposes cost price to the client.
+
+**Decision — flash sales are "basic" exactly as M5's own bullet says**:
+a `FlashSale` + `FlashSaleItem` (variant, sale price, optional stock cap)
+with no countdown-widget config, banner builder, or "shop the look"
+bundling — those are richer M10/M13 territory. `FlashSalesService.
+getActivePrice()` is the one method the cart pricing pipeline calls;
+`recordSold()` tracks the stock cap independently of `inventory_levels`,
+since a flash-sale cap and real on-hand stock are different limits that
+can both apply to the same variant at once.
+
+**Decision — discounts/flash-sales got a minimal CRUD API this
+milestone, not the "full UI."** §16 M8 explicitly owns "discounts &
+coupons full UI... bulk unique codes, margin guard [UI], flash sales
+UI" — M5's own bullet only promises the pricing-pipeline *engine*
+("automatic + code discounts, basic flash sales"). The admin screens for
+both are deferred to M8; for now a discount or flash sale is created via
+the API directly (e.g. from a seed script or `curl`/Swagger) until that
+UI exists. Shipping zones/rates and payment rules *did* get admin pages
+this milestone because M5's own bullet names them explicitly ("shipping
+zones & rates editor," "the payment rules editor").
+
+**Decision — the payment rules admin page edits conditions/actions as
+raw JSON, not a visual rule builder.** The condition vocabulary alone
+(order totals, zone/district/area, customer type/history, risk level,
+cart contents, payment method, time windows, UTM source, blocklist —
+see `payment-rules-engine.ts`) is large enough that a real builder UI is
+its own multi-day effort; a JSON textarea is still fully admin-editable
+(golden rule 1 — nothing is hardcoded) and is the honest MVP for this
+milestone. Worth revisiting once there's a concrete UX need for it.
+
+**Decision — customer sessions are JWT access token (15 min, HS256, key
+derived from `APP_ENCRYPTION_KEY` via HMAC) + opaque rotating refresh
+token (30 days, DB-backed, same hash-and-compare shape as staff
+sessions), deliberately different from staff auth's pure DB-session
+model.** Staff traffic is low-volume and already pays a DB round trip per
+request elsewhere; customer-facing traffic is the higher-volume path, so
+a stateless, fast-to-verify access token is worth the trade-off of
+"revocation only takes effect once the access token expires" — the
+refresh token (the thing that's actually revocable on logout) still goes
+through a DB check on every use. No new `CUSTOMER_JWT_SECRET` env var:
+deriving the signing key from the encryption key that already exists
+keeps setup to the same number of required secrets while still using
+distinct key material for the two purposes.
+
+**Decision — OTP delivery has no message-template system yet** (the SMS
+text is a plain, hardcoded-in-English string in `OtpService`). §6.11's
+bilingual, variable-driven message template editor is M7's job; building
+a one-off bilingual template just for OTP, then throwing it away when M7
+adds the real system, isn't worth it. In non-production environments the
+generated code is also returned in the API response (`devCode`) and shown
+on the storefront's OTP screens — there is no real SMS gateway configured
+anywhere in this environment, so without this nothing could be tested or
+demoed end-to-end; gated strictly behind `NODE_ENV !== "production"`.
+
+**Decision — SSLCommerz/bKash/Nagad drivers are implemented against each
+provider's publicly documented flow (session+validate; grant-token+
+execute; initialize+complete+verify) but not verified against a live
+sandbox account** — no merchant credentials exist in this environment
+(§10: "no merchant accounts exist yet... leave live credentials to be
+entered in admin"), consistent with every other driver built so far. Each
+has a doc-comment flagging the specific risk: endpoint paths and payload
+shapes are the part most likely to have moved since written, so
+**re-verify against each provider's current documentation before going
+live.** The mock driver is what every path in this milestone was actually
+exercised against (boot-tested end to end: initiate → the `MockPayController`
+"fake hosted page" → `confirmByExternalRef` → `OrdersLifecycleService`
+moving the order from `pending_payment` to `pending`).
+
+**Decision — Turnstile verification happens inline in
+`CheckoutService.placeOrder()`, gated by `checkout.turnstileEnabled`**,
+not as a separate guard/interceptor — it's one settings check + one driver
+call, and place-order is the only endpoint §7.5 actually asks for it on
+("invisible on checkout... on place-order"). The mock captcha driver
+(always succeeds unless configured to simulate failure) is what this was
+tested against; the real Turnstile driver needs a real site/secret key
+pair, which — like every other provider this project integrates — doesn't
+exist until an admin configures one.
+
+**Decision — division/district/area ids on `Address`/`Cart`/`Order` are
+plain `String` fields validated against the `divisions`/`districts`/
+`areas` tables in the service layer (`LocationsService.validateChain()`),
+not Prisma relations.** Making them real relations would mean adding a
+back-relation array to `Division`/`District`/`Area` — stable M1 reference-
+data models — for every new consumer forever; a soft reference matches
+the precedent already set by `Category.attributeIds` and
+`PriceSchedule.targetId`.
+
+**Decision — the admin's "searchable" area select (§7.5: "cascading
+selects (searchable, Bangla + English)") searches client-side**, not via
+a server-side query param. Areas per district are few enough to fetch
+whole and filter in the browser, which searches bn+en at once "for free"
+instead of a JSON-path `OR` query on the API side — same reasoning
+`StoreLocationsController` already documents for M4's catalog filters.
+
+**Decision — the account area ships login (OTP) + orders list + a
+read-only addresses list (view/remove, no edit) this milestone, with new
+addresses saved from checkout's own address form rather than a duplicate
+"add address" form on the account page.** A full address-book CRUD
+screen and a mounted Google Identity Services button are both reasonable
+near-term follow-ups (the API side for both — `POST /store/account/
+addresses`, `POST /store/auth/google` — is already built and ready) but
+weren't essential to proving the milestone's acceptance scenarios, all of
+which are checkout-path, not account-area, concerns.
+
+**Not verified in this environment** (same limitation as every prior
+milestone — no live Postgres, no live browser): the actual concurrent-
+request race (unit-tested at the `StockReservationService` level with a
+mocked transaction client, and reasoned through against Postgres's real
+row-locking semantics in the doc comment on that service, but never run
+against two real concurrent HTTP requests hitting a real database);
+Lighthouse/visual QA of the new storefront cart/checkout/account pages;
+the k6 500-VU load test (§13.1); and — because no merchant/gateway
+credentials exist — every online payment driver beyond the mock.

@@ -63,6 +63,22 @@ export class ProviderRegistryService {
     return result.data as Record<string, unknown>;
   }
 
+  /**
+   * The one active instance for a capability that only ever has a single
+   * active provider at a time (sms/payment/captcha/fraud_check — unlike
+   * media, which can run several storage providers side by side). Returns
+   * null when nothing is configured, so callers fall back to their mock
+   * driver (golden rule 2).
+   */
+  async findActiveInstance(capability: ProviderCapability): Promise<{ instanceId: string; driver: string; config: Record<string, unknown> } | null> {
+    const instance = await this.prisma.providerInstance.findFirst({
+      where: { capability, enabled: true },
+      orderBy: [{ isDefault: "desc" }, { priority: "desc" }],
+    });
+    if (!instance) return null;
+    return { instanceId: instance.id, driver: instance.driver, config: this.decryptConfig(instance.config) };
+  }
+
   async testConnection(instanceId: string): Promise<ProviderTestResult> {
     const instance = await this.prisma.providerInstance.findUnique({ where: { id: instanceId } });
     if (!instance) throw new NotFoundException("Provider instance not found");

@@ -64,6 +64,21 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "settings.features.write", group: "settings", label: { bn: "ফিচার সেটিংস পরিবর্তন করুন", en: "Edit feature settings" } },
   { key: "settings.chat.write", group: "settings", label: { bn: "চ্যাট সেটিংস পরিবর্তন করুন", en: "Edit chat settings" } },
   { key: "settings.seo.write", group: "settings", label: { bn: "SEO সেটিংস পরিবর্তন করুন", en: "Edit SEO settings" } },
+
+  // Milestone 5 (docs/PROJECT_SPEC.md §16 M5) — cart/checkout/shipping/
+  // payment rules/risk/discounts. Resource-management permissions follow
+  // the `catalog.manage`/`cms.manage` granularity; each new settings group
+  // gets its own `settings.<group>.write`, matching the existing pattern.
+  { key: "shipping.manage", group: "shipping", label: { bn: "শিপিং জোন ও রেট পরিচালনা করুন", en: "Manage shipping zones & rates" } },
+  { key: "settings.shipping.write", group: "settings", label: { bn: "শিপিং সেটিংস পরিবর্তন করুন", en: "Edit shipping settings" } },
+  { key: "payment_rules.manage", group: "payment_rules", label: { bn: "পেমেন্ট রুল পরিচালনা করুন", en: "Manage payment rules" } },
+  { key: "settings.payment.write", group: "settings", label: { bn: "পেমেন্ট সেটিংস পরিবর্তন করুন", en: "Edit payment settings" } },
+  { key: "settings.risk.write", group: "settings", label: { bn: "রিস্ক সেটিংস পরিবর্তন করুন", en: "Edit risk settings" } },
+  { key: "settings.checkout.write", group: "settings", label: { bn: "চেকআউট সেটিংস পরিবর্তন করুন", en: "Edit checkout settings" } },
+  { key: "settings.orders.write", group: "settings", label: { bn: "অর্ডার সেটিংস পরিবর্তন করুন", en: "Edit order settings" } },
+  { key: "settings.auth.write", group: "settings", label: { bn: "গ্রাহক অথ সেটিংস পরিবর্তন করুন", en: "Edit customer auth settings" } },
+  { key: "discounts.manage", group: "discounts", label: { bn: "ডিসকাউন্ট ও ফ্ল্যাশ সেল পরিচালনা করুন", en: "Manage discounts & flash sales" } },
+  { key: "blocklist.manage", group: "blocklist", label: { bn: "ব্লকলিস্ট পরিচালনা করুন", en: "Manage blocklist" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

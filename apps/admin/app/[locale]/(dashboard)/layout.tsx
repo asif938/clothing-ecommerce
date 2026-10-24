@@ -15,6 +15,8 @@ const NAV_ITEMS = [
   { href: "/collections", labelKey: "navCollections" },
   { href: "/price-schedules", labelKey: "navPriceSchedules" },
   { href: "/inventory", labelKey: "navInventory" },
+  { href: "/shipping", labelKey: "navShipping" },
+  { href: "/payment-rules", labelKey: "navPaymentRules" },
   { href: "/import-export", labelKey: "navImportExport" },
   { href: "/search", labelKey: "navSearch" },
   { href: "/settings", labelKey: "navSettings" },

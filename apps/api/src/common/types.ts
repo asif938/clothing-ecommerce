@@ -9,8 +9,15 @@ export interface AuthenticatedStaff {
   isSuperAdmin: boolean;
 }
 
+/** Attached by CustomerContextGuard — `customer` only when a valid access-token cookie was presented; `anonymousId` is always set (read from or newly written to the anonymous_id cookie) so guest carts have a stable identity. */
+export interface CustomerContext {
+  customer: { id: string; phone: string | null } | null;
+  anonymousId: string;
+}
+
 declare module "express-serve-static-core" {
   interface Request {
     staff?: AuthenticatedStaff;
+    customerContext?: CustomerContext;
   }
 }

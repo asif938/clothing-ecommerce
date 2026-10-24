@@ -448,6 +448,415 @@ export const CHAT_MESSENGER_PAGE_URL = defineSetting({
   ui: { widget: "text" },
 });
 
+/**
+ * Milestone 5 (docs/PROJECT_SPEC.md §6.3-§6.13, §17): shipping/weight
+ * defaults, payment/risk/checkout behavior, order numbering, customer-auth
+ * (OTP + Google) toggles. None of these are `public: true` — unlike M3's
+ * theme/brand settings, nothing here is read directly by an unauthenticated
+ * storefront page; the cart/checkout API reads them server-side.
+ */
+export const SHIPPING_DEFAULT_ITEM_WEIGHT_GRAMS = defineSetting({
+  key: "shipping.defaultItemWeightGrams",
+  group: "shipping",
+  type: z.number().int().min(1),
+  default: 400,
+  label: { bn: "ডিফল্ট পণ্যের ওজন (গ্রাম)", en: "Default item weight (grams)" },
+  help: { bn: "যখন কোনো ভ্যারিয়েন্টের ওজন সেট করা নেই তখন ব্যবহৃত হয়", en: "Used when a variant has no weight set" },
+  secret: false,
+  public: false,
+  permission: "settings.shipping.write",
+  ui: { widget: "text" },
+});
+
+export const SHIPPING_FREE_DELIVERY_THRESHOLD = defineSetting({
+  key: "shipping.freeDeliveryThreshold",
+  group: "shipping",
+  type: z.number().int().min(0).nullable(),
+  default: null,
+  label: { bn: "ফ্রি ডেলিভারি থ্রেশহোল্ড (পয়সা)", en: "Free delivery threshold (poisha)" },
+  help: { bn: "খালি রাখলে বন্ধ থাকবে", en: "Leave empty to disable" },
+  secret: false,
+  public: false,
+  permission: "settings.shipping.write",
+  ui: { widget: "text" },
+});
+
+export const SHIPPING_FALLBACK_FEE = defineSetting({
+  key: "shipping.fallbackFee",
+  group: "shipping",
+  type: z.number().int().min(0).nullable(),
+  default: null,
+  label: { bn: "কোনো জোন না মিললে ফি (পয়সা)", en: "Fee when no zone matches (poisha)" },
+  help: { bn: "খালি রাখলে কোনো জোন না মিললে চেকআউট ব্লক হবে", en: "Leave empty to block checkout when no zone matches" },
+  secret: false,
+  public: false,
+  permission: "settings.shipping.write",
+  ui: { widget: "text" },
+});
+
+export const PAYMENT_COD_ENABLED = defineSetting({
+  key: "payment.codEnabled",
+  group: "payment",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "ক্যাশ অন ডেলিভারি চালু", en: "Cash on delivery enabled" },
+  secret: false,
+  public: false,
+  permission: "settings.payment.write",
+  ui: { widget: "toggle" },
+});
+
+export const PAYMENT_TIMEOUT_MINUTES = defineSetting({
+  key: "payment.timeoutMinutes",
+  group: "payment",
+  type: z.number().int().min(1).max(24 * 60),
+  default: 30,
+  label: { bn: "পেমেন্ট টাইমআউট (মিনিট)", en: "Payment timeout (minutes)" },
+  help: { bn: "এই সময়ের মধ্যে পেমেন্ট সম্পন্ন না হলে অর্ডারটি মেয়াদোত্তীর্ণ হয়ে যাবে এবং স্টক মুক্ত হবে", en: "Unpaid pending_payment orders expire after this and release their stock reservation" },
+  secret: false,
+  public: false,
+  permission: "settings.payment.write",
+  ui: { widget: "text" },
+});
+
+const DEFAULT_RISK_WEIGHTS = {
+  blocklisted_phone: 100,
+  courier_history_low: 40,
+  courier_history_medium: 20,
+  doorstep_rejection: 15,
+  cancelled_after_confirm: 10,
+  new_customer_high_value: 15,
+  same_phone_or_device_burst: 20,
+  same_ip_multi_phone_burst: 25,
+  address_too_short_or_test_words: 15,
+  name_looks_invalid: 10,
+  delivered_history_no_rejections: -30,
+  otp_verified: -10,
+};
+
+export const RISK_WEIGHTS = defineSetting({
+  key: "risk.weights",
+  group: "risk",
+  type: z.record(z.string(), z.number()),
+  default: DEFAULT_RISK_WEIGHTS,
+  label: { bn: "রিস্ক স্কোরিং ওয়েট", en: "Risk scoring weights" },
+  secret: false,
+  public: false,
+  permission: "settings.risk.write",
+  ui: { widget: "json" },
+});
+
+export const RISK_THRESHOLDS = defineSetting({
+  key: "risk.thresholds",
+  group: "risk",
+  type: z.object({ low: z.number().int(), medium: z.number().int() }),
+  default: { low: 30, medium: 60 },
+  label: { bn: "রিস্ক লেভেল থ্রেশহোল্ড", en: "Risk level thresholds" },
+  help: { bn: "low < low-threshold ≤ medium < medium-threshold ≤ high", en: "low < low-threshold ≤ medium < medium-threshold ≤ high" },
+  secret: false,
+  public: false,
+  permission: "settings.risk.write",
+  ui: { widget: "json" },
+});
+
+export const RISK_HOLD_HIGH_RISK = defineSetting({
+  key: "risk.holdHighRisk",
+  group: "risk",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "হাই-রিস্ক অর্ডার হোল্ডে রাখুন", en: "Hold high-risk orders" },
+  secret: false,
+  public: false,
+  permission: "settings.risk.write",
+  ui: { widget: "toggle" },
+});
+
+export const RISK_HIGH_VALUE_THRESHOLD = defineSetting({
+  key: "risk.highValueThreshold",
+  group: "risk",
+  type: z.number().int().min(0),
+  default: 500_00,
+  label: { bn: "উচ্চ-মূল্যের থ্রেশহোল্ড (পয়সা)", en: "High-value threshold (poisha)" },
+  secret: false,
+  public: false,
+  permission: "settings.risk.write",
+  ui: { widget: "text" },
+});
+
+export const RISK_DUPLICATE_WINDOW_MINUTES = defineSetting({
+  key: "risk.duplicateWindowMinutes",
+  group: "risk",
+  type: z.number().int().min(1),
+  default: 60,
+  label: { bn: "ডুপ্লিকেট অর্ডার উইন্ডো (মিনিট)", en: "Duplicate-order window (minutes)" },
+  secret: false,
+  public: false,
+  permission: "settings.risk.write",
+  ui: { widget: "text" },
+});
+
+export const CHECKOUT_CUSTOMER_EMAIL_REQUIREMENT = defineSetting({
+  key: "checkout.customerEmailRequirement",
+  group: "checkout",
+  type: z.enum(["hidden", "optional", "required"]),
+  default: "optional",
+  label: { bn: "চেকআউটে ইমেইল", en: "Email at checkout" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "hidden", label: { bn: "দেখানো হবে না", en: "Hidden" } },
+      { value: "optional", label: { bn: "ঐচ্ছিক", en: "Optional" } },
+      { value: "required", label: { bn: "আবশ্যক", en: "Required" } },
+    ],
+  },
+});
+
+export const CHECKOUT_TERMS_CHECKBOX_ENABLED = defineSetting({
+  key: "checkout.termsCheckboxEnabled",
+  group: "checkout",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "শর্তাবলী চেকবক্স", en: "Terms checkbox" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHECKOUT_MAX_COUPON_CODES_PER_ORDER = defineSetting({
+  key: "checkout.maxCouponCodesPerOrder",
+  group: "checkout",
+  type: z.number().int().min(1).max(10),
+  default: 1,
+  label: { bn: "প্রতি অর্ডারে সর্বোচ্চ কুপন কোড", en: "Max coupon codes per order" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "text" },
+});
+
+export const CHECKOUT_OTP_REQUIRED = defineSetting({
+  key: "checkout.otpRequired",
+  group: "checkout",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "চেকআউটে OTP আবশ্যক", en: "OTP required at checkout" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHECKOUT_TURNSTILE_ENABLED = defineSetting({
+  key: "checkout.turnstileEnabled",
+  group: "checkout",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "চেকআউটে ক্যাপচা", en: "Captcha at checkout" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHECKOUT_SIMPLE_DHAKA_TOGGLE = defineSetting({
+  key: "checkout.simpleDhakaToggle",
+  group: "checkout",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "ঢাকার ভেতরে/বাইরে সহজ টগল", en: "Simple inside/outside Dhaka toggle" },
+  help: { bn: "চালু করলে বিভাগ/জেলা/এলাকা নির্বাচনের বদলে একটি সহজ টগল দেখাবে", en: "When on, shows a simple toggle instead of division/district/area selects" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHECKOUT_GIFT_WRAP_ENABLED = defineSetting({
+  key: "checkout.giftWrapEnabled",
+  group: "checkout",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "গিফট র‍্যাপ অপশন", en: "Gift wrap option" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const CHECKOUT_GIFT_WRAP_FEE = defineSetting({
+  key: "checkout.giftWrapFee",
+  group: "checkout",
+  type: z.number().int().min(0),
+  default: 0,
+  label: { bn: "গিফট র‍্যাপ ফি (পয়সা)", en: "Gift wrap fee (poisha)" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "text" },
+});
+
+export const CHECKOUT_ALLOW_CUSTOMER_CANCEL_WHILE_PENDING = defineSetting({
+  key: "checkout.allowCustomerCancelWhilePending",
+  group: "checkout",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "পেন্ডিং অর্ডার গ্রাহক নিজে বাতিল করতে পারবে", en: "Customer can cancel while order is pending" },
+  secret: false,
+  public: false,
+  permission: "settings.checkout.write",
+  ui: { widget: "toggle" },
+});
+
+export const ORDERS_NUMBER_FORMAT = defineSetting({
+  key: "orders.numberFormat",
+  group: "orders",
+  type: z.string().min(1),
+  default: "{PREFIX}{YYMMDD}{SEQ4}",
+  label: { bn: "অর্ডার নম্বর ফরম্যাট", en: "Order number format" },
+  help: { bn: "ভ্যারিয়েবল: {PREFIX} (ব্র্যান্ডের নামের প্রথম ৩ অক্ষর), {YYMMDD}, {SEQ4}", en: "Variables: {PREFIX} (brand name's first 3 letters), {YYMMDD}, {SEQ4}" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_OTP_LENGTH = defineSetting({
+  key: "auth.otpLength",
+  group: "auth",
+  type: z.number().int().min(4).max(6),
+  default: 6,
+  label: { bn: "OTP এর দৈর্ঘ্য", en: "OTP length" },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_OTP_TTL_MINUTES = defineSetting({
+  key: "auth.otpTtlMinutes",
+  group: "auth",
+  type: z.number().int().min(1).max(60),
+  default: 5,
+  label: { bn: "OTP এর মেয়াদ (মিনিট)", en: "OTP validity (minutes)" },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_OTP_MAX_ATTEMPTS = defineSetting({
+  key: "auth.otpMaxAttempts",
+  group: "auth",
+  type: z.number().int().min(1).max(20),
+  default: 5,
+  label: { bn: "OTP যাচাইয়ের সর্বোচ্চ চেষ্টা", en: "Max OTP verify attempts" },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_OTP_RESEND_SECONDS = defineSetting({
+  key: "auth.otpResendSeconds",
+  group: "auth",
+  type: z.number().int().min(10).max(600),
+  default: 60,
+  label: { bn: "OTP পুনরায় পাঠানোর বিরতি (সেকেন্ড)", en: "OTP resend cooldown (seconds)" },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_OTP_MAX_SENDS_PER_PHONE_PER_10_MIN = defineSetting({
+  key: "auth.otpMaxSendsPerPhonePer10Min",
+  group: "auth",
+  type: z.number().int().min(1).max(20),
+  default: 3,
+  label: { bn: "প্রতি ফোন নম্বরে ১০ মিনিটে সর্বোচ্চ OTP প্রেরণ", en: "Max OTP sends per phone per 10 minutes" },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_GOOGLE_ENABLED = defineSetting({
+  key: "auth.googleEnabled",
+  group: "auth",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "গুগল সাইন-ইন চালু", en: "Google sign-in enabled" },
+  secret: false,
+  public: true,
+  permission: "settings.auth.write",
+  ui: { widget: "toggle" },
+});
+
+export const AUTH_GOOGLE_CLIENT_ID = defineSetting({
+  key: "auth.googleClientId",
+  group: "auth",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "গুগল ক্লায়েন্ট আইডি", en: "Google client ID" },
+  secret: false,
+  public: true,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const AUTH_GOOGLE_CLIENT_SECRET = defineSetting({
+  key: "auth.googleClientSecret",
+  group: "auth",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "গুগল ক্লায়েন্ট সিক্রেট", en: "Google client secret" },
+  secret: true,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
+export const PRICING_MARGIN_GUARD_ENABLED = defineSetting({
+  key: "pricing.marginGuard.enabled",
+  group: "pricing",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "মার্জিন গার্ড চালু", en: "Margin guard enabled" },
+  help: { bn: "ক্রয়মূল্যের চেয়ে কম দামে বিক্রি রোধ করতে ডিসকাউন্ট ব্লক করুন", en: "Block a discount from pushing a line's net price below cost" },
+  secret: false,
+  public: false,
+  permission: "discounts.manage",
+  ui: { widget: "toggle" },
+});
+
+export const PRICING_MARGIN_GUARD_MIN_MARGIN_PERCENT = defineSetting({
+  key: "pricing.marginGuard.minMarginPercent",
+  group: "pricing",
+  type: z.number().min(0).max(1000),
+  default: 0,
+  label: { bn: "সর্বনিম্ন মার্জিন (%)", en: "Minimum margin (%)" },
+  secret: false,
+  public: false,
+  permission: "discounts.manage",
+  ui: { widget: "text" },
+});
+
+export const PRICING_MARGIN_GUARD_BLOCK_WHOLE_DISCOUNT = defineSetting({
+  key: "pricing.marginGuard.blockWholeDiscount",
+  group: "pricing",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "পুরো ডিসকাউন্ট ব্লক করুন (শুধু লাইন নয়)", en: "Block the whole discount (not just the line)" },
+  secret: false,
+  public: false,
+  permission: "discounts.manage",
+  ui: { widget: "toggle" },
+});
+
 export const SEO_TITLE_TEMPLATE = defineSetting({
   key: "seo.titleTemplate",
   group: "seo",

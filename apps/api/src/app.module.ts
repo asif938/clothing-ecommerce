@@ -31,6 +31,18 @@ import { StoreContentModule } from "./store-content/store-content.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
 import { NotifyMeModule } from "./notify-me/notify-me.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { CustomersModule } from "./customers/customers.module";
+import { SmsModule } from "./sms/sms.module";
+import { CustomerAuthModule } from "./customer-auth/customer-auth.module";
+import { AddressesModule } from "./addresses/addresses.module";
+import { ShippingModule } from "./shipping/shipping.module";
+import { DiscountsModule } from "./discounts/discounts.module";
+import { BlocklistModule } from "./blocklist/blocklist.module";
+import { PaymentRulesModule } from "./payment-rules/payment-rules.module";
+import { RiskModule } from "./risk/risk.module";
+import { CartModule } from "./cart/cart.module";
+import { PaymentsModule } from "./payments/payments.module";
+import { CheckoutModule } from "./checkout/checkout.module";
 
 @Module({
   imports: [
@@ -81,6 +93,20 @@ import { AnalyticsModule } from "./analytics/analytics.module";
     // Milestone 4 (docs/PROJECT_SPEC.md §16 M4) — storefront catalog experience.
     NotifyMeModule,
     AnalyticsModule,
+    // Milestone 5 (docs/PROJECT_SPEC.md §16 M5) — cart, checkout, shipping,
+    // payment rules, customer auth.
+    CustomersModule,
+    SmsModule,
+    CustomerAuthModule,
+    AddressesModule,
+    ShippingModule,
+    DiscountsModule,
+    BlocklistModule,
+    PaymentRulesModule,
+    RiskModule,
+    CartModule,
+    PaymentsModule,
+    CheckoutModule,
   ],
 })
 export class AppModule {}

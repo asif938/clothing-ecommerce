@@ -5,6 +5,13 @@ import { cloudinaryStorageDriverDefinition } from "./drivers/storage-cloudinary.
 import { mockEmailDriverDefinition } from "./drivers/email-mock.ts";
 import { smtpEmailDriverDefinition } from "./drivers/email-smtp.ts";
 import { mockSmsDriverDefinition } from "./drivers/sms-mock.ts";
+import { mockPaymentDriverDefinition } from "./drivers/payment-mock.ts";
+import { sslcommerzDriverDefinition } from "./drivers/payment-sslcommerz.ts";
+import { bkashDriverDefinition } from "./drivers/payment-bkash.ts";
+import { nagadDriverDefinition } from "./drivers/payment-nagad.ts";
+import { turnstileDriverDefinition } from "./drivers/captcha-turnstile.ts";
+import { mockCaptchaDriverDefinition } from "./drivers/captcha-mock.ts";
+import { mockFraudCheckDriverDefinition } from "./drivers/fraud-check-mock.ts";
 
 /**
  * The static catalog of every driver implemented so far, keyed by
@@ -24,6 +31,13 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   mockEmailDriverDefinition as unknown as ProviderDriverDefinition,
   smtpEmailDriverDefinition as unknown as ProviderDriverDefinition,
   mockSmsDriverDefinition as unknown as ProviderDriverDefinition,
+  mockPaymentDriverDefinition as unknown as ProviderDriverDefinition,
+  sslcommerzDriverDefinition as unknown as ProviderDriverDefinition,
+  bkashDriverDefinition as unknown as ProviderDriverDefinition,
+  nagadDriverDefinition as unknown as ProviderDriverDefinition,
+  turnstileDriverDefinition as unknown as ProviderDriverDefinition,
+  mockCaptchaDriverDefinition as unknown as ProviderDriverDefinition,
+  mockFraudCheckDriverDefinition as unknown as ProviderDriverDefinition,
 ];
 
 export function getDriverDefinition(

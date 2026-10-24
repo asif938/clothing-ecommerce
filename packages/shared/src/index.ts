@@ -12,4 +12,5 @@ export * from "./i18n/localized-text.ts";
 export * from "./i18n/defaults.ts";
 export * from "./permissions/index.ts";
 export * from "./catalog/slug.ts";
+export * from "./phone/bd-phone.ts";
 export type { ProviderCapability, ProviderTestResult } from "./providers/types.ts";

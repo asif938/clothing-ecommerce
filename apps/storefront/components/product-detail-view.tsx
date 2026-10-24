@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { t } from "@clothing/shared";
-import { Link } from "../i18n/navigation";
+import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
+import { useCart } from "../lib/use-cart";
 import { ProductCard } from "./product-card";
 import { SizeChartModal } from "./size-chart-modal";
 import { NotifyMeForm } from "./notify-me-form";
@@ -38,6 +39,9 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
   const [showSizeChart, setShowSizeChart] = useState(false);
   const [showNotifyMe, setShowNotifyMe] = useState(false);
   const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const cart = useCart();
+  const router = useRouter();
 
   useEffect(() => {
     trackEvent("view_item", { productId: product.id, slug: product.slug });
@@ -77,8 +81,23 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
     setShowNotifyMe(false);
   }
 
-  function handleAddToCart() {
-    setCartMessage(locale === "bn" ? "কার্ট এখনো চালু হয়নি — শীঘ্রই আসছে।" : "Cart isn't wired up yet — coming in the next milestone.");
+  async function handleAddToCart(buyNow: boolean) {
+    if (!matchedVariant) return;
+    setAdding(true);
+    setCartMessage(null);
+    try {
+      await cart.addItem(matchedVariant.id, 1);
+      trackEvent("add_to_cart", { productId: product.id, variantId: matchedVariant.id });
+      if (buyNow) {
+        router.push("/checkout");
+      } else {
+        setCartMessage(locale === "bn" ? "কার্টে যুক্ত হয়েছে।" : "Added to your cart.");
+      }
+    } catch (error) {
+      setCartMessage(error instanceof Error ? error.message : "Could not add to cart");
+    } finally {
+      setAdding(false);
+    }
   }
 
   // Set after mount (not during the initial server-rendered pass) so the
@@ -223,10 +242,10 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={handleAddToCart} className="flex-1 rounded-theme bg-brand px-6 py-3 text-sm font-medium text-brand-foreground">
+              <button disabled={adding} onClick={() => handleAddToCart(false)} className="flex-1 rounded-theme bg-brand px-6 py-3 text-sm font-medium text-brand-foreground disabled:opacity-60">
                 {locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
               </button>
-              <button onClick={handleAddToCart} className="flex-1 rounded-theme border border-brand px-6 py-3 text-sm font-medium text-brand">
+              <button disabled={adding} onClick={() => handleAddToCart(true)} className="flex-1 rounded-theme border border-brand px-6 py-3 text-sm font-medium text-brand disabled:opacity-60">
                 {locale === "bn" ? "এখনই কিনুন" : "Buy now"}
               </button>
               <WishlistButton productId={product.id} locale={locale} />
@@ -290,7 +309,7 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
       {/* Sticky add-to-cart bar on mobile (§7.4) */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3 shadow-lg sm:hidden">
         <span className="text-sm font-semibold text-surface-foreground">{priceLabel}</span>
-        <button onClick={handleAddToCart} className="rounded-theme bg-brand px-5 py-2 text-sm font-medium text-brand-foreground">
+        <button disabled={adding} onClick={() => handleAddToCart(false)} className="rounded-theme bg-brand px-5 py-2 text-sm font-medium text-brand-foreground disabled:opacity-60">
           {locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
         </button>
       </div>

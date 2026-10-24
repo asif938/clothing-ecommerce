@@ -12,6 +12,10 @@ import type { LocalizedText } from "../i18n/localized-text.ts";
  * day one; their driver implementations land with the milestone that needs
  * them (payment/courier M5-M6, whatsapp/sms gateways M7, ai M10+, search M2,
  * captcha M5, fraud_check M5, tracking M8) — see docs/DECISIONS.md.
+ * Milestone 5 adds `payment` (mock/SSLCommerz/bKash/Nagad — COD needs no
+ * driver, it's built-in per §10.1), `captcha` (Turnstile + mock) and a
+ * `fraud_check` mock (the "courier history" risk signal, §6.6 — no real BD
+ * courier-history API integration exists yet, see docs/DECISIONS.md).
  */
 export const PROVIDER_CAPABILITIES = [
   "payment",
@@ -95,4 +99,55 @@ export interface SmsSendOptions {
 export interface SmsDriver {
   send(to: string, text: string, options?: SmsSendOptions): Promise<void>;
   balance?(): Promise<number>;
+}
+
+/**
+ * Online payment drivers (docs/PROJECT_SPEC.md §10.1) — SSLCommerz, bKash
+ * and Nagad each have a different real flow (session+IPN,
+ * grant-token+execute, initialize+complete) but all funnel down to the
+ * same two steps from the caller's point of view: start a hosted-page
+ * payment and get a redirect URL back, then confirm what happened (from a
+ * callback payload, or by actively querying the provider). COD needs
+ * neither — it's handled directly in `PaymentsService`, never through this
+ * interface (§10.1: "No gateway").
+ */
+export interface PaymentInitiateInput {
+  amount: number;
+  currency: string;
+  orderNumber: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  returnUrls: { success: string; fail: string; cancel: string };
+}
+
+export interface PaymentInitiateResult {
+  redirectUrl: string;
+  externalRef: string;
+  raw?: unknown;
+}
+
+export type PaymentVerificationStatus = "succeeded" | "failed" | "pending";
+
+export interface PaymentVerifyResult {
+  status: PaymentVerificationStatus;
+  externalRef: string;
+  amount?: number;
+  raw?: unknown;
+}
+
+export interface PaymentDriver {
+  initiate(input: PaymentInitiateInput): Promise<PaymentInitiateResult>;
+  /** Called from the provider's callback/IPN/redirect, or by the reconciliation job re-querying a `pending` payment — must be idempotent (§10.1: "idempotent processing of duplicate callbacks"). */
+  verify(externalRef: string, callbackPayload?: Record<string, unknown>): Promise<PaymentVerifyResult>;
+}
+
+/** Cloudflare Turnstile (or any future captcha), invisible on checkout/OTP/review/contact (§10.6). */
+export interface CaptchaDriver {
+  verify(token: string, remoteIp?: string): Promise<{ success: boolean; reason?: string }>;
+}
+
+/** The one risk-scoring signal (§6.6) that needs an external lookup; a real BD courier-history API is not integrated yet — see docs/DECISIONS.md. */
+export interface FraudCheckDriver {
+  checkPhone(phone: string): Promise<{ deliverySuccessRatio: number | null; sampleSize: number }>;
 }

@@ -1,6 +1,7 @@
 import { t } from "@clothing/shared";
 import { Link } from "../i18n/navigation";
 import { SearchBox } from "./search-box";
+import { CartLink } from "./cart-link";
 import type { MenuData } from "../lib/store-api";
 
 /**
@@ -66,7 +67,10 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale }: Head
       <div className={`mx-auto flex max-w-6xl items-center gap-4 ${headerVariant === "centered" ? "flex-col" : "justify-between"}`}>
         {logo}
         {nav}
-        <SearchBox locale={locale} />
+        <div className="flex items-center gap-4">
+          <SearchBox locale={locale} />
+          <CartLink locale={locale} />
+        </div>
       </div>
     </header>
   );

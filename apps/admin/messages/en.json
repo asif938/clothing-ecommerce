@@ -189,6 +189,37 @@
     "statusLabel": "Status",
     "cancel": "Cancel"
   },
+  "shipping": {
+    "title": "Shipping zones & rates",
+    "zoneName": "Zone name",
+    "priority": "Priority",
+    "matchDivisionIds": "Division IDs (comma-separated)",
+    "matchDistrictIds": "District IDs (comma-separated)",
+    "matchAreaIds": "Area IDs (comma-separated)",
+    "matchDhakaCity": "Matches Dhaka city",
+    "isCatchAll": "Catch-all (rest of Bangladesh)",
+    "addZone": "Add zone",
+    "rates": "Rates",
+    "rateNameEn": "Rate name (English)",
+    "rateNameBn": "Rate name (Bangla)",
+    "baseFee": "Base fee (BDT)",
+    "includedWeight": "Included weight (g)",
+    "extraFeePerStep": "Extra fee per step (BDT)",
+    "weightStep": "Weight step (g)",
+    "estimatedDaysMin": "Estimated days (min)",
+    "estimatedDaysMax": "Estimated days (max)",
+    "addRate": "Add rate"
+  },
+  "paymentRules": {
+    "title": "Payment rules",
+    "name": "Name",
+    "priority": "Priority",
+    "stopProcessing": "Stop processing further rules",
+    "conditions": "Conditions (JSON)",
+    "actions": "Actions (JSON)",
+    "invalidJson": "Conditions and actions must be valid JSON",
+    "addRule": "Add rule"
+  },
   "inventory": {
     "title": "Inventory",
     "locationsTitle": "Stock locations",
@@ -246,6 +277,8 @@
     "navCollections": "Collections",
     "navPriceSchedules": "Price schedules",
     "navInventory": "Inventory",
+    "navShipping": "Shipping",
+    "navPaymentRules": "Payment rules",
     "navImportExport": "Import / export",
     "navSearch": "Search settings"
   }

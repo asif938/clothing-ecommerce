@@ -792,14 +792,170 @@ Postgres, no browser); see "Not verified" below.
 
 ---
 
+## Milestone 5 — Cart, checkout, shipping, payment rules, customer auth
+
+Status: complete (§16 M5) at the code/test level. All four acceptance
+scenarios are implemented and reasoned through carefully (see
+docs/DECISIONS.md for the stock-reservation race-condition argument in
+particular); none could be exercised against a real concurrent HTTP
+load or a live Postgres in this environment — see "Not verified" below.
+
+### Built
+
+- **`packages/db`**: `customers`, `customer_sessions`, `otp_codes`,
+  `addresses`, `carts`/`cart_items`, `shipping_zones`/`shipping_rates`,
+  `payment_rules`, `discounts`/`discount_usages`, `flash_sales`/
+  `flash_sale_items`, `blocklist_entries`, `orders`/`order_items`/
+  `order_discounts`/`order_events`, `payments` — one hand-written
+  migration (`20261024090000_cart_checkout_shipping_payments`), generated
+  via `prisma migrate diff` on two schema files (no live DB needed for
+  that) and reviewed by hand before being committed, same as every prior
+  milestone's migration.
+- **`packages/shared`**: BD phone normalize/validate/format/mask
+  (`phone/bd-phone.ts`, §6.2); `PaymentDriver`/`CaptchaDriver`/
+  `FraudCheckDriver` provider interfaces + drivers — `mock`/`sslcommerz`/
+  `bkash`/`nagad` for payment, `turnstile`/`mock` for captcha, `mock` for
+  fraud-check (§10.1, §10.6, §6.6); ~25 new settings across `shipping.*`,
+  `payment.*`, `risk.*`, `checkout.*`, `orders.*`, `auth.*`,
+  `pricing.marginGuard.*`; new permissions (`shipping.manage`,
+  `payment_rules.manage`, `discounts.manage`, `blocklist.manage`, plus a
+  `settings.<group>.write` per new settings group).
+- **`apps/api`** (one module per bounded context, as established):
+  - `customers`, `customer-auth` (OTP send/verify, Google sign-in, JWT
+    access + rotating refresh cookies, cart-merge-on-login — §6.13),
+    `addresses` (customer saved addresses), `locations` (gained a
+    `LocationsService.validateChain()` + a public `/store/locations/*`
+    read API for checkout's cascading selects).
+  - `shipping` (zone/rate matching + fee calculation, §6.4 — fully unit-
+    tested: specificity ordering, priority tie-breaks, weight surcharge,
+    free-delivery threshold), `discounts` (code + automatic discount
+    evaluation, margin guard, basic flash sales — fully unit-tested: 22
+    cases covering eligibility, allocation rounding, combinability),
+    `payment-rules` (the §6.5 engine — fully unit-tested), `risk` (the
+    §6.6 scorer + courier-history/fraud-check driver slot — fully unit-
+    tested), `blocklist`.
+  - `cart` (`CartService` for CRUD/identity/merge-on-login,
+    `CartPricingService` for the full §6.3 pipeline: line resolution with
+    flash-sale pricing, stock clamping, discounts, shipping, payment-
+    rules preview, free-delivery progress).
+  - `checkout` (`CheckoutService.placeOrder()` — idempotency replay,
+    full server-side re-pricing, OTP/terms/Turnstile checks, real risk
+    scoring, the authoritative payment-rules re-evaluation, atomic stock
+    reservation via one conditional `UPDATE ... WHERE available >= :q`
+    per line inside the order-creation transaction, order-number
+    generation; `OrderExpiryService` — the §6.7 "release expired
+    reservations every minute" sweep, registered via `SchedulerService.
+    registerRecurring`; `OrdersService` — track by phone+number, mine,
+    cancel-while-pending, both release stock on cancel).
+  - `payments` (`PaymentsService` — driver resolution, initiate/confirm/
+    reconcile; `MockPayController` — the mock driver's stand-in for a
+    real gateway's hosted page; `StorePaymentsController` — which
+    methods are actually configured).
+  - New public store routes: `/store/cart/*`, `/store/checkout/place-
+    order`, `/store/orders/*`, `/store/shipping/quote`, `/store/
+    locations/*`, `/store/auth/*` (incl. new `GET /store/auth/me`),
+    `/store/payments/methods`.
+  - New admin routes + pages: `/admin/shipping/*` (zones+rates CRUD) with
+    a real admin UI at `/shipping`; `/admin/payment-rules/*` with a real
+    admin UI at `/payment-rules` (conditions/actions as JSON — see
+    docs/DECISIONS.md); `/admin/discounts/*`, `/admin/flash-sales/*`,
+    `/admin/blocklist/*` (API only this milestone — see docs/DECISIONS.md
+    for why the admin UI for those is M8's).
+- **`apps/storefront`**: header cart link with live item count; `/cart`
+  (line items, quantity steppers, coupon codes, free-delivery progress,
+  totals); `/checkout` (contact, cascading address selects, delivery-
+  rate picker, payment-method picker respecting payment-rules-disabled
+  methods, inline OTP step when required, terms checkbox, idempotent
+  place-order); `/checkout/success`, `/checkout/failed`; `/track` (guest
+  order lookup by phone + order number); `/account`, `/account/login`
+  (OTP), `/account/addresses`; the PDP's "Add to cart"/"Buy now" buttons
+  (stubbed in M4, explicitly deferred to M5 — see that milestone's
+  DECISIONS.md entry) now call the real cart API.
+
+### Verified
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` all pass
+  across the whole workspace (202 `apps/api` unit tests — 77 new this
+  milestone: 12 shipping-calc, 22 discount-math, 11 payment-rules-engine,
+  18 risk-score, 5 stock-reservation, 3 order-expiry, 6 order-number; 10
+  `storefront` tests, unchanged this milestone). As with every prior
+  milestone, the whole workspace's `lint`/`typecheck` in full parallel
+  via Turbo intermittently OOMs on this Windows machine (now observed for
+  `typecheck` too, not just `lint`) — every package individually
+  typechecks/lints clean, which is the authoritative check.
+- **Ran the real API dev server against no database, repeatedly, after
+  each major addition**: the full DI graph resolves (caught and fixed two
+  real module-wiring bugs this way — `PaymentsModule` and `CheckoutModule`
+  were each missing a `ProvidersModule`/module import that only a boot
+  attempt surfaces, not `tsc`), every new route maps correctly, a bad
+  request body 400s via Zod validation before touching the database, and
+  every DB-dependent route returns the real `PrismaClientInitializationError`
+  rather than a code-bug 500.
+- All three apps build cleanly together, including every new storefront
+  route (`/cart`, `/checkout`, `/checkout/success`, `/checkout/failed`,
+  `/track`, `/account`, `/account/login`, `/account/addresses`) and both
+  new admin routes (`/shipping`, `/payment-rules`).
+- Read through `CheckoutService.placeOrder()` line by line specifically
+  checking the stock-reservation ordering (reservation happens inside the
+  transaction; the payment-gateway network call happens strictly after it
+  commits) and the idempotency-replay path (returns the already-created
+  order, including its payments, rather than ever creating a second one).
+
+### Not verified in this environment
+
+- **The actual concurrent-request race** — no live Postgres to run two
+  real HTTP requests against. Unit-tested at the `StockReservationService`
+  level (mocked transaction client asserting the conditional-UPDATE call
+  shape and the throw-on-zero-rows behavior) and reasoned through against
+  Postgres's real row-locking semantics in a doc comment, but the
+  acceptance scenario's literal "two buyers race" has not been run for
+  real.
+- The full checkout flow end-to-end in a real browser (address cascading
+  selects, OTP step, payment-method disabling, successful mock payment
+  redirecting back and landing on a `pending` order) — built and
+  boot-tested for wiring/DI correctness, not click-tested.
+- SSLCommerz/bKash/Nagad against their real sandboxes (no merchant
+  credentials exist in this environment — see docs/DECISIONS.md). The
+  mock driver is what every path was actually exercised against.
+- Lighthouse/visual QA of the new pages; the k6 500-VU load test (§13.1).
+
+### Known issues / explicitly deferred
+
+- Discounts/flash-sales admin UI (API + engine exist; "full UI" is M8's
+  named job per §16).
+- A visual payment-rules builder (JSON editor for now — see
+  docs/DECISIONS.md).
+- Full address-book CRUD on the account page (view/remove only; new
+  addresses are saved from checkout's own form) and a mounted Google
+  Identity Services button (the API side for both is ready).
+- OTP delivery has no bilingual message-template system yet (M7's job);
+  the SMS text is a plain English string, and the generated code is
+  returned in the API response / shown on the storefront in non-
+  production environments only, since no real SMS gateway exists here.
+- Loyalty/store-credit/gift-card redemption at checkout (§6.3 step 9) —
+  none of those features exist before M12/M13/M16, so that step is a
+  no-op this milestone.
+- Preorder products are not exempted from the stock check (§6.7's
+  preorder-limit bypass is deferred to M10, which is also when the rest
+  of preorder UX arrives).
+- Multi-location stock allocation (§6.7 phase 2) — always reserves
+  against the single default location.
+- A genuine "count as if this facet were also selected" type precision
+  for payment-rules conditions isn't applicable here, but the condition
+  vocabulary itself, while broad, doesn't cover segments/tiers (no
+  segment model exists before M8).
+
+---
+
 ### Next up
 
-Milestone 5 — Cart, checkout, shipping, payment rules, customer auth
-(§16 M5): cart (drawer + page) with the pricing pipeline (§6.3, automatic
-+ code discounts, basic flash sales), shipping zones & rates editor and
-calculation (§6.4), the payment rules editor and engine (§6.5), risk
-scoring (§6.6), stock reservation (§6.7), the one-page checkout (§7.5),
-OTP (mock SMS) + Google login, guest checkout, account area, order
-placement with idempotency, payment drivers (COD + mock gateway +
-SSLCommerz/bKash/Nagad against sandbox docs), success/failure flows,
-payment reconciliation, Turnstile.
+Milestone 6 — Order management and fulfillment (§16 M6): orders list
+(filters, saved views, bulk), order detail (timeline, edit before ship
+with re-pricing, notes, call outcomes, assign, tags, payments, refunds
+record), manual order creation, the full state machine (§6.8) with side
+effects, duplicate detection UI, blocklist UI polish, invoices and labels
+(PDF), pick list, packing screen with scan, handover manifest, courier
+drivers (manual + mock + Steadfast/Pathao/RedX against sandbox/docs),
+area mapping tool, shipment tracking and status mapping, doorstep
+rejection and partial delivery flows (§6.9), basic returns & exchanges
+(§6.10), order tracking page polish.
