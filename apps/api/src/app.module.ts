@@ -43,6 +43,13 @@ import { RiskModule } from "./risk/risk.module";
 import { CartModule } from "./cart/cart.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { CheckoutModule } from "./checkout/checkout.module";
+import { CouriersModule } from "./couriers/couriers.module";
+import { CourierAreaMappingModule } from "./courier-area-mapping/courier-area-mapping.module";
+import { ShipmentsModule } from "./shipments/shipments.module";
+import { FulfillmentModule } from "./fulfillment/fulfillment.module";
+import { OrdersModule } from "./orders/orders.module";
+import { ReturnsModule } from "./returns/returns.module";
+import { RefundsModule } from "./refunds/refunds.module";
 
 @Module({
   imports: [
@@ -107,6 +114,16 @@ import { CheckoutModule } from "./checkout/checkout.module";
     CartModule,
     PaymentsModule,
     CheckoutModule,
+    // Milestone 6 (docs/PROJECT_SPEC.md §16 M6) — order management and
+    // fulfillment: couriers, shipments, pick/pack/handover, staff order
+    // management, returns & exchanges, refunds queue.
+    CouriersModule,
+    CourierAreaMappingModule,
+    ShipmentsModule,
+    FulfillmentModule,
+    OrdersModule,
+    ReturnsModule,
+    RefundsModule,
   ],
 })
 export class AppModule {}

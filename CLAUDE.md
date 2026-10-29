@@ -10,7 +10,7 @@ all business logic and integrations). One codebase, single-tenant per
 deployment, reusable for any clothing brand via a setup wizard and config
 export/import — no code changes per brand. Full scope is specified in
 `docs/PROJECT_SPEC.md`; it is built milestone by milestone (§16), currently
-starting Milestone 6. Check `docs/PROGRESS.md` before starting work to see
+starting Milestone 7. Check `docs/PROGRESS.md` before starting work to see
 exactly what exists.
 
 ## Golden rules
@@ -87,4 +87,5 @@ docker compose -f infra/compose/docker-compose.dev.yml up -d   # Postgres, MinIO
 Full specification, confirmed decisions, domain model, business rules, and
 the milestone plan: [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md). Decision
 log: [`docs/DECISIONS.md`](docs/DECISIONS.md). Build status:
-[`docs/PROGRESS.md`](docs/PROGRESS.md).
+[`docs/PROGRESS.md`](docs/PROGRESS.md). Running this locally (Windows/Mac):
+[`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md).

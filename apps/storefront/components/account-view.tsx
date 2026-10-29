@@ -41,9 +41,14 @@ export function AccountView() {
       </div>
       {phone && <p className="mb-6 text-sm text-surface-foreground/70">{phone}</p>}
 
-      <Link href="/account/addresses" className="mb-6 block text-sm text-brand underline">
-        {locale === "bn" ? "ঠিকানা পরিচালনা করুন" : "Manage addresses"}
-      </Link>
+      <div className="mb-6 flex gap-4">
+        <Link href="/account/addresses" className="block text-sm text-brand underline">
+          {locale === "bn" ? "ঠিকানা পরিচালনা করুন" : "Manage addresses"}
+        </Link>
+        <Link href="/account/returns" className="block text-sm text-brand underline">
+          {locale === "bn" ? "রিটার্ন ও এক্সচেঞ্জ" : "Returns & exchanges"}
+        </Link>
+      </div>
 
       <h2 className="mb-3 text-sm font-semibold text-surface-foreground">{locale === "bn" ? "অর্ডারসমূহ" : "Orders"}</h2>
       {orders?.length === 0 && <p className="text-sm text-surface-foreground/60">{locale === "bn" ? "কোনো অর্ডার নেই।" : "No orders yet."}</p>}
@@ -54,7 +59,14 @@ export function AccountView() {
               <p className="font-medium text-surface-foreground">{order.orderNumber}</p>
               <p className="text-surface-foreground/60">{order.status}</p>
             </div>
-            <p>{formatBdt(order.total)}</p>
+            <div className="flex items-center gap-3">
+              <p>{formatBdt(order.total)}</p>
+              {["delivered", "partially_delivered", "completed"].includes(order.status) && (
+                <Link href={`/account/returns/new?orderId=${order.id}`} className="text-xs text-brand underline">
+                  {locale === "bn" ? "রিটার্ন অনুরোধ" : "Request return"}
+                </Link>
+              )}
+            </div>
           </div>
         ))}
       </div>

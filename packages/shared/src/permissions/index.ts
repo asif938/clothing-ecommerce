@@ -79,6 +79,18 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "settings.auth.write", group: "settings", label: { bn: "গ্রাহক অথ সেটিংস পরিবর্তন করুন", en: "Edit customer auth settings" } },
   { key: "discounts.manage", group: "discounts", label: { bn: "ডিসকাউন্ট ও ফ্ল্যাশ সেল পরিচালনা করুন", en: "Manage discounts & flash sales" } },
   { key: "blocklist.manage", group: "blocklist", label: { bn: "ব্লকলিস্ট পরিচালনা করুন", en: "Manage blocklist" } },
+
+  // Milestone 6 (docs/PROJECT_SPEC.md §16 M6) — order management and
+  // fulfillment. Courier/payment *provider instances* stay under the
+  // existing `providers.manage` (generic Integrations screen, M1); these are
+  // for the order-management/warehouse/returns workflows themselves.
+  { key: "orders.manage", group: "orders", label: { bn: "অর্ডার পরিচালনা করুন", en: "Manage orders" } },
+  { key: "fulfillment.manage", group: "fulfillment", label: { bn: "ফুলফিলমেন্ট পরিচালনা করুন", en: "Manage fulfillment" } },
+  { key: "returns.manage", group: "returns", label: { bn: "রিটার্ন ও এক্সচেঞ্জ পরিচালনা করুন", en: "Manage returns & exchanges" } },
+  { key: "refunds.manage", group: "refunds", label: { bn: "রিফান্ড পরিচালনা করুন", en: "Manage refunds" } },
+  { key: "couriers.manage", group: "couriers", label: { bn: "কুরিয়ার এরিয়া ম্যাপিং পরিচালনা করুন", en: "Manage courier area mapping" } },
+  { key: "settings.returns.write", group: "settings", label: { bn: "রিটার্ন সেটিংস পরিবর্তন করুন", en: "Edit returns settings" } },
+  { key: "settings.couriers.write", group: "settings", label: { bn: "কুরিয়ার সেটিংস পরিবর্তন করুন", en: "Edit courier settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

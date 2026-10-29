@@ -12,16 +12,31 @@ import { ProvidersModule } from "../providers/providers.module";
 import { CheckoutService } from "./checkout.service";
 import { CheckoutController } from "./checkout.controller";
 import { CaptchaProvidersService } from "./captcha-providers.service";
-import { StockReservationService } from "./stock-reservation.service";
+import { StockReservationModule } from "./stock-reservation.module";
+import { OrdersLifecycleModule } from "./orders-lifecycle.module";
+import { OrderNumberModule } from "./order-number.module";
 import { OrderExpiryService } from "./order-expiry.service";
 import { OrdersService } from "./orders.service";
 import { OrdersController } from "./orders.controller";
 
 @Module({
-  imports: [CartModule, DiscountsModule, RiskModule, BlocklistModule, PaymentRulesModule, PaymentsModule, CustomerAuthModule, CustomerContextModule, ProvidersModule],
+  imports: [
+    CartModule,
+    DiscountsModule,
+    RiskModule,
+    BlocklistModule,
+    PaymentRulesModule,
+    PaymentsModule,
+    CustomerAuthModule,
+    CustomerContextModule,
+    ProvidersModule,
+    StockReservationModule,
+    OrdersLifecycleModule,
+    OrderNumberModule,
+  ],
   controllers: [CheckoutController, OrdersController],
-  providers: [CheckoutService, CaptchaProvidersService, StockReservationService, OrderExpiryService, OrdersService],
-  exports: [CheckoutService, StockReservationService],
+  providers: [CheckoutService, CaptchaProvidersService, OrderExpiryService, OrdersService],
+  exports: [CheckoutService, StockReservationModule],
 })
 export class CheckoutModule implements OnModuleInit {
   constructor(

@@ -7,6 +7,14 @@ async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+export interface TrackedShipment {
+  id: string;
+  status: string;
+  trackingCode: string | null;
+  trackingUrl: string | null;
+  courierDriver: string;
+}
+
 export interface TrackedOrder {
   id: string;
   orderNumber: string;
@@ -14,6 +22,7 @@ export interface TrackedOrder {
   total: number;
   codAmount: number;
   events: { type: string; data: unknown; createdAt: string }[];
+  shipments: TrackedShipment[];
 }
 
 export const trackOrder = (phone: string, orderNumber: string) => callApi<TrackedOrder>(`/store/orders/track?phone=${encodeURIComponent(phone)}&orderNumber=${encodeURIComponent(orderNumber)}`);

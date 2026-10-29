@@ -45,6 +45,24 @@ export function OrderTrackingView() {
           <p className="mt-1 text-surface-foreground/70">{locale === "bn" ? "অবস্থা" : "Status"}: {order.status}</p>
           <p className="mt-1 text-surface-foreground/70">{locale === "bn" ? "মোট" : "Total"}: {formatBdt(order.total)}</p>
           {order.codAmount > 0 && <p className="mt-1 text-surface-foreground/70">{locale === "bn" ? "ডেলিভারিতে পরিশোধ" : "Pay on delivery"}: {formatBdt(order.codAmount)}</p>}
+          {order.shipments.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              {order.shipments.map((shipment) => (
+                <div key={shipment.id} className="mb-2">
+                  <p className="text-surface-foreground">
+                    {locale === "bn" ? "কুরিয়ার" : "Courier"}: {shipment.courierDriver}
+                    {shipment.trackingCode ? ` · ${shipment.trackingCode}` : ""}
+                  </p>
+                  <p className="text-surface-foreground/70">{locale === "bn" ? "শিপমেন্ট অবস্থা" : "Shipment status"}: {shipment.status}</p>
+                  {shipment.trackingUrl && (
+                    <a href={shipment.trackingUrl} target="_blank" rel="noreferrer" className="text-brand underline">
+                      {locale === "bn" ? "লাইভ ট্র্যাকিং দেখুন" : "View live tracking"}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

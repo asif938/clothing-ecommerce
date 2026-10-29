@@ -947,15 +947,173 @@ load or a live Postgres in this environment — see "Not verified" below.
 
 ---
 
+---
+
+## Milestone 6 — Order management and fulfillment
+
+Status: complete (§16 M6) at the code/test level. The acceptance scenario
+("confirm → pack (scan) → book → status progresses automatically to
+delivered; another order ends as rejected_at_door with delivery fee
+collected, stock restocked after QC, refund record created for its
+advance minus fee; customer risk count increments") is implemented and
+exercised piece-by-piece (state machine, mock courier timing, doorstep
+refund math, all unit-tested) but never run as one live sequence against
+a real database — see "Not verified" below.
+
+### Built
+
+- **`packages/db`**: `shipments`/`shipment_items`/`shipment_events`,
+  `refunds`, `returns`/`return_reasons`, `invoices`,
+  `courier_area_mappings`; `orders` gained `possibleDuplicateOrderIds`,
+  `deliveredAt`, `totalWeightGrams`; `OrderEventType` gained `assigned`/
+  `tag`/`return`/`refund`. One hand-written migration
+  (`20261030090000_fulfillment_shipments_returns`), generated the same
+  `prisma migrate diff` way as every prior milestone (confirmed byte-
+  identical to a fresh diff before committing, including after adding the
+  `totalWeightGrams` column in a second pass).
+- **`packages/shared`**: `CourierDriver` interface + `mock`/`steadfast`/
+  `pathao`/`redx` drivers (§10.2) — "manual" is a built-in option, not a
+  driver (see docs/DECISIONS.md, same reasoning as COD for payments); the
+  mock driver's status progression is a pure function of elapsed time
+  (fake-timer tested) so staff can create several mock instances (one per
+  `finalStatus`) to exercise delivered vs. rejected_at_door vs. partially
+  delivered side by side. Also fixed a real M5 bug found while reviewing
+  the pattern: SSLCommerz's `initiate()` was sending the amount in poisha
+  instead of taka (100x overcharge, never caught because no sandbox
+  account exists to run it against).
+- **`apps/api`**: `couriers` (driver resolution — several instances active
+  at once, unlike payment/sms/captcha), `courier-area-mapping` (CRUD +
+  lookup), `shipments` (book/cancel/status-update/reconcile-partial/
+  receive-at-warehouse, the courier status-poll sweep, a per-driver
+  webhook endpoint), `fulfillment` (pick list grouped by product/bin,
+  scan-validated packing, handover manifest), `orders` (admin list/
+  detail/manual-create/edit-with-re-pricing/notes/call-outcomes/assign/
+  tags/duplicates/manual-payments/bulk actions — all under `orders.
+  manage`), `returns` (full §6.10 flow: request → approve (reserves +
+  creates the linked exchange order right there) → pickup → receive →
+  inspect (restocks passed items) → resolve (refund record / store-credit
+  balance increment / exchange already done)), `refunds` (the pending-
+  refund queue). `OrdersLifecycleService.transition()` now carries the
+  full §6.8 `ALLOWED_TRANSITIONS` table plus cancellation's side effects
+  (stock release, pending refund, coupon-usage release) — fully unit-
+  tested (13 cases). `StockReservationService` gained `fulfill`/`restock`
+  alongside M5's `reserve`/`release`. Duplicate detection
+  (`RiskScoringService.findPossibleDuplicates`, written in M5, unused
+  until now) is wired into `CheckoutService.placeOrder()`, symmetrically.
+  New admin routes: `/admin/orders/*`, `/admin/fulfillment/*`,
+  `/admin/shipments/*` + `/webhooks/couriers/:driver`,
+  `/admin/returns/*` + `/admin/return-reasons/*`, `/admin/refunds/*`,
+  `/admin/courier-area-mapping/*`, `/admin/couriers/available`. New store
+  routes: `/store/returns/*`, `/store/return-reasons`.
+- **`apps/admin`**: `/orders` (list with filters/bulk confirm-cancel/
+  duplicate flag) + `/orders/new` (manual order form: customer, cascading
+  address, product search, discount, COD/already-paid) + `/orders/:id`
+  (timeline, items, payments/refunds, shipments with inline booking,
+  returns links, notes, call-outcome buttons, tags, status actions) +
+  `/orders/:id/edit` (quantities + shipping-fee override + required
+  reason); `/fulfillment` (pick list / packing-with-scan / handover
+  manifest as tabs, print via `window.print()` same as M2's barcode
+  labels); `/returns` + `/returns/:id` (approve/reject/schedule-pickup/
+  receive/inspect/resolve); `/refunds` (complete/reject queue);
+  `/courier-area-mapping`; `/blocklist` (M5's backend finally got a UI).
+- **`apps/storefront`**: the order-tracking page and account order list
+  now show shipment tracking code/status/live-tracking link; new
+  `/account/returns` (list) and `/account/returns/new` (item picker +
+  type + reason + comment, login-gated like the rest of the account
+  area) — the request itself needs an account; the order-tracking page
+  links out to login rather than also supporting phone+order-number
+  verification for this one flow (see docs/DECISIONS.md).
+- `packages/db/src/seed.ts`: seeds the spec's own six example return
+  reasons (size too small/large, damaged, wrong item, not as described,
+  changed mind), each admin-editable from there on (golden rule 1).
+
+### Verified
+
+- Every package individually typechecks and lints clean
+  (`@clothing/db`, `@clothing/shared`, `api`, `admin`, `storefront`,
+  `@clothing/ui`, `@clothing/blocks`, `@clothing/sdk`,
+  `@clothing/email-templates`) — `pnpm lint`/`pnpm typecheck` in full
+  workspace parallel still intermittently OOMs on this Windows machine
+  (same known issue since M1/M5); per-package is the authoritative check.
+- `pnpm test` across the touched packages: 222 `apps/api` tests (13 new
+  for `OrdersLifecycleService.transition()`'s allowed-transitions and
+  cancellation side effects, 4 new for the doorstep-rejection refund
+  math), 79 `@clothing/shared` tests (4 new for the mock courier driver's
+  time-based status progression, fake-timer tested), 7 `@clothing/db`,
+  10 `storefront` — all pass.
+- **Ran the real API dev server against no database, repeatedly, after
+  each major addition** (same ritual as every prior milestone): caught
+  and fixed one real module-wiring bug this way (`OrdersLifecycleModule`
+  needed `StockReservationModule` once the state machine started
+  releasing stock on cancellation — only a boot attempt surfaces this,
+  not `tsc`). The final boot confirmed every new route mapped, `/health`
+  → 200, `/ready` → 503 (clean "can't reach database," not a crash),
+  every DB-dependent route (including the new public
+  `/store/return-reasons`) → 500 with the real Prisma error rather than a
+  code-bug 500 (confirmed this is the actual, consistent behavior for
+  *every* DB-touching route without a live Postgres, M5's included — not
+  specific to anything new here), the public courier webhook → 200 with
+  a graceful `{ok:false, reason:...}` on an unidentifiable payload, and
+  guarded admin routes → 401 with no session.
+- Read `ShipmentsService.applyStatus()` and `OrdersLifecycleService.
+  transition()` line by line specifically checking: a webhook and the
+  poll job hitting the same shipment twice is a no-op past the first
+  terminal status (idempotency guard on `TERMINAL_SHIPMENT_STATUSES`);
+  cancellation never double-releases stock (`reservationReleasedAt`
+  guard, same field M5's `OrderExpiryService` already used); an approved
+  exchange return's stock reservation is always backed by a real order
+  row created in the same transaction (§6.10 "reserved at approval
+  time," reasoned through in docs/DECISIONS.md).
+
+### Not verified in this environment
+
+- The full mock-courier acceptance scenario as one live sequence (confirm
+  → process → pack with scan → book → `SchedulerService` ticks actually
+  advancing the mock courier through its states → delivered; a second
+  order ending at rejected_at_door with a refund record and an
+  incremented `rejectedAtDoorCount`) — every piece is unit-tested
+  separately (see "Verified" above) but needs a real Postgres and a
+  running scheduler tick to see end to end.
+- Steadfast/Pathao/RedX against real sandboxes (no merchant accounts
+  exist — same caveat already accepted for M5's payment drivers). Their
+  webhook payload field names in particular are a best guess from public
+  docs, flagged directly in `shipments-webhook.controller.ts`.
+- The admin orders/fulfillment/returns/refunds/courier-area-mapping pages
+  in a real browser against seeded data — typechecked, linted, and
+  boot-tested for routing/auth-guard correctness, not click-tested.
+- **`pnpm build`'s static export fails on both Next.js apps — discovered
+  this session, confirmed pre-existing (reproduces identically on a clean
+  `git stash` back to the M5 commit), not caused by anything in M6.** See
+  docs/DECISIONS.md for the investigation and the (unsuccessful) attempted
+  fix. `pnpm dev` is unaffected.
+
+### Known issues / explicitly deferred
+
+- Order edit's admin UI exposes quantities + a shipping-fee override, not
+  a full address picker or discount re-evaluation (the API supports the
+  address field; see docs/DECISIONS.md).
+- Returns' reverse pickup is staff bookkeeping only (no courier API
+  confirmed to support booking one); store credit has no ledger yet
+  (M8/M13's job — `Customer.storeCreditBalance` is incremented directly).
+- Multiple shipments per order (split shipping) — one order ships as one
+  parcel this milestone; `ShipmentItem` exists but is never actually
+  split across more than one `Shipment` yet (phase 2 "merge/split
+  orders," §16 M11).
+- Courier auto-assignment rules, the Kanban order view, order-queue
+  auto-assignment, and field-level permissions are all explicitly phase 2
+  (§16 M11) and not attempted here.
+- No message-sending (confirmation/shipped/delivered SMS/WhatsApp) is
+  wired into any of M6's new transitions — M7's job, same deferral
+  pattern already used for OTP in M5. Every transition still writes its
+  `order_events` row, which is what M7 will hook into.
+
+---
+
 ### Next up
 
-Milestone 6 — Order management and fulfillment (§16 M6): orders list
-(filters, saved views, bulk), order detail (timeline, edit before ship
-with re-pricing, notes, call outcomes, assign, tags, payments, refunds
-record), manual order creation, the full state machine (§6.8) with side
-effects, duplicate detection UI, blocklist UI polish, invoices and labels
-(PDF), pick list, packing screen with scan, handover manifest, courier
-drivers (manual + mock + Steadfast/Pathao/RedX against sandbox/docs),
-area mapping tool, shipment tracking and status mapping, doorstep
-rejection and partial delivery flows (§6.9), basic returns & exchanges
-(§6.10), order tracking page polish.
+Milestone 7 — Notifications and messaging (§16 M7): message templates
+(SMS/email/WhatsApp, bn/en) with editor, preview, test send; channel
+matrix per event with fallback order; SMS drivers (generic HTTP + two BD
+gateways), email drivers (SMTP, Brevo, Resend), WhatsApp click-to-chat +
+Cloud API driver; notification logs; staff notifications (in-app +
+email).

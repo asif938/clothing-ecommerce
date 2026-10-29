@@ -8,6 +8,10 @@ import { api } from "../../../lib/api";
 
 const NAV_ITEMS = [
   { href: "/", labelKey: "navDashboard" },
+  { href: "/orders", labelKey: "navOrders" },
+  { href: "/fulfillment", labelKey: "navFulfillment" },
+  { href: "/returns", labelKey: "navReturns" },
+  { href: "/refunds", labelKey: "navRefunds" },
   { href: "/cms/pages", labelKey: "navCmsPages" },
   { href: "/cms/announcements", labelKey: "navCmsAnnouncements" },
   { href: "/products", labelKey: "navProducts" },
@@ -17,6 +21,8 @@ const NAV_ITEMS = [
   { href: "/inventory", labelKey: "navInventory" },
   { href: "/shipping", labelKey: "navShipping" },
   { href: "/payment-rules", labelKey: "navPaymentRules" },
+  { href: "/courier-area-mapping", labelKey: "navCourierAreaMapping" },
+  { href: "/blocklist", labelKey: "navBlocklist" },
   { href: "/import-export", labelKey: "navImportExport" },
   { href: "/search", labelKey: "navSearch" },
   { href: "/settings", labelKey: "navSettings" },

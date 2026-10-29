@@ -884,6 +884,7 @@ model StockLocation {
   inventoryLevels InventoryLevel[]
   stockMovements  StockMovement[]
   orderItems      OrderItem[]
+  shipments       Shipment[]
 
   @@map("stock_locations")
 }
@@ -1249,6 +1250,7 @@ model Customer {
   addresses Address[]
   carts     Cart[]
   orders    Order[]
+  returns   Return[]
 
   @@map("customers")
 }
@@ -1577,50 +1579,64 @@ enum RiskLevel {
 }
 
 model Order {
-  id                    String             @id @default(cuid(2))
-  orderNumber           String             @unique @map("order_number")
-  customerId            String?            @map("customer_id")
-  channel               OrderChannel       @default(web)
-  status                OrderStatus        @default(pending_payment)
-  paymentStatus         OrderPaymentStatus @default(unpaid) @map("payment_status")
-  fulfillmentStatus     FulfillmentStatus  @default(unfulfilled) @map("fulfillment_status")
-  currency              String             @default("BDT")
-  subtotal              Int
-  discountTotal         Int                @default(0) @map("discount_total")
-  shippingFee           Int                @default(0) @map("shipping_fee")
-  shippingDiscount      Int                @default(0) @map("shipping_discount")
-  advanceRequired       Int                @default(0) @map("advance_required")
-  advancePaid           Int                @default(0) @map("advance_paid")
-  codAmount             Int                @default(0) @map("cod_amount")
-  total                 Int
-  paidTotal             Int                @default(0) @map("paid_total")
-  refundedTotal         Int                @default(0) @map("refunded_total")
-  shippingAddress       Json               @map("shipping_address")
-  billingContact        Json               @map("billing_contact")
-  customerNote          String?            @map("customer_note")
-  riskScore             Int                @default(0) @map("risk_score")
-  riskReasonCodes       String[]           @default([]) @map("risk_reason_codes")
-  riskLevel             RiskLevel          @default(low) @map("risk_level")
-  requiresReview        Boolean            @default(false) @map("requires_review")
-  assignedTo            String?            @map("assigned_to")
-  confirmedBy           String?            @map("confirmed_by")
-  confirmedAt           DateTime?          @map("confirmed_at")
-  cancelledReason       String?            @map("cancelled_reason")
-  utmSource             String?            @map("utm_source")
-  utmMedium             String?            @map("utm_medium")
-  utmCampaign           String?            @map("utm_campaign")
-  utmContent            String?            @map("utm_content")
-  referrer              String?
-  landingPage           String?            @map("landing_page")
-  ip                    String?
-  userAgent             String?            @map("user_agent")
-  deviceId              String?            @map("device_id")
-  idempotencyKey        String?            @unique @map("idempotency_key")
-  tags                  String[]           @default([])
-  paymentTimeoutAt      DateTime?          @map("payment_timeout_at")
-  reservationReleasedAt DateTime?          @map("reservation_released_at")
-  createdAt             DateTime           @default(now()) @map("created_at")
-  updatedAt             DateTime           @updatedAt @map("updated_at")
+  id                        String             @id @default(cuid(2))
+  orderNumber               String             @unique @map("order_number")
+  customerId                String?            @map("customer_id")
+  channel                   OrderChannel       @default(web)
+  status                    OrderStatus        @default(pending_payment)
+  paymentStatus             OrderPaymentStatus @default(unpaid) @map("payment_status")
+  fulfillmentStatus         FulfillmentStatus  @default(unfulfilled) @map("fulfillment_status")
+  currency                  String             @default("BDT")
+  subtotal                  Int
+  discountTotal             Int                @default(0) @map("discount_total")
+  shippingFee               Int                @default(0) @map("shipping_fee")
+  shippingDiscount          Int                @default(0) @map("shipping_discount")
+  advanceRequired           Int                @default(0) @map("advance_required")
+  advancePaid               Int                @default(0) @map("advance_paid")
+  codAmount                 Int                @default(0) @map("cod_amount")
+  total                     Int
+  paidTotal                 Int                @default(0) @map("paid_total")
+  refundedTotal             Int                @default(0) @map("refunded_total")
+  shippingAddress           Json               @map("shipping_address")
+  billingContact            Json               @map("billing_contact")
+  customerNote              String?            @map("customer_note")
+  riskScore                 Int                @default(0) @map("risk_score")
+  riskReasonCodes           String[]           @default([]) @map("risk_reason_codes")
+  riskLevel                 RiskLevel          @default(low) @map("risk_level")
+  requiresReview            Boolean            @default(false) @map("requires_review")
+  assignedTo                String?            @map("assigned_to")
+  confirmedBy               String?            @map("confirmed_by")
+  confirmedAt               DateTime?          @map("confirmed_at")
+  cancelledReason           String?            @map("cancelled_reason")
+  utmSource                 String?            @map("utm_source")
+  utmMedium                 String?            @map("utm_medium")
+  utmCampaign               String?            @map("utm_campaign")
+  utmContent                String?            @map("utm_content")
+  referrer                  String?
+  landingPage               String?            @map("landing_page")
+  ip                        String?
+  userAgent                 String?            @map("user_agent")
+  deviceId                  String?            @map("device_id")
+  idempotencyKey            String?            @unique @map("idempotency_key")
+  tags                      String[]           @default([])
+  paymentTimeoutAt          DateTime?          @map("payment_timeout_at")
+  reservationReleasedAt     DateTime?          @map("reservation_released_at")
+  // §6.6 duplicate detection (RiskScoringService.findPossibleDuplicates, wired
+  // up at placement in M6) — ids of other orders that look like the same
+  // order placed twice; symmetric (each duplicate lists every other one).
+  possibleDuplicateOrderIds String[]           @default([]) @map("possible_duplicate_order_ids")
+  // Set once, the first time the order (or any of its shipments) reaches
+  // delivered/partially_delivered — drives the automatic delivered→completed
+  // sweep after `returns.windowDays` (§6.8) and the loyalty pendingDays clock
+  // (M8/M13, not wired yet).
+  deliveredAt               DateTime?          @map("delivered_at")
+  // Snapshot of `CartPricingResult.totalWeightGrams` at placement (§6.3) —
+  // shipment booking (M6) needs the order's total parcel weight and
+  // shouldn't have to re-derive it from variant/product weight fallbacks a
+  // second time.
+  totalWeightGrams          Int                @default(0) @map("total_weight_grams")
+  createdAt                 DateTime           @default(now()) @map("created_at")
+  updatedAt                 DateTime           @updatedAt @map("updated_at")
 
   customer       Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   items          OrderItem[]
@@ -1628,6 +1644,10 @@ model Order {
   events         OrderEvent[]
   payments       Payment[]
   discountUsages DiscountUsage[]
+  shipments      Shipment[]
+  refunds        Refund[]
+  returns        Return[]
+  invoice        Invoice?
 
   @@index([customerId])
   @@index([status])
@@ -1653,9 +1673,10 @@ model OrderItem {
   returnedQty       Int     @default(0) @map("returned_qty")
   rejectedQty       Int     @default(0) @map("rejected_qty")
 
-  order    Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  location StockLocation  @relation(fields: [locationId], references: [id])
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  location      StockLocation  @relation(fields: [locationId], references: [id])
+  shipmentItems ShipmentItem[]
 
   @@index([orderId])
   @@index([variantId])
@@ -1687,6 +1708,10 @@ enum OrderEventType {
   shipment
   notification_sent
   risk_flag
+  assigned
+  tag
+  return
+  refund
 }
 
 model OrderEvent {
@@ -1741,7 +1766,8 @@ model Payment {
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refunds Refund[]
 
   @@index([orderId])
   @@index([externalRef])
@@ -1770,4 +1796,245 @@ model BlocklistEntry {
 
   @@index([type, value])
   @@map("blocklist_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 6 (docs/PROJECT_SPEC.md §5.6, §6.8-§6.10, §16 M6): fulfillment.
+// `OrderStatus` already carries the full §6.8 state machine (added ahead of
+// time in M5, see the model above) — this milestone is what actually drives
+// it: shipments/couriers, doorstep rejection & partial delivery (§6.9),
+// returns & exchanges (§6.10), refunds, invoices, and courier area mapping.
+// Labels/invoices print via the browser's own print-to-PDF, same as the
+// M2 barcode-label screen (`apps/admin/.../inventory/page.tsx`) — no new PDF
+// or barcode-image dependency, see docs/DECISIONS.md.
+// ---------------------------------------------------------------------------
+
+enum ShipmentStatus {
+  pending
+  booked
+  picked_up
+  in_transit
+  out_for_delivery
+  delivered
+  partially_delivered
+  returned_to_sender
+  rejected_at_door
+  cancelled
+  lost
+}
+
+model Shipment {
+  id                        String         @id @default(cuid(2))
+  orderId                   String         @map("order_id")
+  locationId                String         @map("location_id")
+  courierProviderInstanceId String?        @map("courier_provider_instance_id")
+  // Snapshot of which driver booked it, so the shipment stays interpretable
+  // even if the provider instance is later disabled/deleted.
+  courierDriver             String         @map("courier_driver")
+  manual                    Boolean        @default(false)
+  consignmentId             String?        @map("consignment_id")
+  trackingCode              String?        @map("tracking_code")
+  trackingUrl               String?        @map("tracking_url")
+  status                    ShipmentStatus @default(pending)
+  rawStatus                 String?        @map("raw_status")
+  codAmount                 Int            @default(0) @map("cod_amount")
+  weightGrams               Int            @map("weight_grams")
+  // §10.2 "delivery_charge_actual (courier cost)" — what the courier billed us.
+  deliveryChargeActual      Int?           @map("delivery_charge_actual")
+  // §6.9 — delivery fee the courier collected from the customer at the door
+  // on a rejection/partial delivery (distinct from deliveryChargeActual,
+  // which is what the courier charges *us*).
+  deliveryFeeCollected      Int?           @map("delivery_fee_collected")
+  bookedAt                  DateTime?      @map("booked_at")
+  deliveredAt               DateTime?      @map("delivered_at")
+  handedOverAt              DateTime?      @map("handed_over_at")
+  // Poll fallback job (§10.2: "every 2h for active shipments") — null means
+  // never polled yet.
+  lastPolledAt              DateTime?      @map("last_polled_at")
+  createdAt                 DateTime       @default(now()) @map("created_at")
+  updatedAt                 DateTime       @updatedAt @map("updated_at")
+
+  order    Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  location StockLocation   @relation(fields: [locationId], references: [id])
+  items    ShipmentItem[]
+  events   ShipmentEvent[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([consignmentId])
+  @@map("shipments")
+}
+
+/**
+ * Which order items (and how many) travel in this parcel — almost always all of them, but kept separate from `OrderItem` so a future split-shipment doesn't need a schema change.
+ */
+model ShipmentItem {
+  id          String @id @default(cuid(2))
+  shipmentId  String @map("shipment_id")
+  orderItemId String @map("order_item_id")
+  quantity    Int
+
+  shipment  Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@map("shipment_items")
+}
+
+model ShipmentEvent {
+  id         String         @id @default(cuid(2))
+  shipmentId String         @map("shipment_id")
+  status     ShipmentStatus
+  rawStatus  String?        @map("raw_status")
+  message    String?
+  occurredAt DateTime       @default(now()) @map("occurred_at")
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, occurredAt])
+  @@map("shipment_events")
+}
+
+enum RefundMethod {
+  original
+  bkash_manual
+  nagad_manual
+  bank
+  store_credit
+}
+
+enum RefundStatus {
+  pending
+  processing
+  completed
+  rejected
+  cancelled
+}
+
+/**
+ * Always created as `pending` for staff to action (§6.9/§10.1: "creates a refund record" / "refunds queue (pending manual refunds with trx id entry)") — nothing here auto-disburses money.
+ */
+model Refund {
+  id          String       @id @default(cuid(2))
+  orderId     String       @map("order_id")
+  paymentId   String?      @map("payment_id")
+  returnId    String?      @map("return_id")
+  amount      Int
+  method      RefundMethod
+  status      RefundStatus @default(pending)
+  reason      String?
+  approvedBy  String?      @map("approved_by")
+  externalRef String?      @map("external_ref")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  return  Return?  @relation(fields: [returnId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("refunds")
+}
+
+enum ReturnShippingPaidBy {
+  customer
+  brand
+}
+
+/**
+ * Admin-managed, localized reasons list (§6.10) with a per-reason default on who pays return shipping.
+ */
+model ReturnReason {
+  id            String               @id @default(cuid(2))
+  code          String               @unique
+  label         Json
+  defaultPaidBy ReturnShippingPaidBy @default(customer) @map("default_paid_by")
+  isActive      Boolean              @default(true) @map("is_active")
+  position      Int                  @default(0)
+
+  @@map("return_reasons")
+}
+
+enum ReturnType {
+  refund
+  exchange
+  store_credit
+}
+
+enum ReturnStatus {
+  requested
+  approved
+  rejected
+  pickup_scheduled
+  received
+  inspected
+  completed
+  cancelled
+}
+
+model Return {
+  id                   String                @id @default(cuid(2))
+  orderId              String                @map("order_id")
+  customerId           String?               @map("customer_id")
+  type                 ReturnType
+  status               ReturnStatus          @default(requested)
+  reasonCode           String?               @map("reason_code")
+  customerComment      String?               @map("customer_comment")
+  mediaIds             String[]              @default([]) @map("media_ids")
+  // [{ orderItemId, quantity, condition?: "pass"|"fail", restock?: boolean }]
+  // — a point-in-time snapshot of what was requested/inspected, same
+  // convention as `OrderDiscount.allocation`/`Cart` snapshots rather than a
+  // join table.
+  items                Json
+  returnShippingPaidBy ReturnShippingPaidBy? @map("return_shipping_paid_by")
+  resolution           Json?
+  exchangeOrderId      String?               @map("exchange_order_id")
+  rejectedReason       String?               @map("rejected_reason")
+  approvedBy           String?               @map("approved_by")
+  approvedAt           DateTime?             @map("approved_at")
+  receivedAt           DateTime?             @map("received_at")
+  completedAt          DateTime?             @map("completed_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  refunds  Refund[]
+
+  @@index([orderId])
+  @@index([status])
+  @@map("returns")
+}
+
+/**
+ * Just a number + timestamp (§5.6) — the PDF itself is rendered on demand by the admin app's print view (browser print-to-PDF), never stored; this only guarantees the number stays stable across re-prints.
+ */
+model Invoice {
+  id          String   @id @default(cuid(2))
+  orderId     String   @unique @map("order_id")
+  number      String   @unique
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+/**
+ * §10.2 "area mapping tool in admin" — maps our division/district/area to a specific courier provider instance's own location codes (Pathao city/zone/area, RedX area id, …) so booking a parcel doesn't need the staff member to remember codes.
+ */
+model CourierAreaMapping {
+  id                        String   @id @default(cuid(2))
+  courierProviderInstanceId String   @map("courier_provider_instance_id")
+  divisionId                String   @map("division_id")
+  districtId                String   @map("district_id")
+  areaId                    String?  @map("area_id")
+  courierAreaCode           String   @map("courier_area_code")
+  courierAreaName           String?  @map("courier_area_name")
+  extra                     Json?
+  createdAt                 DateTime @default(now()) @map("created_at")
+
+  @@unique([courierProviderInstanceId, divisionId, districtId, areaId])
+  @@map("courier_area_mappings")
 }

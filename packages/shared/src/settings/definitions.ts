@@ -869,3 +869,162 @@ export const SEO_TITLE_TEMPLATE = defineSetting({
   permission: "settings.seo.write",
   ui: { widget: "text" },
 });
+
+/**
+ * Milestone 6 (docs/PROJECT_SPEC.md §6.8-§6.10, §10.2, §16 M6): order
+ * fulfillment, courier polling, and returns/doorstep-rejection policy. None
+ * of these are `public: true` — read server-side by staff-facing fulfillment
+ * flows and the checkout/tracking APIs, never directly by the storefront.
+ */
+export const ORDERS_STOCK_DECREMENT_AT = defineSetting({
+  key: "orders.stockDecrementAt",
+  group: "orders",
+  type: z.enum(["packed", "shipped"]),
+  default: "shipped",
+  label: { bn: "স্টক থেকে বাস্তবে বিয়োগ করার সময়", en: "When stock is actually decremented" },
+  help: {
+    bn: "অর্ডার করার সময় স্টক রিজার্ভ হয়; এই সেটিং ঠিক করে কখন সেটা on-hand থেকে প্রকৃতপক্ষে বিয়োগ হবে",
+    en: "Stock is reserved at order placement either way; this controls when it's actually removed from on-hand",
+  },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "packed", label: { bn: "প্যাক করার সময়", en: "When packed" } },
+      { value: "shipped", label: { bn: "শিপ করার সময়", en: "When shipped" } },
+    ],
+  },
+});
+
+export const ORDERS_PACKING_REQUIRES_SCAN = defineSetting({
+  key: "orders.packingRequiresScan",
+  group: "orders",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "প্যাকিংয়ে বারকোড স্ক্যান আবশ্যক", en: "Packing requires scanning each item" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "toggle" },
+});
+
+export const ORDERS_RELEASE_COUPON_USAGE_ON_CANCEL = defineSetting({
+  key: "orders.releaseCouponUsageOnCancel",
+  group: "orders",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "বাতিল হলে কুপন ব্যবহার মুক্ত করুন", en: "Release coupon usage on cancellation" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "toggle" },
+});
+
+export const FULFILLMENT_PICK_LIST_GROUP_BY = defineSetting({
+  key: "fulfillment.pickListGroupBy",
+  group: "fulfillment",
+  type: z.enum(["product", "bin"]),
+  default: "product",
+  label: { bn: "পিক লিস্ট গ্রুপিং", en: "Pick list grouping" },
+  secret: false,
+  public: false,
+  permission: "fulfillment.manage",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "product", label: { bn: "পণ্য অনুযায়ী", en: "By product" } },
+      { value: "bin", label: { bn: "বিন অনুযায়ী", en: "By bin location" } },
+    ],
+  },
+});
+
+export const COURIERS_POLL_INTERVAL_MINUTES = defineSetting({
+  key: "couriers.pollIntervalMinutes",
+  group: "couriers",
+  type: z.number().int().min(5).max(24 * 60),
+  default: 120,
+  label: { bn: "কুরিয়ার স্ট্যাটাস পোল বিরতি (মিনিট)", en: "Courier status poll interval (minutes)" },
+  help: { bn: "যেসব কুরিয়ারের webhook নেই বা মিস হয়েছে তাদের জন্য ফলব্যাক", en: "Fallback for couriers without webhooks, or when one is missed" },
+  secret: false,
+  public: false,
+  permission: "settings.couriers.write",
+  ui: { widget: "text" },
+});
+
+export const RETURNS_ENABLED_TYPES = defineSetting({
+  key: "returns.enabledTypes",
+  group: "returns",
+  type: z.array(z.enum(["exchange", "refund", "store_credit"])),
+  default: ["exchange", "refund", "store_credit"],
+  label: { bn: "চালু রিটার্নের ধরন", en: "Enabled return types" },
+  secret: false,
+  public: true,
+  permission: "settings.returns.write",
+  ui: { widget: "json" },
+});
+
+export const RETURNS_WINDOW_DAYS = defineSetting({
+  key: "returns.windowDays",
+  group: "returns",
+  type: z.number().int().min(0).max(90),
+  default: 7,
+  label: { bn: "রিটার্ন উইন্ডো (দিন)", en: "Return window (days)" },
+  help: { bn: "ডেলিভারির পর কতদিন রিটার্ন/এক্সচেঞ্জ অনুরোধ করা যাবে; এই সময় পার হলে অর্ডার স্বয়ংক্রিয়ভাবে সম্পন্ন হয়ে যায়", en: "How many days after delivery a return/exchange can be requested; the order auto-completes once this passes" },
+  secret: false,
+  public: true,
+  permission: "settings.returns.write",
+  ui: { widget: "text" },
+});
+
+export const RETURNS_DOORSTEP_REJECTION_ALLOWED = defineSetting({
+  key: "returns.doorstepRejectionAllowed",
+  group: "returns",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "ডেলিভারির সময় গ্রাহক প্রত্যাখ্যান করতে পারবে", en: "Customer may reject the parcel at the door" },
+  secret: false,
+  public: true,
+  permission: "settings.returns.write",
+  ui: { widget: "toggle" },
+});
+
+export const RETURNS_DOORSTEP_CUSTOMER_PAYS = defineSetting({
+  key: "returns.doorstepCustomerPays",
+  group: "returns",
+  type: z.enum(["delivery_fee_only", "delivery_fee_plus_return", "free"]),
+  default: "delivery_fee_only",
+  label: { bn: "ডোরস্টেপ প্রত্যাখ্যানে গ্রাহক কী পরিশোধ করবে", en: "What the customer pays on doorstep rejection" },
+  secret: false,
+  public: true,
+  permission: "settings.returns.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "delivery_fee_only", label: { bn: "শুধু ডেলিভারি চার্জ", en: "Delivery charge only" } },
+      { value: "delivery_fee_plus_return", label: { bn: "ডেলিভারি + ফেরত চার্জ", en: "Delivery + return charge" } },
+      { value: "free", label: { bn: "ফ্রি", en: "Free" } },
+    ],
+  },
+});
+
+export const RETURNS_DOORSTEP_REFUND_METHOD = defineSetting({
+  key: "returns.doorstepRefundMethod",
+  group: "returns",
+  type: z.enum(["same_method", "manual_transfer", "store_credit"]),
+  default: "manual_transfer",
+  label: { bn: "ডোরস্টেপ প্রত্যাখ্যানে রিফান্ড পদ্ধতি", en: "Doorstep-rejection refund method" },
+  help: { bn: "যদি আগাম/সম্পূর্ণ পেমেন্ট করা থাকে — পরিশোধিত বিয়োগ চার্জ কীভাবে ফেরত দেওয়া হবে", en: "If paid in advance/full — how the paid amount minus charges gets refunded" },
+  secret: false,
+  public: false,
+  permission: "settings.returns.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "same_method", label: { bn: "একই মোবাইল ব্যাংকিং পদ্ধতিতে", en: "Same mobile banking method" } },
+      { value: "manual_transfer", label: { bn: "ফাইন্যান্স স্টাফ দ্বারা ম্যানুয়াল ট্রান্সফার", en: "Manual transfer by finance staff" } },
+      { value: "store_credit", label: { bn: "স্টোর ক্রেডিট", en: "Store credit" } },
+    ],
+  },
+});

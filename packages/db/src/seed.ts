@@ -140,6 +140,24 @@ async function seedDefaultStockLocation() {
   console.log('[db:seed] Default stock location "Main warehouse" created.');
 }
 
+/** Milestone 6 (docs/PROJECT_SPEC.md §6.10): the spec's own example reasons list — admin-managed and localized from here on, never hardcoded in UI code (golden rule 1). */
+async function seedDefaultReturnReasons() {
+  const existing = await prisma.returnReason.findFirst();
+  if (existing) return;
+  const reasons: { code: string; label: { bn: string; en: string }; defaultPaidBy: "customer" | "brand" }[] = [
+    { code: "size_too_small", label: { bn: "সাইজ ছোট হয়ে গেছে", en: "Size too small" }, defaultPaidBy: "customer" },
+    { code: "size_too_large", label: { bn: "সাইজ বড় হয়ে গেছে", en: "Size too large" }, defaultPaidBy: "customer" },
+    { code: "damaged", label: { bn: "ক্ষতিগ্রস্ত পণ্য", en: "Damaged" }, defaultPaidBy: "brand" },
+    { code: "wrong_item", label: { bn: "ভুল পণ্য পাঠানো হয়েছে", en: "Wrong item" }, defaultPaidBy: "brand" },
+    { code: "not_as_described", label: { bn: "বর্ণনার সাথে মিল নেই", en: "Not as described" }, defaultPaidBy: "brand" },
+    { code: "changed_mind", label: { bn: "মন পরিবর্তন করেছি", en: "Changed mind" }, defaultPaidBy: "customer" },
+  ];
+  for (const [index, reason] of reasons.entries()) {
+    await prisma.returnReason.create({ data: { ...reason, position: index } });
+  }
+  console.log(`[db:seed] ${reasons.length} default return reasons created.`);
+}
+
 /**
  * Milestone 3 (docs/PROJECT_SPEC.md §16 M3): system pages (home, 404, 500,
  * maintenance — storefront looks these up by reserved slug) and policy
@@ -227,6 +245,7 @@ async function main() {
   await seedUiStrings();
   await seedLocations();
   await seedDefaultStockLocation();
+  await seedDefaultReturnReasons();
   await seedDefaultPages();
   if (isDemo) {
     await seedDemoBrand();

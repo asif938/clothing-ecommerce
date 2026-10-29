@@ -21,6 +21,18 @@ export interface OrderSummary {
 }
 export const myOrders = () => callApi<OrderSummary[]>("/store/orders/mine");
 
+export interface OrderDetailItem {
+  id: string;
+  sku: string;
+  title: { en?: string; bn?: string };
+  quantity: number;
+  unitPrice: number;
+}
+export interface OrderDetail extends OrderSummary {
+  items: OrderDetailItem[];
+}
+export const orderDetail = (id: string) => callApi<OrderDetail>(`/store/orders/mine/${id}`);
+
 export interface Address {
   id: string;
   label: string | null;

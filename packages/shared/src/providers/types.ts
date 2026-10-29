@@ -151,3 +151,65 @@ export interface CaptchaDriver {
 export interface FraudCheckDriver {
   checkPhone(phone: string): Promise<{ deliverySuccessRatio: number | null; sampleSize: number }>;
 }
+
+/**
+ * Courier drivers (docs/PROJECT_SPEC.md §10.2) — Steadfast/Pathao/RedX each
+ * have a different real API (and different area/zone lookup needs — see
+ * `CourierAreaMapping`) but all funnel down to the same three operations
+ * from `ShipmentsService`'s point of view: book a parcel, poll its status,
+ * optionally cancel it. Money fields are poisha (golden rule 3); drivers
+ * convert to the provider's own unit (usually whole taka) at the boundary.
+ */
+export type ShipmentStatusValue =
+  | "pending"
+  | "booked"
+  | "picked_up"
+  | "in_transit"
+  | "out_for_delivery"
+  | "delivered"
+  | "partially_delivered"
+  | "returned_to_sender"
+  | "rejected_at_door"
+  | "cancelled"
+  | "lost";
+
+export interface CourierParcelInput {
+  /** Our order number — used as the provider's invoice/merchant-reference field. */
+  reference: string;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  /** From `CourierAreaMapping`, when the driver needs it (Pathao city/zone/area, RedX area id) — null when no mapping exists yet for this destination. */
+  areaCode: string | null;
+  areaName: string | null;
+  codAmount: number;
+  weightGrams: number;
+  itemDescription: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface CourierParcelResult {
+  consignmentId: string;
+  trackingCode: string;
+  trackingUrl?: string;
+  raw?: unknown;
+}
+
+export interface CourierStatusResult {
+  status: ShipmentStatusValue;
+  rawStatus: string;
+  /** §6.9 — delivery charge the courier collected from the customer at the door on a rejection/partial delivery, when the provider reports it. */
+  deliveryFeeCollected?: number;
+  /** §10.2 "delivery_charge_actual (courier cost)" — what the courier bills us, when known at this point. */
+  deliveryChargeActual?: number;
+  message?: string;
+  raw?: unknown;
+}
+
+export interface CourierDriver {
+  createParcel(input: CourierParcelInput): Promise<CourierParcelResult>;
+  getStatus(consignmentId: string): Promise<CourierStatusResult>;
+  /** Not every provider supports cancelling a booked parcel through the API — optional. */
+  cancelParcel?(consignmentId: string): Promise<void>;
+}

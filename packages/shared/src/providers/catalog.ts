@@ -12,6 +12,10 @@ import { nagadDriverDefinition } from "./drivers/payment-nagad.ts";
 import { turnstileDriverDefinition } from "./drivers/captcha-turnstile.ts";
 import { mockCaptchaDriverDefinition } from "./drivers/captcha-mock.ts";
 import { mockFraudCheckDriverDefinition } from "./drivers/fraud-check-mock.ts";
+import { mockCourierDriverDefinition } from "./drivers/courier-mock.ts";
+import { steadfastDriverDefinition } from "./drivers/courier-steadfast.ts";
+import { pathaoDriverDefinition } from "./drivers/courier-pathao.ts";
+import { redxDriverDefinition } from "./drivers/courier-redx.ts";
 
 /**
  * The static catalog of every driver implemented so far, keyed by
@@ -38,6 +42,10 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   turnstileDriverDefinition as unknown as ProviderDriverDefinition,
   mockCaptchaDriverDefinition as unknown as ProviderDriverDefinition,
   mockFraudCheckDriverDefinition as unknown as ProviderDriverDefinition,
+  mockCourierDriverDefinition as unknown as ProviderDriverDefinition,
+  steadfastDriverDefinition as unknown as ProviderDriverDefinition,
+  pathaoDriverDefinition as unknown as ProviderDriverDefinition,
+  redxDriverDefinition as unknown as ProviderDriverDefinition,
 ];
 
 export function getDriverDefinition(

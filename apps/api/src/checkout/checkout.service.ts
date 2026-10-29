@@ -14,7 +14,7 @@ import { PaymentsService, type OnlinePaymentMethod } from "../payments/payments.
 import { OtpService } from "../customer-auth/otp.service";
 import { CaptchaProvidersService } from "./captcha-providers.service";
 import { StockReservationService } from "./stock-reservation.service";
-import { derivePrefix, formatOrderNumber } from "./order-number";
+import { OrderNumberService } from "./order-number.service";
 import type { PlaceOrderDto } from "./dto";
 
 const ORDER_WITH_PAYMENTS_INCLUDE = { items: true, payments: true } as const;
@@ -54,6 +54,7 @@ export class CheckoutService {
     private readonly otp: OtpService,
     private readonly captcha: CaptchaProvidersService,
     private readonly stock: StockReservationService,
+    private readonly orderNumbers: OrderNumberService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -136,7 +137,9 @@ export class CheckoutService {
 
     const stockLines = priceableLines.map((l) => ({ variantId: l.variantId, quantity: l.quantity }));
     const location = await this.stock.defaultLocation();
-    const orderNumber = await this.generateOrderNumber();
+    const orderNumber = await this.orderNumbers.generate();
+    // §6.6 duplicate detection — checked against orders that already exist, before this one is created.
+    const possibleDuplicateOrderIds = await this.riskScoring.findPossibleDuplicates(cartRow.contactPhone, priceableLines.map((l) => l.variantId));
 
     const discountAllocatedByVariant = new Map<string, number>();
     for (const applied of quote.discounts.applied) {
@@ -161,6 +164,7 @@ export class CheckoutService {
           advanceRequired: advanceAmount,
           total: quote.total,
           codAmount: dto.paymentMethod === "cod" ? Math.max(0, quote.total - advanceAmount) : 0,
+          totalWeightGrams: quote.totalWeightGrams,
           shippingAddress: toJson({
             recipientName: cartRow.contactName,
             phone: cartRow.contactPhone,
@@ -182,6 +186,7 @@ export class CheckoutService {
           deviceId: dto.deviceId ?? null,
           idempotencyKey: requestContext.idempotencyKey,
           paymentTimeoutAt: needsOnlinePayment ? new Date(Date.now() + timeoutMinutes * 60 * 1000) : null,
+          possibleDuplicateOrderIds,
           items: {
             create: priceableLines.map((line) => ({
               variantId: line.variantId,
@@ -214,6 +219,10 @@ export class CheckoutService {
 
     for (const applied of quote.discounts.applied) {
       await this.discounts.recordUsage(applied.discountId, order.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);
+    }
+    // Symmetric: the orders found above don't yet list this new order as one of their duplicates.
+    for (const otherId of possibleDuplicateOrderIds) {
+      await this.prisma.order.update({ where: { id: otherId }, data: { possibleDuplicateOrderIds: { push: order.id } } });
     }
     await this.cart.markConverted(cartRow.id);
     if (requestContext.identity.customerId) {
@@ -252,22 +261,6 @@ export class CheckoutService {
   /** §11.1 "Idempotency-Key header required on place-order" — a retried request with the same key gets back the order that was actually created, never a second one. */
   private buildReplayResponse(order: OrderWithPayments) {
     return { order, redirectUrl: null, advanceAmount: order.advanceRequired, codAmount: order.codAmount, replay: true, warnings: [] as string[] };
-  }
-
-  private async generateOrderNumber(): Promise<string> {
-    const [format, brandName] = await Promise.all([this.settings.getValue<string>("orders.numberFormat"), this.settings.getValue<unknown>("brand.name")]);
-    const prefix = derivePrefix(typeof brandName === "object" && brandName ? ((brandName as { en?: string; bn?: string }).en ?? (brandName as { en?: string; bn?: string }).bn ?? null) : null);
-    const now = new Date();
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todaysCount = await this.prisma.order.count({ where: { createdAt: { gte: dayStart } } });
-
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const candidate = formatOrderNumber(format, prefix, now, todaysCount + 1 + attempt);
-      const taken = await this.prisma.order.findUnique({ where: { orderNumber: candidate } });
-      if (!taken) return candidate;
-    }
-    // Astronomically unlikely fallback — guarantees uniqueness even under a burst that outpaces the retry loop above.
-    return formatOrderNumber(format, prefix, now, todaysCount + 1 + Math.floor(Math.random() * 10_000));
   }
 }
 

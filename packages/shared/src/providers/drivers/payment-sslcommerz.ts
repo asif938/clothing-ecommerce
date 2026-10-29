@@ -28,7 +28,7 @@ export function createSslcommerzDriver(config: SslcommerzConfig): PaymentDriver 
       const body = new URLSearchParams({
         store_id: config.storeId,
         store_passwd: config.storePassword,
-        total_amount: input.amount.toFixed(2),
+        total_amount: (input.amount / 100).toFixed(2),
         currency: input.currency,
         tran_id: tranId,
         success_url: input.returnUrls.success,

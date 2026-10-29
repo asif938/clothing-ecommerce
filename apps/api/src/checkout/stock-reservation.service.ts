@@ -47,7 +47,7 @@ export class StockReservationService {
     }
   }
 
-  /** Cancel before ship, or payment-timeout expiry (§6.7). */
+  /** Cancel before ship, or payment-timeout expiry (§6.7). Only un-reserves — nothing physically moved, so no `StockMovement` row. */
   async release(tx: Prisma.TransactionClient, locationId: string, lines: ReservationLine[]): Promise<void> {
     for (const line of lines) {
       if (line.quantity <= 0) continue;
@@ -56,6 +56,39 @@ export class StockReservationService {
         SET reserved = reserved - ${line.quantity}
         WHERE variant_id = ${line.variantId} AND location_id = ${locationId}
       `;
+    }
+  }
+
+  /**
+   * §6.8 "stock decrement (setting)" — the reservation already took the
+   * stock out of `available` at order time; this is the moment it actually
+   * leaves the building (packed or shipped, per `orders.stockDecrementAt`).
+   * Reduces `on_hand` and `reserved` together so `available` doesn't move
+   * again here, and logs a `StockMovement` (unlike `release`, which never
+   * touches `on_hand` because nothing physically moved).
+   */
+  async fulfill(tx: Prisma.TransactionClient, locationId: string, lines: ReservationLine[], reference: { type: string; id: string }): Promise<void> {
+    for (const line of lines) {
+      if (line.quantity <= 0) continue;
+      await tx.$executeRaw`
+        UPDATE inventory_levels
+        SET on_hand = on_hand - ${line.quantity}, reserved = reserved - ${line.quantity}
+        WHERE variant_id = ${line.variantId} AND location_id = ${locationId}
+      `;
+      await tx.stockMovement.create({
+        data: { variantId: line.variantId, locationId, quantity: -line.quantity, reason: "sale", referenceType: reference.type, referenceId: reference.id, actor: "system" },
+      });
+    }
+  }
+
+  /** §6.9 step 5 / §6.10 — QC-passed returned/rejected items go back on hand. Items that fail QC never call this (see `ReturnsService`/`ShipmentsService` — they write an event instead, no inventory movement). */
+  async restock(tx: Prisma.TransactionClient, locationId: string, lines: ReservationLine[], reference: { type: string; id: string }): Promise<void> {
+    for (const line of lines) {
+      if (line.quantity <= 0) continue;
+      await tx.$executeRaw`UPDATE inventory_levels SET on_hand = on_hand + ${line.quantity} WHERE variant_id = ${line.variantId} AND location_id = ${locationId}`;
+      await tx.stockMovement.create({
+        data: { variantId: line.variantId, locationId, quantity: line.quantity, reason: "return_restock", referenceType: reference.type, referenceId: reference.id, actor: "system" },
+      });
     }
   }
 }
