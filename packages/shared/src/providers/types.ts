@@ -119,6 +119,30 @@ export interface WhatsappDriver {
 }
 
 /**
+ * Server-side tracking/conversions-API drivers (docs/PROJECT_SPEC.md §10.5,
+ * §13.3) — Meta Conversions API, GA4 Measurement Protocol, TikTok Events
+ * API. `eventId` is the same id the client pixel call used for the same
+ * event (shared for platform-side deduplication, per spec); `userData` is
+ * raw (unhashed) here — each driver hashes whatever its own API requires at
+ * the request boundary, not the caller.
+ */
+export interface TrackingEventInput {
+  eventName: string;
+  eventId: string;
+  eventTimeUnixSeconds: number;
+  /** Order/cart total in taka (not poisha) — these APIs all want a plain currency amount. */
+  value?: number;
+  currency?: string;
+  contents?: { id: string; quantity: number; price?: number }[];
+  userData: { phone?: string; email?: string; clientIp?: string; userAgent?: string; fbc?: string; fbp?: string };
+  sourceUrl?: string;
+}
+
+export interface TrackingDriver {
+  send(event: TrackingEventInput): Promise<void>;
+}
+
+/**
  * Online payment drivers (docs/PROJECT_SPEC.md §10.1) — SSLCommerz, bKash
  * and Nagad each have a different real flow (session+IPN,
  * grant-token+execute, initialize+complete) but all funnel down to the

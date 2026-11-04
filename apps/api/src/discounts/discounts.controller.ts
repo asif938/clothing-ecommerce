@@ -7,7 +7,18 @@ import { RequirePermissions } from "../common/require-permissions.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { DiscountsService } from "./discounts.service";
 import { FlashSalesService } from "./flash-sales.service";
-import { createDiscountSchema, createFlashSaleSchema, updateDiscountSchema, updateFlashSaleSchema, type CreateDiscountDto, type CreateFlashSaleDto, type UpdateDiscountDto, type UpdateFlashSaleDto } from "./dto";
+import {
+  createDiscountSchema,
+  createFlashSaleSchema,
+  generateBulkCodesSchema,
+  updateDiscountSchema,
+  updateFlashSaleSchema,
+  type CreateDiscountDto,
+  type CreateFlashSaleDto,
+  type GenerateBulkCodesDto,
+  type UpdateDiscountDto,
+  type UpdateFlashSaleDto,
+} from "./dto";
 
 /** Discounts & basic flash sales — the engine's admin CRUD (docs/PROJECT_SPEC.md §16 M5); the "full UI" (bulk unique codes, visual campaign builder) is M8's job, see docs/DECISIONS.md. */
 @ApiTags("discounts")
@@ -41,6 +52,21 @@ export class DiscountsController {
   async remove(@Param("id") id: string, @Req() req: Request) {
     await this.discounts.remove(id, req.staff!);
     return { ok: true };
+  }
+
+  @Post(":id/codes/generate")
+  generateBulkCodes(@Param("id") id: string, @Body(new ZodValidationPipe(generateBulkCodesSchema)) body: GenerateBulkCodesDto, @Req() req: Request) {
+    return this.discounts.generateBulkCodes(id, body, req.staff!);
+  }
+
+  @Get(":id/codes")
+  listBulkCodes(@Param("id") id: string) {
+    return this.discounts.listBulkCodes(id);
+  }
+
+  @Get(":id/usage")
+  usageReport(@Param("id") id: string) {
+    return this.discounts.usageReport(id);
   }
 }
 

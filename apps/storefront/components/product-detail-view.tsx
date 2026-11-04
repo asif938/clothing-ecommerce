@@ -11,6 +11,8 @@ import { NotifyMeForm } from "./notify-me-form";
 import { WishlistButton } from "./wishlist-button";
 import { RecentlyViewedTracker } from "./recently-viewed-tracker";
 import { RecentlyViewedSection } from "./recently-viewed-section";
+import { ProductReviews } from "./product-reviews";
+import { ProductQnA } from "./product-qna";
 import { trackEvent } from "../lib/analytics";
 import type { ProductDetail } from "../lib/store-api";
 
@@ -303,6 +305,9 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
           </section>
         ) : null,
       )}
+
+      <ProductReviews productId={product.id} locale={locale} />
+      <ProductQnA productId={product.id} locale={locale} />
 
       <RecentlyViewedSection excludeId={product.id} locale={locale} />
 

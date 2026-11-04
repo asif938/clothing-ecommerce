@@ -6,6 +6,7 @@ import { SettingsService } from "../settings/settings.service";
 import { AuditService } from "../audit/audit.service";
 import { StockReservationService } from "./stock-reservation.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { TrackingService } from "../tracking/tracking.service";
 
 export type TransitionActor = { type: "staff"; id: string } | { type: "customer"; id: string } | { type: "system" };
 
@@ -90,6 +91,7 @@ export class OrdersLifecycleService {
     private readonly audit: AuditService,
     private readonly stock: StockReservationService,
     private readonly notifications: NotificationsService,
+    private readonly tracking: TrackingService,
   ) {}
 
   async transition(input: TransitionInput, tx?: Prisma.TransactionClient): Promise<void> {
@@ -167,6 +169,21 @@ export class OrdersLifecycleService {
     const notificationEvent = ORDER_STATUS_TO_NOTIFICATION_EVENT[input.to];
     if (notificationEvent) {
       await this.enqueueStatusNotification(tx, order, notificationEvent);
+    }
+
+    if (input.to === "confirmed" && order.trackingEventId) {
+      const purchaseEventTiming = await this.settings.getValue<"placement" | "confirmation">("tracking.purchaseEventTiming");
+      if (purchaseEventTiming === "confirmation") {
+        const billingContact = (order.billingContact as { phone?: string; email?: string } | null) ?? null;
+        await this.tracking.recordPurchase({
+          eventId: order.trackingEventId,
+          orderId: order.id,
+          total: order.total,
+          currency: order.currency,
+          items: order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice })),
+          userData: { phone: order.customer?.phone ?? billingContact?.phone ?? null, email: order.customer?.email ?? billingContact?.email ?? null },
+        });
+      }
     }
   }
 

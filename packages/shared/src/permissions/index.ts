@@ -99,6 +99,17 @@ export const PERMISSIONS: PermissionDefinition[] = [
   // only their own).
   { key: "notifications.manage", group: "notifications", label: { bn: "নোটিফিকেশন টেমপ্লেট ও লগ পরিচালনা করুন", en: "Manage notification templates & logs" } },
   { key: "settings.notifications.write", group: "settings", label: { bn: "নোটিফিকেশন সেটিংস পরিবর্তন করুন", en: "Edit notification settings" } },
+
+  // Milestone 8 (docs/PROJECT_SPEC.md §16 M8) — marketing basics, customers,
+  // reviews, tracking & feeds, reports. `discounts.manage` (M5) already
+  // covers the discounts/flash-sales admin UI this milestone adds — no new
+  // permission needed there.
+  { key: "customers.manage", group: "customers", label: { bn: "গ্রাহক ও সেগমেন্ট পরিচালনা করুন", en: "Manage customers & segments" } },
+  { key: "reviews.manage", group: "reviews", label: { bn: "রিভিউ ও প্রশ্নোত্তর পরিচালনা করুন", en: "Manage reviews & Q&A" } },
+  { key: "settings.reviews.write", group: "settings", label: { bn: "রিভিউ সেটিংস পরিবর্তন করুন", en: "Edit review settings" } },
+  { key: "reports.read", group: "reports", label: { bn: "ড্যাশবোর্ড ও রিপোর্ট দেখুন", en: "View dashboard & reports" } },
+  { key: "settings.tracking.write", group: "settings", label: { bn: "ট্র্যাকিং সেটিংস পরিবর্তন করুন", en: "Edit tracking settings" } },
+  { key: "settings.feeds.write", group: "settings", label: { bn: "প্রোডাক্ট ফিড সেটিংস পরিবর্তন করুন", en: "Edit product feed settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

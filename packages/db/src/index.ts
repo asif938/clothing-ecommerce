@@ -38,6 +38,7 @@ export type {
   PriceScheduleStatus,
   PriceScheduleTargetType,
   ProductOptionType,
+  ProductQuestionStatus,
   ProductRelationType,
   ProductStatus,
   ProductType,
@@ -48,6 +49,9 @@ export type {
   ReturnShippingPaidBy,
   ReturnStatus,
   ReturnType,
+  Review,
+  ReviewFitFeedback,
+  ReviewStatus,
   RiskLevel,
   ScheduledTaskStatus,
   Shipment,
@@ -55,4 +59,5 @@ export type {
   SizeSystemType,
   StaffUserStatus,
   StockMovementReason,
+  TrackingEventLogStatus,
 } from "@prisma/client";

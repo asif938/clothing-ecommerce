@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProductCard } from "../../../components/product-card";
+import { SearchAnalyticsTracker } from "../../../components/search-analytics-tracker";
 import { getSearchResults } from "../../../lib/store-api";
 
 export const metadata: Metadata = { robots: { index: false, follow: true } }; // §13.2: search results pages aren't indexed
@@ -22,6 +23,7 @@ export default async function SearchPage({ params, searchParams }: { params: Pro
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
+      <SearchAnalyticsTracker term={q} resultCount={result.meta.total} />
       <h1 className="text-xl font-semibold text-surface-foreground">
         {locale === "bn" ? `"${q}" এর জন্য ফলাফল` : `Results for "${q}"`} ({result.meta.total})
       </h1>

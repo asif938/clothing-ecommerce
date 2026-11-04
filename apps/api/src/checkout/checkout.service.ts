@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Prisma } from "@clothing/db";
 import { formatTakaFromPoisha } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { StaffNotificationsService } from "../notifications/staff-notifications.service";
+import { TrackingService } from "../tracking/tracking.service";
 import { SettingsService } from "../settings/settings.service";
 import type { CartIdentity } from "../cart/cart.service";
 import { CartService } from "../cart/cart.service";
@@ -60,6 +62,7 @@ export class CheckoutService {
     private readonly orderNumbers: OrderNumberService,
     private readonly notifications: NotificationsService,
     private readonly staffNotifications: StaffNotificationsService,
+    private readonly tracking: TrackingService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -193,6 +196,8 @@ export class CheckoutService {
           idempotencyKey: requestContext.idempotencyKey,
           paymentTimeoutAt: needsOnlinePayment ? new Date(Date.now() + timeoutMinutes * 60 * 1000) : null,
           possibleDuplicateOrderIds,
+          // §10.5/§13.3 — shared with the client pixel's own Purchase event id for platform-side dedup; generated server-side when the client didn't send one (e.g. tracking scripts never loaded).
+          trackingEventId: dto.trackingEventId ?? randomUUID(),
           items: {
             create: priceableLines.map((line) => ({
               variantId: line.variantId,
@@ -240,6 +245,19 @@ export class CheckoutService {
     });
 
     await this.staffNotifications.notifyNewOrder(order);
+
+    const purchaseEventTiming = await this.settings.getValue<"placement" | "confirmation">("tracking.purchaseEventTiming");
+    if (purchaseEventTiming === "placement" && order.trackingEventId) {
+      await this.tracking.recordPurchase({
+        eventId: order.trackingEventId,
+        orderId: order.id,
+        total: order.total,
+        currency: order.currency,
+        items: order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice })),
+        userData: { phone: cartRow.contactPhone, email: cartRow.contactEmail, clientIp: requestContext.ip, userAgent: requestContext.userAgent, fbc: dto.fbc, fbp: dto.fbp },
+        sourceUrl: dto.sourceUrl,
+      });
+    }
 
     for (const applied of quote.discounts.applied) {
       await this.discounts.recordUsage(applied.discountId, order.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);

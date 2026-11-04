@@ -112,6 +112,11 @@ export interface PlaceOrderInput {
   otpCode?: string;
   termsAccepted?: boolean;
   turnstileToken?: string;
+  /** §10.5/§13.3 — see `checkout-view.tsx` for why this is generated client-side. */
+  trackingEventId?: string;
+  fbc?: string;
+  fbp?: string;
+  sourceUrl?: string;
 }
 
 export interface PlaceOrderResult {

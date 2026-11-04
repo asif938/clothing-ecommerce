@@ -9,7 +9,13 @@ import { Banner, Button, Card, TextField } from "../../../../components/ui";
 // docs/DECISIONS.md. "storage" only lists *alternative* storage providers
 // (Cloudinary) that an admin can switch to via the `media.defaultProvider`
 // setting; email/sms were the Milestone 1 proof of the generic pattern.
-const CAPABILITIES = ["storage", "email", "sms"] as const;
+// Bugfix (found during M8): this list was never extended as M5-M7 added
+// real drivers for payment/courier/captcha/fraud_check/whatsapp — those
+// capabilities had a working catalog+CRUD API all along (confirmed by the
+// generic form above needing no capability-specific code) but no tab to
+// reach them from. "tracking" (M8) would have landed in the same silent
+// gap had this not been caught.
+const CAPABILITIES = ["storage", "email", "sms", "whatsapp", "payment", "courier", "captcha", "fraud_check", "tracking"] as const;
 
 interface DriverCatalogEntry {
   capability: string;

@@ -62,9 +62,14 @@ export function AccountView() {
             <div className="flex items-center gap-3">
               <p>{formatBdt(order.total)}</p>
               {["delivered", "partially_delivered", "completed"].includes(order.status) && (
-                <Link href={`/account/returns/new?orderId=${order.id}`} className="text-xs text-brand underline">
-                  {locale === "bn" ? "রিটার্ন অনুরোধ" : "Request return"}
-                </Link>
+                <>
+                  <Link href={`/account/orders/${order.id}/reviews`} className="text-xs text-brand underline">
+                    {locale === "bn" ? "রিভিউ লিখুন" : "Write a review"}
+                  </Link>
+                  <Link href={`/account/returns/new?orderId=${order.id}`} className="text-xs text-brand underline">
+                    {locale === "bn" ? "রিটার্ন অনুরোধ" : "Request return"}
+                  </Link>
+                </>
               )}
             </div>
           </div>

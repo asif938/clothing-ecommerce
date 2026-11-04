@@ -12,6 +12,10 @@ import { sslWirelessDriverDefinition } from "./drivers/sms-sslwireless.ts";
 import { bulkSmsBdDriverDefinition } from "./drivers/sms-bulksmsbd.ts";
 import { mockWhatsappDriverDefinition } from "./drivers/whatsapp-mock.ts";
 import { whatsappCloudDriverDefinition } from "./drivers/whatsapp-cloud.ts";
+import { mockTrackingDriverDefinition } from "./drivers/tracking-mock.ts";
+import { metaCapiDriverDefinition } from "./drivers/tracking-meta-capi.ts";
+import { ga4MpDriverDefinition } from "./drivers/tracking-ga4-mp.ts";
+import { tiktokEventsDriverDefinition } from "./drivers/tracking-tiktok-events.ts";
 import { mockPaymentDriverDefinition } from "./drivers/payment-mock.ts";
 import { sslcommerzDriverDefinition } from "./drivers/payment-sslcommerz.ts";
 import { bkashDriverDefinition } from "./drivers/payment-bkash.ts";
@@ -60,6 +64,10 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   steadfastDriverDefinition as unknown as ProviderDriverDefinition,
   pathaoDriverDefinition as unknown as ProviderDriverDefinition,
   redxDriverDefinition as unknown as ProviderDriverDefinition,
+  mockTrackingDriverDefinition as unknown as ProviderDriverDefinition,
+  metaCapiDriverDefinition as unknown as ProviderDriverDefinition,
+  ga4MpDriverDefinition as unknown as ProviderDriverDefinition,
+  tiktokEventsDriverDefinition as unknown as ProviderDriverDefinition,
 ];
 
 export function getDriverDefinition(

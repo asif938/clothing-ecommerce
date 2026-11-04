@@ -1268,12 +1268,182 @@ prior milestone.
 
 ---
 
+## Milestone 8 — Marketing basics, customers, reviews, tracking, reports
+
+Status: complete (§16 M8) at the code/test level. The acceptance scenario
+("a purchase produces client and server Purchase events with the same
+event_id, verified in the event log; feeds validate against the
+platforms' required fields") is implemented and unit-tested
+(`feed-xml.spec.ts` checks every required field is present; the
+client/server event-id link is traced end to end through
+`checkout-view.tsx` → `Order.trackingEventId` → `TrackingService.
+recordPurchase`) and boot-tested for wiring, but not run live against
+seeded data — see "Not verified" below, same limitation as every prior
+milestone.
+
+### Built
+
+- **`packages/db`**: `DiscountCode` (bulk unique codes), `Segment`
+  (customer segments — rules only, no membership table, see
+  docs/DECISIONS.md), `Review` + `ProductQuestion` (+ `ReviewFitFeedback`/
+  `ReviewStatus`/`ProductQuestionStatus` enums), `TrackingEventLog` (+
+  `TrackingEventLogStatus`); `Order` gained `trackingEventId`. One
+  hand-written migration (`20261105090000_marketing_customers_reviews_
+  tracking`), generated via `prisma migrate diff`, confirmed byte-identical
+  to a fresh diff before committing, same reasoning as every prior
+  milestone's migration.
+- **`packages/shared`**: three new `tracking`-capability provider drivers
+  (`meta_capi`, `ga4_mp`, `tiktok_events`, each alongside a `mock`) —
+  SHA-256-hashed PII where each platform requires it, plain `fetch`, no
+  vendor SDK, same pattern as every real driver since M5. New permissions
+  (`customers.manage`, `reviews.manage`, `reports.read`, `settings.
+  tracking.write`, `settings.feeds.write`) and settings (`tracking.*`
+  pixel ids + Purchase-event timing, `feeds.enabled`/`secretToken`,
+  `reviews.autoApprove`). 3 new unit tests (mock tracking driver).
+- **`apps/api`**: `DiscountsService` gained bulk-code generation/listing
+  and a usage report; `CustomersModule` gained `CustomersAdminController`/
+  `Service` (list/profile/tags/notes/block/merge) and `SegmentsController`/
+  `Service` (CRUD + live preview count + members, rules →
+  `Prisma.CustomerWhereInput` via `segment-rules.ts`, mirroring M2's
+  `collection-rules.ts`); new `ReviewsModule` (admin moderation + rating
+  recompute; store submit/list/helpful/photo-upload, verified-purchase-
+  gated) and `ProductQuestionsModule` (admin answer/hide; store ask/list);
+  new `TrackingModule` (`TrackingDriversService`/`Service`/
+  `DispatchService` — several active instances at once, like M6's
+  couriers, not the sms/email/whatsapp single-winner pattern; registered
+  via `SchedulerService.registerRecurring`) wired into `CheckoutService.
+  placeOrder()` (placement-timed Purchase) and `OrdersLifecycleService.
+  transition()`'s `confirmed` branch (confirmation-timed Purchase, per the
+  `tracking.purchaseEventTiming` setting); new `FeedsModule` (on-demand
+  Meta-catalog/Google-Merchant XML, one shared builder, secret-token-gated);
+  new `DashboardModule` (KPIs: revenue/orders/AOV/conversion/delivered/
+  rejection rate/new-vs-returning/orders-by-status/top-products/low-stock/
+  live-visitors/active-carts/pending-COD/integration-failure alerts); new
+  `ReportsModule` (sales/products/courier/staff/discounts/search-terms,
+  each with CSV export via a from-scratch `toCsv` helper). **Bugfix**: the
+  admin Integrations page's capability tab list had silently missed
+  payment/courier/captcha/fraud_check (M5/M6) and whatsapp (M7) the entire
+  time — fixed while wiring `tracking`'s own tab (see docs/DECISIONS.md).
+  22 new unit tests (segment rules, feed XML required-field coverage, CSV
+  writer, tracking dispatch retry/failure, two new `OrdersLifecycleService`
+  tracking-hook cases).
+- **`apps/admin`**: nine new pages — `/discounts` (CRUD + bulk-code
+  generator + usage report), `/flash-sales` (CRUD with inline item rows),
+  `/customers` + `/customers/[id]` (list, profile with tags/notes/block/
+  merge), `/segments` (rule-JSON builder + live preview count),
+  `/reviews` (moderation queue with photo thumbnails + reply), `/
+  product-questions` (answer/hide queue), `/reports` (6 report tabs, date
+  range, CSV export link), `/feeds` (enable toggle, token generator, the
+  two computed feed URLs). Dashboard home page replaced with real KPIs
+  (today/7d/30d, clickable order-status counts). New `discounts`/
+  `flashSales`/`customers`/`segments`/`reviews`/`productQuestions`/
+  `reports`/`feeds`/`dashboard` message namespaces (bn + en).
+- **`apps/storefront`**: PDP gained `ProductReviews` (list, helpful count,
+  photos, admin replies, fit-feedback badges) and `ProductQnA` (ask +
+  answered list); `/account` gained a "write a review" link per delivered
+  order to a new `/account/orders/[id]/reviews` page (per-item rating/
+  fit/photo-upload/body form — review *submission* lives here, not the
+  PDP, since verified-purchase needs an `order_item_id` only the order
+  detail has, see docs/DECISIONS.md); `/search` now fires a `search`
+  analytics event (term + result count) for the new search-terms report;
+  the root layout gained `TrackingScripts` (GTM/Meta/GA4/TikTok bootstrap
+  snippets, `next/script` `afterInteractive`, skipped entirely when cookie
+  consent is required and no consent banner exists to grant it); checkout
+  now generates a `trackingEventId` client-side, sends it (+ `_fbc`/`_fbp`
+  cookies) with `placeOrder`, and the success page's new `PurchaseTracker`
+  fires the client `fbq`/`gtag`/`ttq` Purchase call with that same id.
+
+### Verified
+
+- `pnpm typecheck`/`pnpm lint`/`pnpm test` pass per-package across every
+  touched package (`@clothing/shared`: 99 tests; `@clothing/db`: 7 tests;
+  `api`: 257 tests — 22 new; `storefront`: 10 tests; `admin`: typecheck/
+  lint clean) — same per-package-is-authoritative caveat as every prior
+  milestone (full workspace `lint`/`typecheck` in parallel via Turbo still
+  intermittently OOMs on this Windows machine).
+- `pnpm --filter api run build` (`nest build`) succeeds.
+- **Ran the real API dev server with no database available**: the full DI
+  graph resolves (`TrackingModule`/`FeedsModule`/`DashboardModule`/
+  `ReportsModule` and the extended `CustomersModule`/`DiscountsModule`
+  wire cleanly into `CheckoutModule`/`OrdersLifecycleModule` with no
+  circular-dependency error), every new route maps correctly (confirmed
+  via curl: all `/admin/*` routes return 401 unauthenticated rather than
+  404; `/store/reviews/*`, `/store/product-questions/*`, `/feeds/*.xml`
+  fail with the real "can't reach database" `PrismaClientInitializationError`
+  rather than a code-bug crash; `/store/checkout/place-order` still 400s
+  via Zod validation with the new tracking fields present in the body).
+- **Ran the real admin dev server**: all nine new pages plus the
+  dashboard home page return 200 (bn and en) against a real `next dev`
+  server, no runtime crash.
+- **Ran the real storefront dev server**: `/search` and `/checkout/
+  success` (with `orderId`/`eventId`/`total` query params) both return
+  200 with no runtime error; the home page's pre-existing 404 (no CMS
+  "home" page reachable with no database) is unchanged from M3's own
+  established behavior, confirmed not caused by the new `TrackingScripts`
+  component (no error logged for that request).
+
+### Not verified in this environment
+
+- No live Postgres, so: the tracking dispatch sweep, dashboard KPIs, and
+  every report's actual output were exercised against pure logic (unit
+  tests) or boot-tested for wiring, never run against real seeded data —
+  the acceptance scenario's literal "place an order, see matching client
+  and server Purchase events in the tracking log" was never clicked
+  through.
+- The three real tracking drivers (Meta CAPI, GA4 MP, TikTok Events API)
+  and both feed endpoints are implemented against each platform's own
+  published XML/API shape with no live ad account/Business Manager to
+  verify against — same caveat accepted for every real driver since M5.
+- The admin's nine new pages and the storefront's PDP reviews/Q&A/
+  tracking-script wiring were boot-tested (every route 200, no crash) but
+  not click-tested against seeded data.
+- `pnpm build`'s pre-existing static-export failure (flagged in M6,
+  unrelated to this milestone) still reproduces on the storefront app,
+  this time naming `/en/checkout` as the "collateral" page — matching the
+  already-documented "a different one each run" pattern exactly.
+
+### Known issues / explicitly deferred
+
+- `buy_x_get_y`/`bundle_price`/`tiered` discount value types are neither
+  in the pricing engine nor the admin UI — only percent/fixed/
+  free_shipping (M5's engine) have a "full UI" this milestone; see
+  docs/DECISIONS.md for why completing the other three was traded off
+  against this milestone's other five areas.
+- Customer segments have no materialized membership table — every
+  read computes membership live from the rule tree (deliberate, not a
+  performance gap at this scale; see docs/DECISIONS.md).
+- Review photo uploads bypass the media library entirely (direct
+  `StorageDriver` injection) — no usage tracking, no multi-size variants,
+  orphaned files from an abandoned draft are never cleaned up.
+- The WhatsApp Cloud API / Meta CAPI / GA4 MP / TikTok Events API drivers
+  are all "re-verify against a live account before launch" — standard
+  caveat, not specific to this milestone.
+- Product feeds are on-demand only — §10.5's "generated by a job (and on
+  demand)" only has the "on demand" half built; pre-generation/caching is
+  deferred until a catalog large enough to need it exists.
+- Dashboard "conversion rate" and "new vs returning" are documented
+  approximations (no funnel/session table, no event-sourced order
+  history) — see docs/DECISIONS.md for exactly what each one actually
+  measures.
+- Cookie-consent-gated tracking scripts fail closed (don't load at all)
+  because no real consent banner exists yet to grant them — same root
+  cause as M3's own flagged gap, now visibly affecting a second feature.
+- Loyalty/gift cards/affiliates/referrals (§5.8) remain entirely out of
+  scope, per the milestone's own "except loyalty/gift cards" — phase 2/3
+  per §16.
+- Reports don't yet support a "compare period" as a server concept — the
+  admin UI would need to fetch the same report twice (two ranges) and diff
+  client-side; not built this milestone.
+
+---
+
 ### Next up
 
-Milestone 8 — Marketing basics, customers, reviews, tracking, reports
-(§16 M8): discounts & coupons full UI (types except loyalty/gift cards),
-bulk unique codes, margin guard, flash sales UI; customers list/profile/
-tags/segments (rule builder); reviews & moderation with photo reviews and
-fit feedback; Meta Pixel + CAPI, GA4 + MP, GTM, TikTok with dedup and event
-log; product feeds; dashboard KPIs; core reports (sales, products,
-courier, staff, discounts, search terms) with export.
+Milestone 9 — Hardening and launch readiness (§16 M9): full test suites
+(§14), E2E for the listed journeys, security review against §12,
+performance pass against §13.1, accessibility pass, demo seed polish,
+`docs/ADMIN_GUIDE.md` (bilingual, per module), `docs/DEPLOYMENT.md` (free
+mode + VPS mode), launch checklist page in admin (policies filled, payment
+live, courier live, SMS live, tracking verified, sitemap submitted,
+backups running, staff 2FA). This closes Phase 1 (MVP, launch-ready
+store).

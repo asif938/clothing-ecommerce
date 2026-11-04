@@ -1444,3 +1444,242 @@ failure (flagged in M6) persists, unrelated to this milestone (reproduces
 on `/_global-error` and a different "collateral" page each run — this time
 `/bn/integrations`/`/bn/returns` — exactly the pattern already documented
 there).
+
+---
+
+## 2026-11-05 — Milestone 8: marketing basics, customers, reviews, tracking, reports
+
+**Context.** §16 M8: discounts & coupons full UI (§5.8 types except
+loyalty/gift cards), bulk unique codes, margin guard, flash sales UI;
+customers list/profile/tags/segments (rule builder); reviews & moderation
+with photo reviews and fit feedback; Meta Pixel + CAPI, GA4 + MP, GTM,
+TikTok with dedup and event log; product feeds; dashboard KPIs; core
+reports (sales, products, courier, staff, discounts, search terms) with
+export. Acceptance: a purchase produces client and server Purchase events
+sharing one `event_id` (verified in the event log); feeds validate against
+the platforms' required fields.
+
+**Decision — "5.8 types except loyalty/gift cards" is read as completing
+the admin UI for the value types M5's engine already implements
+(percent/fixed/free_shipping), not as adding `buy_x_get_y`/`bundle_price`/
+`tiered` to the pricing engine this milestone.** Those three are genuinely
+new pricing algorithms (`CartPricingService`/`discount-math.ts` would each
+need a new branch, not just a new form field), and building three new
+algorithms would have come at the direct expense of the other five M8
+areas (customers, reviews, tracking, feeds, reports) — none of which are
+optional line items in the same milestone. Bulk unique codes
+(`DiscountCode`, a new table + `generateBulkCodes`/`listBulkCodes`/
+`usageReport` on `DiscountsService`) and margin guard (already fully built
+in M5 as `pricing.marginGuard.*` settings — the generated Settings page
+already exposes it, so this needed zero new work) are both real and
+complete. Recorded here as a deliberate scope trim, not a silent gap.
+
+**Decision — customer segments have no materialized membership table.**
+`Segment.rules` is a small typed condition tree
+(`apps/api/src/customers/segment-rules.ts`) evaluated into a
+`Prisma.CustomerWhereInput` at read time — the exact same pattern
+`collections/collection-rules.ts` (M2) already established for automatic
+collections, just pointed at `Customer` instead of `Product`. A segment's
+member list and count are always computed live; `memberCountCache` is a
+last-computed convenience for the list screen (refreshed on create/update),
+never the source of truth. This means there is nothing to keep in sync when
+a customer's stats change — the alternative (a join table maintained by
+triggers or recompute sweeps) is real complexity this milestone's
+acceptance scenario doesn't call for.
+
+**Decision — the admin customers list's "risk" filter is a raw
+`minRiskScore` number, not a low/medium/high enum.** §6.6's risk levels are
+derived from `risk.thresholds`, a *setting* (admin-configurable
+low/medium cutoffs), not a fixed mapping — duplicating that threshold
+lookup into the customers-list filter would mean two places could disagree
+about what "high risk" means. A numeric floor needs no such duplication.
+
+**Decision — "merge duplicates" (customers) reuses M5's
+`mergeGoogleOnlyIntoPhoneCustomer` logic generalized to admin-chosen ids,
+rather than being a new mechanism.** The move-everything-then-soft-delete
+transaction doesn't care *why* two rows are the same person; only the
+caller differs (an auth flow discovering a Google/phone duplicate vs. a
+staff member spotting one in the admin UI). `CustomersAdminService.merge()`
+additionally moves `Review` rows, which didn't exist when the M5 version
+was written.
+
+**Decision — reviews are a verified-purchase-gated, per-order-item
+submission, and the storefront submission form lives on the account's
+order page, not the PDP.** The PDP has no way to know *which* of the
+customer's orders/items correspond to the product being viewed without an
+extra lookup; the account's own `/store/orders/mine/:id` already returns
+the order's items with their ids, which `order_item_id` (the verified-
+purchase check) needs directly. The PDP instead gets a full review
+*display* (`ProductReviews` — list, helpful count, photos, admin replies,
+fit-feedback badges) and the Q&A section, both already complete.
+`Product.ratingAvg`/`ratingCount` (built M2) are recomputed from approved
+reviews only, on every moderation decision and on auto-approve
+(`ReviewsService.recomputeProductRating`) — a full recompute, not an
+incremental running average, since per-product review volume never
+approaches a scale where that matters.
+
+**Decision — review photo uploads go straight through the `StorageDriver`
+injection token, not the full media library.** A customer-submitted review
+photo has none of the things the media library exists for (folders, usage
+tracking across catalog entities, focal points, multi-size variants) — it's
+one URL stored directly on `Review.mediaUrls`. `STORAGE_DRIVER` is
+`@Global()` (M1), so `StoreReviewsService` injects it directly with no new
+module wiring. Orphaned files from an abandoned review draft are an
+accepted, documented trade-off (same category as M1's "verified copy" scope
+line for the Cloudinary migration job) — nothing references them, so they
+just sit in storage.
+
+**Decision — the three new provider drivers (`meta_capi`, `ga4_mp`,
+`tiktok_events`) share one new `tracking` capability, and several can be
+active at once** (Meta + GA4 + TikTok side by side) — the same
+"no single active one" shape `CourierProvidersService` (M6) already
+established for couriers, not `ProviderRegistryService.findActiveInstance`'s
+single-winner pattern used by sms/email/whatsapp. Each driver hashes
+whatever PII its own platform requires (SHA-256 lowercase for Meta/TikTok's
+phone/email) at the request boundary, never the caller. None are verified
+against a live ad account in this environment — same caveat as every real
+driver added since M5.
+
+**Bugfix, discovered while wiring the `tracking` capability's admin
+config, not scoped to this milestone — the admin Integrations page's
+`CAPABILITIES` tab list was never extended past M1's
+`["storage","email","sms"]`.** `payment`/`courier`/`captcha`/`fraud_check`
+(M5/M6) and `whatsapp` (M7) each got a real driver catalog and a working
+generic CRUD API, but no tab ever existed to reach them from — the
+create/edit form itself needed zero capability-specific code (confirmed by
+reading it), so this was purely a missing array entry, not a deeper gap.
+Fixed by listing every capability with a real driver catalog today,
+`tracking` included. Flagged here with the same weight as a test bug fix
+in a prior milestone (see M7's `courier-mock.test.ts` entry) — a real,
+previously-unnoticed gap across three milestones, now closed in one line.
+
+**Decision — the server-side Purchase event's dispatch timing
+(`tracking.purchaseEventTiming`, placement vs. confirmation) is read at
+exactly the two points that already exist for this: `CheckoutService.
+placeOrder()` (placement) and `OrdersLifecycleService.transition()`'s
+`confirmed` branch (confirmation) — mirroring how M7's notification hooks
+are wired into the same two call sites. The client/server `event_id` link
+is `Order.trackingEventId`, a new column set once at placement (client-
+generated via `crypto.randomUUID()` in `checkout-view.tsx`, or server-
+generated if the client didn't send one — e.g. tracking scripts never
+loaded) and read again at confirmation time if that's when the setting
+says to fire. Added to the schema *before* generating this milestone's
+migration, same "no live DB has ever run the column-less version" reasoning
+as M7's `NotificationLog.contacts` addition.
+
+**Decision — `TrackingEventLog.driver` is a free-text string, not an
+enum**, deliberately not mirroring `NotificationLog`'s channel-rule
+pattern 1:1. A notification channel maps to exactly one concept
+(sms/email/whatsapp); a tracking provider instance's *driver* can be
+`mock`, `meta_capi`, `ga4_mp`, or `tiktok_events`, and nothing about the row
+itself should force "which platform" into a fixed three-value enum when a
+merchant could plausibly run two differently-configured Meta pixels (e.g.
+test vs. live) side by side. This is the same "string, not enum" choice
+`NotificationLog.driver` already made, applied consistently here instead
+of the narrower `TrackingProvider` enum the schema briefly had before this
+decision (changed pre-migration, never shipped).
+
+**Decision — the tracking dispatch sweep retries in place (incrementing
+`attempts`, same row) rather than scheduling a specific backoff delay the
+way M7's notification sweep does.** There is no fallback-channel chain here
+— each provider instance is independent, not a fallback order — and
+tracking delivery is best-effort (nobody is waiting on it the way a
+customer waits on an SMS), so the embedded sweep's own 60s tick cadence is
+already enough spacing between attempts. Capped at 5 attempts, same number
+M7 used, for consistency rather than a different reasoned number.
+
+**Decision — product feeds are generated entirely on demand, not by a
+background job**, despite §10.5 saying "generated by a job (and on
+demand)". A free-tier, single-merchant catalog's feed XML is cheap enough
+to build per request (confirmed by not needing pagination or streaming in
+`FeedsService.buildXml()`); pre-generating and caching it is an optimization
+for catalogs large enough that it matters, which this milestone has no way
+to size against. The on-demand half of that bullet is real and complete;
+the job half is deferred, not silently dropped.
+
+**Decision — Meta's catalog feed and Google Merchant's feed are served
+from the same XML builder** (`feed-xml.ts`) — both platforms publish the
+same Google-Shopping-style RSS 2.0 + `g:` namespace format as an accepted
+input, confirmed independently for each platform's own docs, not assumed.
+One `FeedItem` per *variant* (not per product), with `item_group_id` set to
+the parent product id, per §10.5's own instruction. Feed availability
+checks the real `inventory_levels.available` sum across locations — not
+`Product.status` alone — matching the same "don't fake data" standard
+every report in this milestone follows.
+
+**Decision — `feeds.secretToken` is *not* marked `secret: true`** despite
+being a credential-shaped value, breaking from the pattern every other
+secret setting in this project follows (e.g. `auth.googleClientSecret`,
+write-only and masked on read). Staff need to see this value — not just
+set it once — to paste it into Meta's or Google's own feed-URL
+configuration field; the usual masking would make the one thing this
+setting exists for impossible. `public: false` still keeps it out of the
+storefront's own `GET /store/config` payload, which is the protection that
+actually matters here.
+
+**Decision — the admin Dashboard's "conversion rate" and "new vs
+returning" KPIs are documented approximations, not exact figures.**
+Conversion rate divides orders by distinct anonymous visitors seen in
+`analytics_events` over the same window — no funnel/session table exists
+to compute a real "visited → ordered" rate, and M4's first-party events are
+the closest proxy available. "New vs returning" classifies by the
+customer's *current* `ordersCount` (`<= 1` vs `> 1`) rather than what it
+was at the moment of each order in the range, since no event-sourced order
+history exists to answer that exactly. Both are called out directly in
+`DashboardService`'s own doc comment, not just here, so a future reader
+hits the caveat before trusting the number.
+
+**Decision — every report (sales/products/courier/staff/discounts/
+search-terms) buckets or groups in JS after one range-bounded Prisma fetch,
+not via raw SQL `date_trunc`/window functions.** Admin report volumes
+(order counts per merchant per month) are small enough that this is never
+a real cost in practice, and it avoids introducing the one raw-SQL code
+path in a codebase where every other query goes through Prisma's typed
+query builder — a second, untested code path for exactly one feature isn't
+worth the risk it carries for a correctness-sensitive feature like
+financial reporting. CSV export (`toCsv`, `reports/csv.ts`) is a from-
+scratch ~20-line RFC 4180 writer, not a dependency — the format is simple
+enough, and every other "no bespoke X" exception in this project (AWS SDK,
+`xlsx`) was for something genuinely complex to reimplement; CSV isn't.
+
+**Decision — search-term analytics (needed for the "search terms (top,
+zero-result)" report) didn't exist before this milestone and was added as
+part of it**, not treated as a prerequisite gap to fix separately: the
+storefront's `/search` page now fires a `trackEvent("search", {term,
+resultCount})` via a new `SearchAnalyticsTracker` client component (the
+same no-UI "tracker" pattern `RecentlyViewedTracker`/`PurchaseTracker`
+already use), landing in the same `analytics_events` table M4 built.
+`ReportsService.searchTerms()` reads it directly — no new table needed.
+
+**Decision — tracking scripts (GTM/Meta/GA4/TikTok) load via `next/script`
+with `strategy="afterInteractive"`, and simply don't load at all when
+`features.cookieConsent` (M3) is on** — not "load after a real accept
+click," because no consent *banner* component exists yet to produce that
+click (M3 flagged the setting; the banner itself was never built, see that
+milestone's own "known issues"). Failing closed (no scripts at all under
+consent-required mode, rather than loading without a genuine signal) is the
+only honest option available until a real banner exists; documented here
+directly since it materially changes what "enabling cookie consent" does
+to tracking, which isn't obvious from the setting's own M3-era description.
+
+**Not verified in this environment** (same root cause as every milestone
+so far — no Docker/live Postgres): the actual dispatch sweep, dashboard
+KPIs, and every report were exercised against their own pure logic (unit
+tests) or boot-tested for route-wiring/DI correctness (the real API dev
+server resolves the full module graph with `TrackingModule`/`FeedsModule`/
+`DashboardModule`/`ReportsModule`/the extended `CustomersModule`/
+`ReviewsModule`/`ProductQuestionsModule` all wired in; every new route
+curled against it returns the correct 401/500-with-real-Prisma-error, never
+a code-bug crash) but never run against real seeded data. The admin's nine
+new pages (`/discounts`, `/flash-sales`, `/customers[/:id]`, `/segments`,
+`/reviews`, `/product-questions`, `/reports`, `/feeds`) and the storefront's
+new PDP reviews/Q&A sections, search tracking, and checkout-success
+Purchase event were boot-tested (every route returns 200 against a real
+`next dev` server, no runtime crash) but not click-tested against seeded
+data — no database available here to seed it with. The three real tracking
+drivers and the two feed endpoints are implemented against each platform's
+own published XML/API shape, not verified against a live Meta/Google/
+TikTok account. `pnpm build`'s pre-existing static-export failure (flagged
+in M6, unrelated to this milestone) still reproduces on the storefront app
+this time (collateral page `/en/checkout`), matching the exact
+already-documented pattern.

@@ -1077,6 +1077,143 @@ export const NOTIFICATIONS_QUIET_HOURS_END = defineSetting({
   ui: { widget: "text" },
 });
 
+/**
+ * Milestone 8 (docs/PROJECT_SPEC.md §10.5, §13.3, §16 M8): client pixel ids
+ * (read by the storefront via `GET /store/config`, same as every other
+ * `public: true` setting) and the one setting that governs the server-side
+ * Purchase event's timing (§6.11: "server-side Purchase event, setting:
+ * send Purchase on placement or on confirmation"). GTM needs only a
+ * container id — `dataLayer` events already follow the GA4 e-commerce
+ * shape via `lib/analytics.ts` (M4), so there's nothing else to configure
+ * for it specifically.
+ */
+export const TRACKING_GTM_CONTAINER_ID = defineSetting({
+  key: "tracking.gtmContainerId",
+  group: "tracking",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "GTM কন্টেইনার আইডি", en: "GTM container ID" },
+  help: { bn: "যেমন GTM-XXXXXXX — খালি রাখলে GTM লোড হবে না", en: "e.g. GTM-XXXXXXX — leave empty to not load GTM" },
+  secret: false,
+  public: true,
+  permission: "settings.tracking.write",
+  ui: { widget: "text" },
+});
+
+export const TRACKING_META_PIXEL_ID = defineSetting({
+  key: "tracking.metaPixelId",
+  group: "tracking",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "Meta পিক্সেল আইডি", en: "Meta Pixel ID" },
+  secret: false,
+  public: true,
+  permission: "settings.tracking.write",
+  ui: { widget: "text" },
+});
+
+export const TRACKING_GA_MEASUREMENT_ID = defineSetting({
+  key: "tracking.gaMeasurementId",
+  group: "tracking",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "GA4 মেজারমেন্ট আইডি", en: "GA4 Measurement ID" },
+  help: { bn: "যেমন G-XXXXXXXXXX", en: "e.g. G-XXXXXXXXXX" },
+  secret: false,
+  public: true,
+  permission: "settings.tracking.write",
+  ui: { widget: "text" },
+});
+
+export const TRACKING_TIKTOK_PIXEL_ID = defineSetting({
+  key: "tracking.tiktokPixelId",
+  group: "tracking",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "TikTok পিক্সেল আইডি", en: "TikTok Pixel ID" },
+  secret: false,
+  public: true,
+  permission: "settings.tracking.write",
+  ui: { widget: "text" },
+});
+
+export const TRACKING_PURCHASE_EVENT_TIMING = defineSetting({
+  key: "tracking.purchaseEventTiming",
+  group: "tracking",
+  type: z.enum(["placement", "confirmation"]),
+  default: "placement",
+  label: { bn: "Purchase ইভেন্ট কখন পাঠানো হবে", en: "When to send the server-side Purchase event" },
+  secret: false,
+  public: false,
+  permission: "settings.tracking.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "placement", label: { bn: "অর্ডার প্লেসমেন্টে", en: "On order placement" } },
+      { value: "confirmation", label: { bn: "অর্ডার কনফার্মেশনে", en: "On order confirmation" } },
+    ],
+  },
+});
+
+export const TRACKING_TEST_EVENT_CODE = defineSetting({
+  key: "tracking.metaTestEventCode",
+  group: "tracking",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "Meta টেস্ট ইভেন্ট কোড", en: "Meta test event code" },
+  help: { bn: "Meta Events Manager-এ লাইভ টেস্ট করার সময় ব্যবহার করুন; খালি রাখলে পাঠানো হবে না", en: "Use while live-testing in Meta Events Manager; omitted from the payload when empty" },
+  secret: false,
+  public: false,
+  permission: "settings.tracking.write",
+  ui: { widget: "text" },
+});
+
+/** §5.5/§8.2 reviews — verified-purchase-gated submissions still default to staff moderation before going live; auto-approve is an opt-in speed/trust trade-off. */
+export const REVIEWS_AUTO_APPROVE = defineSetting({
+  key: "reviews.autoApprove",
+  group: "reviews",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "রিভিউ অটো-অ্যাপ্রুভ করুন", en: "Auto-approve reviews" },
+  help: { bn: "বন্ধ থাকলে প্রতিটি রিভিউ স্টাফ অনুমোদনের অপেক্ষায় থাকবে", en: "When off, every review waits for staff approval" },
+  secret: false,
+  public: false,
+  permission: "settings.reviews.write",
+  ui: { widget: "toggle" },
+});
+
+/** Product feeds (§10.5) — on-demand Meta catalog / Google Merchant XML, gated by a secret token in the feed URL rather than auth (platforms fetch feed URLs unauthenticated). */
+export const FEEDS_ENABLED = defineSetting({
+  key: "feeds.enabled",
+  group: "feeds",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "প্রোডাক্ট ফিড সক্রিয় করুন", en: "Enable product feeds" },
+  secret: false,
+  public: false,
+  permission: "settings.feeds.write",
+  ui: { widget: "toggle" },
+});
+
+export const FEEDS_SECRET_TOKEN = defineSetting({
+  key: "feeds.secretToken",
+  group: "feeds",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "ফিড সিক্রেট টোকেন", en: "Feed secret token" },
+  help: { bn: "ফিড URL-এ ব্যবহৃত হয় — খালি থাকলে ফিড কাজ করবে না", en: "Used in the feed URL — feeds refuse to serve while this is empty" },
+  // Deliberately not `secret: true` despite the name: staff need to *see*
+  // this value (not just set it once) to paste it into Meta/Google's own
+  // feed-URL field — the usual "write-only credential" masking this
+  // project's other secrets get (e.g. `auth.googleClientSecret`) would
+  // defeat the one thing this value is for. `public: false` still keeps it
+  // out of the storefront's own `GET /store/config` payload.
+  secret: false,
+  public: false,
+  permission: "settings.feeds.write",
+  ui: { widget: "text" },
+});
+
 export const SMS_COST_PER_SEGMENT_POISHA = defineSetting({
   key: "notifications.smsCostPerSegmentPoisha",
   group: "notifications",

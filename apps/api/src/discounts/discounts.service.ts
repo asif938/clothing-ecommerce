@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, type Discount, type DiscountValueType } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
@@ -17,7 +18,7 @@ import {
   type DiscountContext,
   type DiscountLine,
 } from "./discount-math";
-import type { CreateDiscountDto, UpdateDiscountDto } from "./dto";
+import type { CreateDiscountDto, GenerateBulkCodesDto, UpdateDiscountDto } from "./dto";
 
 export interface CartLineForPricing extends DiscountLine {
   unitPrice: number;
@@ -159,7 +160,14 @@ export class DiscountsService {
     const maxCodes = await this.settings.getValue<number>("checkout.maxCouponCodesPerOrder");
     const uniqueCodes = [...new Set(enteredCodes.map((c) => c.trim().toUpperCase()).filter(Boolean))].slice(0, maxCodes);
     for (const code of uniqueCodes) {
-      const discount = await this.prisma.discount.findFirst({ where: { code, type: "code" } });
+      // §16 M8 "bulk unique codes": a code may be the discount's own shared
+      // `code` field, or one of many rows in `discount_codes` (e.g. 500
+      // distinct single-use codes generated for one "VIP10" discount) —
+      // either resolves to the same underlying `Discount`.
+      const discount =
+        (await this.prisma.discount.findFirst({ where: { code, type: "code" } })) ??
+        (await this.prisma.discountCode.findUnique({ where: { code }, include: { discount: true } }))?.discount ??
+        null;
       if (!discount) {
         rejectedCodes.push({ code, reasonCode: "NOT_FOUND", message: "This code does not exist." });
         continue;
@@ -239,6 +247,48 @@ export class DiscountsService {
     await this.prisma.$transaction([
       this.prisma.discountUsage.create({ data: { discountId, orderId, customerId, phone, amount, code } }),
       this.prisma.discount.update({ where: { id: discountId }, data: { usedCount: { increment: 1 } } }),
+      // A no-op `updateMany` when `code` isn't one of this discount's bulk
+      // codes (the common case: a shared `Discount.code`) — cheaper than
+      // checking existence first for what's usually a miss.
+      ...(code ? [this.prisma.discountCode.updateMany({ where: { code }, data: { usedCount: { increment: 1 } } })] : []),
     ]);
+  }
+
+  /** §16 M8 "bulk unique code generator" — e.g. 500 distinct single-use codes for one `code`-type discount, each individually trackable in `discount_codes`. */
+  async generateBulkCodes(discountId: string, dto: GenerateBulkCodesDto, actor: AuthenticatedStaff): Promise<{ codes: string[] }> {
+    const discount = await this.get(discountId);
+    if (discount.type !== "code") {
+      throw new Error("Bulk codes can only be generated for a code-type discount");
+    }
+
+    const codes: string[] = [];
+    const prefix = dto.prefix?.toUpperCase() ?? "";
+    while (codes.length < dto.count) {
+      const remaining = dto.count - codes.length;
+      const batch = Array.from({ length: remaining }, () => `${prefix}${randomBytes(Math.ceil(dto.codeLength / 2)).toString("hex").toUpperCase().slice(0, dto.codeLength)}`);
+      const unique = [...new Set(batch)];
+      const existing = await this.prisma.discountCode.findMany({ where: { code: { in: unique } }, select: { code: true } });
+      const existingCodes = new Set(existing.map((e) => e.code));
+      for (const code of unique) {
+        if (!existingCodes.has(code) && codes.length < dto.count) codes.push(code);
+      }
+    }
+
+    await this.prisma.discountCode.createMany({ data: codes.map((code) => ({ discountId, code })) });
+    await this.audit.record({ actorType: "staff", actorId: actor.id, action: "discount.bulk_codes_generated", entityType: "discount", entityId: discountId, after: { count: codes.length } });
+    return { codes };
+  }
+
+  listBulkCodes(discountId: string) {
+    return this.prisma.discountCode.findMany({ where: { discountId }, orderBy: { createdAt: "desc" } });
+  }
+
+  /** §8.2 "usage reports" — total uses/amount plus a recent list; the Reports module's discount report (§8.2 "marketing: discount usage") aggregates across *all* discounts, this is the single-discount drill-down shown on its own admin page. */
+  async usageReport(discountId: string) {
+    const [totals, recent] = await Promise.all([
+      this.prisma.discountUsage.aggregate({ where: { discountId }, _count: { _all: true }, _sum: { amount: true } }),
+      this.prisma.discountUsage.findMany({ where: { discountId }, orderBy: { createdAt: "desc" }, take: 50 }),
+    ]);
+    return { totalUses: totals._count._all, totalAmount: totals._sum.amount ?? 0, recent };
   }
 }

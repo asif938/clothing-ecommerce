@@ -15,6 +15,8 @@ interface FakeOrder {
   billingContact: Record<string, unknown>;
   total: number;
   codAmount: number;
+  currency: string;
+  trackingEventId: string | null;
 }
 
 function makeTx(order: FakeOrder) {
@@ -34,8 +36,9 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const audit = { record: vi.fn() };
   const stock = { release: vi.fn(() => Promise.resolve()) };
   const notifications = { commonVariables: vi.fn(() => Promise.resolve({ brand_name: "Demo Fashion", support_phone: "01700-000000" })), enqueue: vi.fn(() => Promise.resolve()) };
-  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never);
-  return { service, tx, prisma, audit, stock, notifications };
+  const tracking = { recordPurchase: vi.fn(() => Promise.resolve()) };
+  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never);
+  return { service, tx, prisma, audit, stock, notifications, tracking };
 }
 
 function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
@@ -53,6 +56,8 @@ function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
     billingContact: {},
     total: 150000,
     codAmount: 150000,
+    currency: "BDT",
+    trackingEventId: "evt-1",
     ...overrides,
   };
 }
@@ -82,6 +87,18 @@ describe("OrdersLifecycleService.transition", () => {
     const { service, notifications } = makeService(order({ status: "pending" }));
     await service.transition({ orderId: "o1", to: "on_hold", actor: { type: "staff", id: "staff-1" }, reason: "Suspicious order" });
     expect(notifications.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("fires the server-side Purchase tracking event on confirm when timing is set to confirmation", async () => {
+    const { service, tracking } = makeService(order({ status: "pending", trackingEventId: "evt-42" }), { "tracking.purchaseEventTiming": "confirmation" });
+    await service.transition({ orderId: "o1", to: "confirmed", actor: { type: "staff", id: "staff-1" } });
+    expect(tracking.recordPurchase).toHaveBeenCalledWith(expect.objectContaining({ eventId: "evt-42", orderId: "o1", total: 150000, currency: "BDT" }));
+  });
+
+  it("does not fire the tracking event on confirm when timing is set to placement (the default)", async () => {
+    const { service, tracking } = makeService(order({ status: "pending" }), { "tracking.purchaseEventTiming": "placement" });
+    await service.transition({ orderId: "o1", to: "confirmed", actor: { type: "staff", id: "staff-1" } });
+    expect(tracking.recordPurchase).not.toHaveBeenCalled();
   });
 
   it("requires a reason to put an order on hold", async () => {

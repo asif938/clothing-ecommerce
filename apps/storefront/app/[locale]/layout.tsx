@@ -8,6 +8,7 @@ import { BlockRenderer } from "../../components/block-renderer";
 import { ChatButtons } from "../../components/chat-buttons";
 import { Footer } from "../../components/footer";
 import { Header } from "../../components/header";
+import { TrackingScripts } from "../../components/tracking-scripts";
 import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
@@ -77,6 +78,13 @@ export default async function LocaleLayout({
         {siteLd.map((data, index) => (
           <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
         ))}
+        <TrackingScripts
+          gtmContainerId={typeof config["tracking.gtmContainerId"] === "string" ? (config["tracking.gtmContainerId"] as string) : null}
+          metaPixelId={typeof config["tracking.metaPixelId"] === "string" ? (config["tracking.metaPixelId"] as string) : null}
+          gaMeasurementId={typeof config["tracking.gaMeasurementId"] === "string" ? (config["tracking.gaMeasurementId"] as string) : null}
+          tiktokPixelId={typeof config["tracking.tiktokPixelId"] === "string" ? (config["tracking.tiktokPixelId"] as string) : null}
+          consentRequired={config["features.cookieConsent"] === true}
+        />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} />

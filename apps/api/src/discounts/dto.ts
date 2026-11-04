@@ -44,6 +44,13 @@ export type CreateDiscountDto = z.infer<typeof createDiscountSchema>;
 export const updateDiscountSchema = createDiscountSchema.partial();
 export type UpdateDiscountDto = z.infer<typeof updateDiscountSchema>;
 
+export const generateBulkCodesSchema = z.object({
+  count: z.number().int().min(1).max(5000),
+  prefix: z.string().max(20).optional(),
+  codeLength: z.number().int().min(4).max(20).default(8),
+});
+export type GenerateBulkCodesDto = z.infer<typeof generateBulkCodesSchema>;
+
 export const createFlashSaleSchema = z.object({
   name: z.record(z.string(), z.string()),
   startsAt: z.coerce.date(),

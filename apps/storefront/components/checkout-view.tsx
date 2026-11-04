@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
+import { readCookie } from "../lib/analytics";
 import { useCart } from "../lib/use-cart";
 import {
   availablePaymentMethods,
@@ -108,11 +109,18 @@ export function CheckoutView() {
     setPlacing(true);
     setPlaceError(null);
     try {
-      const result = await placeOrder({ paymentMethod, otpCode: otpCode || undefined, termsAccepted }, idempotencyKey.current);
+      // §10.5/§13.3 — generated once here so the client Purchase event (fired on
+      // the success page) and the server-side CAPI/MP/Events-API copy share
+      // the same id for platform-side dedup.
+      const trackingEventId = crypto.randomUUID();
+      const result = await placeOrder(
+        { paymentMethod, otpCode: otpCode || undefined, termsAccepted, trackingEventId, fbc: readCookie("_fbc"), fbp: readCookie("_fbp"), sourceUrl: window.location.href },
+        idempotencyKey.current,
+      );
       if (result.redirectUrl) {
         window.location.href = result.redirectUrl;
       } else {
-        router.push(`/checkout/success?orderId=${result.order.id}`);
+        router.push(`/checkout/success?orderId=${result.order.id}&eventId=${trackingEventId}&total=${result.order.total}`);
       }
     } catch (error) {
       setPlaceError(error instanceof Error ? error.message : "Could not place order");

@@ -51,6 +51,12 @@ import { OrdersModule } from "./orders/orders.module";
 import { ReturnsModule } from "./returns/returns.module";
 import { RefundsModule } from "./refunds/refunds.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { ProductQuestionsModule } from "./product-questions/product-questions.module";
+import { TrackingModule } from "./tracking/tracking.module";
+import { FeedsModule } from "./feeds/feeds.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
+import { ReportsModule } from "./reports/reports.module";
 
 @Module({
   imports: [
@@ -127,6 +133,16 @@ import { NotificationsModule } from "./notifications/notifications.module";
     RefundsModule,
     // Milestone 7 (docs/PROJECT_SPEC.md §16 M7) — notifications and messaging.
     NotificationsModule,
+    // Milestone 8 (docs/PROJECT_SPEC.md §16 M8) — marketing basics,
+    // customers, reviews, tracking & feeds, reports. `CustomersModule` is
+    // already imported above (M5); this milestone only added controllers
+    // to it, not a new import here.
+    ReviewsModule,
+    ProductQuestionsModule,
+    TrackingModule,
+    FeedsModule,
+    DashboardModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

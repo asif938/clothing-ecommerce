@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMockEmailDriver, mockEmailDriverDefinition } from "./email-mock";
 import { createMockSmsDriver, mockSmsDriverDefinition } from "./sms-mock";
 import { createMockWhatsappDriver, mockWhatsappDriverDefinition } from "./whatsapp-mock";
+import { createMockTrackingDriver, mockTrackingDriverDefinition } from "./tracking-mock";
 
 describe("mock email driver", () => {
   it("calls onSend and resolves when simulating success", async () => {
@@ -52,5 +53,25 @@ describe("mock WhatsApp driver", () => {
   it("testConnection reflects the configured simulation", async () => {
     expect((await mockWhatsappDriverDefinition.testConnection({ simulate: "success", delayMs: 0 })).ok).toBe(true);
     expect((await mockWhatsappDriverDefinition.testConnection({ simulate: "failure", delayMs: 0 })).ok).toBe(false);
+  });
+});
+
+describe("mock tracking driver", () => {
+  it("calls onSend with the event payload", async () => {
+    const onSend = vi.fn();
+    const driver = createMockTrackingDriver({ simulate: "success", delayMs: 0 }, onSend);
+    const event = { eventName: "Purchase", eventId: "evt-1", eventTimeUnixSeconds: 0, userData: {} };
+    await driver.send(event);
+    expect(onSend).toHaveBeenCalledWith(event);
+  });
+
+  it("throws when simulating failure", async () => {
+    const driver = createMockTrackingDriver({ simulate: "failure", delayMs: 0 });
+    await expect(driver.send({ eventName: "Purchase", eventId: "evt-1", eventTimeUnixSeconds: 0, userData: {} })).rejects.toThrow();
+  });
+
+  it("testConnection reflects the configured simulation", async () => {
+    expect((await mockTrackingDriverDefinition.testConnection({ simulate: "success", delayMs: 0 })).ok).toBe(true);
+    expect((await mockTrackingDriverDefinition.testConnection({ simulate: "failure", delayMs: 0 })).ok).toBe(false);
   });
 });
