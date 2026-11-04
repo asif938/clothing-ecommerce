@@ -9,6 +9,7 @@ import { PaymentsModule } from "../payments/payments.module";
 import { CustomerAuthModule } from "../customer-auth/customer-auth.module";
 import { CustomerContextModule } from "../customer-auth/customer-context.module";
 import { ProvidersModule } from "../providers/providers.module";
+import { NotificationsModule } from "../notifications/notifications.module";
 import { CheckoutService } from "./checkout.service";
 import { CheckoutController } from "./checkout.controller";
 import { CaptchaProvidersService } from "./captcha-providers.service";
@@ -33,6 +34,7 @@ import { OrdersController } from "./orders.controller";
     StockReservationModule,
     OrdersLifecycleModule,
     OrderNumberModule,
+    NotificationsModule,
   ],
   controllers: [CheckoutController, OrdersController],
   providers: [CheckoutService, CaptchaProvidersService, OrderExpiryService, OrdersService],

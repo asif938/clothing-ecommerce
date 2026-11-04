@@ -7,9 +7,10 @@ import { CustomerSessionService } from "./customer-session.service";
 import { CustomerAuthService } from "./customer-auth.service";
 import { CustomerAuthController } from "./customer-auth.controller";
 import { CustomerContextModule } from "./customer-context.module";
+import { NotificationsModule } from "../notifications/notifications.module";
 
 @Module({
-  imports: [CustomersModule, SmsModule, CartModule, CustomerContextModule],
+  imports: [CustomersModule, SmsModule, CartModule, CustomerContextModule, NotificationsModule],
   controllers: [CustomerAuthController],
   providers: [OtpService, CustomerSessionService, CustomerAuthService],
   exports: [OtpService, CustomerSessionService, CustomerContextModule],

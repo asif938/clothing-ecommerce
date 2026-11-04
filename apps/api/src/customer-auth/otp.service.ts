@@ -5,15 +5,23 @@ import type { OtpPurpose } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { SmsProvidersService } from "../sms/sms-providers.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /**
  * OTP (docs/PROJECT_SPEC.md §6.13): 6 digits (setting 4-6), valid 5 min, max
  * 5 attempts, resend after 60s, rate-limited per phone/IP. Codes are hashed
  * at rest (argon2, same primitive as staff passwords — the real
  * anti-bruteforce property here is the attempt counter and short TTL, not
- * the hash algorithm). The SMS copy is a plain, untranslated placeholder:
- * the template editor (bn/en, with variables) is M7's job — see
- * docs/DECISIONS.md.
+ * the hash algorithm). The message text now goes through the M7
+ * `otp_verification` template (bn/en, admin-editable — see
+ * `NotificationsService.renderOtpMessage`) instead of a hardcoded English
+ * placeholder, but the send itself stays synchronous and outside the
+ * queued/retried dispatch pipeline used for order events — the customer is
+ * waiting for this code right now, so it still goes straight through
+ * `SmsProvidersService`, unchanged from M5. Locale isn't threaded from the
+ * storefront request into this call yet, so it always renders the `bn`
+ * copy — a reasonable simplification until a real need to localize OTP by
+ * request locale shows up.
  */
 @Injectable()
 export class OtpService {
@@ -23,6 +31,7 @@ export class OtpService {
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly sms: SmsProvidersService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async send(phone: string, purpose: OtpPurpose, ip: string | null): Promise<{ sent: true; devCode?: string }> {
@@ -49,11 +58,16 @@ export class OtpService {
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
     await this.prisma.otpCode.create({ data: { phone, purpose, codeHash, expiresAt, ip } });
 
+    const locale = "bn";
+    const message = await this.notifications.renderOtpMessage(locale, code);
     const driver = await this.sms.resolveActiveDriver();
     try {
-      await driver.send(phone, `Your verification code is ${code}. It expires in ${ttlMinutes} minutes.`);
+      await driver.send(phone, message.body);
+      await this.notifications.logImmediate({ event: "otp_verification", channel: "sms", recipientType: "guest", to: phone, locale, body: message.body, status: "sent" });
     } catch (error) {
-      this.logger.warn(`OTP send failed for ${phone}: ${error instanceof Error ? error.message : "unknown error"}`);
+      const errorMessage = error instanceof Error ? error.message : "unknown error";
+      await this.notifications.logImmediate({ event: "otp_verification", channel: "sms", recipientType: "guest", to: phone, locale, body: message.body, status: "failed", lastError: errorMessage });
+      this.logger.warn(`OTP send failed for ${phone}: ${errorMessage}`);
     }
 
     // Dev/demo convenience only (no real SMS gateway is configured yet in

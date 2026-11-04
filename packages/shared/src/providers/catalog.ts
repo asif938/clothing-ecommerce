@@ -4,7 +4,14 @@ import { s3StorageDriverDefinition } from "./drivers/storage-s3.ts";
 import { cloudinaryStorageDriverDefinition } from "./drivers/storage-cloudinary.ts";
 import { mockEmailDriverDefinition } from "./drivers/email-mock.ts";
 import { smtpEmailDriverDefinition } from "./drivers/email-smtp.ts";
+import { brevoEmailDriverDefinition } from "./drivers/email-brevo.ts";
+import { resendEmailDriverDefinition } from "./drivers/email-resend.ts";
 import { mockSmsDriverDefinition } from "./drivers/sms-mock.ts";
+import { genericHttpSmsDriverDefinition } from "./drivers/sms-generic-http.ts";
+import { sslWirelessDriverDefinition } from "./drivers/sms-sslwireless.ts";
+import { bulkSmsBdDriverDefinition } from "./drivers/sms-bulksmsbd.ts";
+import { mockWhatsappDriverDefinition } from "./drivers/whatsapp-mock.ts";
+import { whatsappCloudDriverDefinition } from "./drivers/whatsapp-cloud.ts";
 import { mockPaymentDriverDefinition } from "./drivers/payment-mock.ts";
 import { sslcommerzDriverDefinition } from "./drivers/payment-sslcommerz.ts";
 import { bkashDriverDefinition } from "./drivers/payment-bkash.ts";
@@ -34,7 +41,14 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   cloudinaryStorageDriverDefinition as unknown as ProviderDriverDefinition,
   mockEmailDriverDefinition as unknown as ProviderDriverDefinition,
   smtpEmailDriverDefinition as unknown as ProviderDriverDefinition,
+  brevoEmailDriverDefinition as unknown as ProviderDriverDefinition,
+  resendEmailDriverDefinition as unknown as ProviderDriverDefinition,
   mockSmsDriverDefinition as unknown as ProviderDriverDefinition,
+  genericHttpSmsDriverDefinition as unknown as ProviderDriverDefinition,
+  sslWirelessDriverDefinition as unknown as ProviderDriverDefinition,
+  bulkSmsBdDriverDefinition as unknown as ProviderDriverDefinition,
+  mockWhatsappDriverDefinition as unknown as ProviderDriverDefinition,
+  whatsappCloudDriverDefinition as unknown as ProviderDriverDefinition,
   mockPaymentDriverDefinition as unknown as ProviderDriverDefinition,
   sslcommerzDriverDefinition as unknown as ProviderDriverDefinition,
   bkashDriverDefinition as unknown as ProviderDriverDefinition,

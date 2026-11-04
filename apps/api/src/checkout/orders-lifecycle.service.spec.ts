@@ -10,6 +10,11 @@ interface FakeOrder {
   deliveredAt: Date | null;
   items: { variantId: string; locationId: string; quantity: number }[];
   payments: { id: string; status: string }[];
+  customerId: string | null;
+  customer: { name: string; phone: string | null; email: string | null; locale: string } | null;
+  billingContact: Record<string, unknown>;
+  total: number;
+  codAmount: number;
 }
 
 function makeTx(order: FakeOrder) {
@@ -18,6 +23,7 @@ function makeTx(order: FakeOrder) {
     orderEvent: { create: vi.fn() },
     refund: { create: vi.fn() },
     discountUsage: { deleteMany: vi.fn() },
+    shipment: { findFirst: vi.fn(() => Promise.resolve(null)) },
   };
 }
 
@@ -27,8 +33,9 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const settingsService = { getValue: vi.fn((key: string) => Promise.resolve(settings[key])) };
   const audit = { record: vi.fn() };
   const stock = { release: vi.fn(() => Promise.resolve()) };
-  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never);
-  return { service, tx, prisma, audit, stock };
+  const notifications = { commonVariables: vi.fn(() => Promise.resolve({ brand_name: "Demo Fashion", support_phone: "01700-000000" })), enqueue: vi.fn(() => Promise.resolve()) };
+  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never);
+  return { service, tx, prisma, audit, stock, notifications };
 }
 
 function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
@@ -41,6 +48,11 @@ function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
     deliveredAt: null,
     items: [{ variantId: "v1", locationId: "loc-1", quantity: 2 }],
     payments: [],
+    customerId: "c1",
+    customer: { name: "Rahim", phone: "+8801700000000", email: null, locale: "bn" },
+    billingContact: {},
+    total: 150000,
+    codAmount: 150000,
     ...overrides,
   };
 }
@@ -55,6 +67,21 @@ describe("OrdersLifecycleService.transition", () => {
     const { service, tx } = makeService(order({ status: "pending" }));
     await service.transition({ orderId: "o1", to: "confirmed", actor: { type: "staff", id: "staff-1" } });
     expect(tx.order.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "confirmed", confirmedBy: "staff-1" }) }));
+  });
+
+  it("enqueues an order_confirmed notification for the customer", async () => {
+    const { service, notifications } = makeService(order({ status: "pending" }));
+    await service.transition({ orderId: "o1", to: "confirmed", actor: { type: "staff", id: "staff-1" } });
+    expect(notifications.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ event: "order_confirmed", recipientType: "customer", recipientId: "c1", contacts: { sms: "+8801700000000", whatsapp: "+8801700000000", email: null } }),
+    );
+  });
+
+  it("does not enqueue a notification for a transition with no mapped event", async () => {
+    const { service, notifications } = makeService(order({ status: "pending" }));
+    await service.transition({ orderId: "o1", to: "on_hold", actor: { type: "staff", id: "staff-1" }, reason: "Suspicious order" });
+    expect(notifications.enqueue).not.toHaveBeenCalled();
   });
 
   it("requires a reason to put an order on hold", async () => {
@@ -124,5 +151,14 @@ describe("OrdersLifecycleService.transition", () => {
     await service.transition({ orderId: "o1", to: "delivered", actor: { type: "system" } });
     const call = tx.order.update.mock.calls[0]?.[0];
     expect(call.data.deliveredAt).toBeUndefined();
+  });
+
+  it("enqueues an order_cancelled notification, falling back to the billing contact for a guest order", async () => {
+    const { service, notifications } = makeService(order({ status: "confirmed", customerId: null, customer: null, billingContact: { name: "Karim", phone: "+8801800000000" } }));
+    await service.transition({ orderId: "o1", to: "cancelled", actor: { type: "staff", id: "staff-1" }, reason: "Out of stock" });
+    expect(notifications.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ event: "order_cancelled", recipientType: "guest", recipientId: null, contacts: { sms: "+8801800000000", whatsapp: "+8801800000000", email: null } }),
+    );
   });
 });

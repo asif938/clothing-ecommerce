@@ -91,6 +91,14 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "couriers.manage", group: "couriers", label: { bn: "কুরিয়ার এরিয়া ম্যাপিং পরিচালনা করুন", en: "Manage courier area mapping" } },
   { key: "settings.returns.write", group: "settings", label: { bn: "রিটার্ন সেটিংস পরিবর্তন করুন", en: "Edit returns settings" } },
   { key: "settings.couriers.write", group: "settings", label: { bn: "কুরিয়ার সেটিংস পরিবর্তন করুন", en: "Edit courier settings" } },
+
+  // Milestone 7 (docs/PROJECT_SPEC.md §16 M7) — message templates, channel
+  // matrix, and notification logs are all behind one broad permission,
+  // matching the `cms.manage`/`catalog.manage` granularity; staff in-app
+  // notifications need no permission of their own (every staff member reads
+  // only their own).
+  { key: "notifications.manage", group: "notifications", label: { bn: "নোটিফিকেশন টেমপ্লেট ও লগ পরিচালনা করুন", en: "Manage notification templates & logs" } },
+  { key: "settings.notifications.write", group: "settings", label: { bn: "নোটিফিকেশন সেটিংস পরিবর্তন করুন", en: "Edit notification settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

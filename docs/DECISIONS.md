@@ -1228,3 +1228,219 @@ credentials exist — every online payment driver beyond the mock.
 **Discovered this session, pre-existing, not caused by M6 — `pnpm build`'s static export now fails on both Next.js apps.** `next build` crashes prerendering Next's own auto-generated `/_global-error` page (`TypeError: Cannot read properties of null (reading 'useContext')`, worker exits), which then takes down whichever other page happens to share that worker — confirmed by reproducing the identical failure on a clean `git stash` back to the M5 commit, with a freshly wiped `.next`, before any M6 file existed; the specific "collateral" page named in the error (`/en/checkout`, `/en/import-export`, `/bn/returns`, `/bn/integrations` — a different one each run) changes between runs, which is consistent with "whichever page's worker happened to be adjacent," not a defect in that specific page. Added a plain, self-contained `app/global-error.tsx` to both apps (neither had one — Next.js was using its own default, which sits above `[locale]/layout.tsx` and has no access to anything that layout provides) since that's the standard fix for this class of issue; it did not resolve it here, so something about Turbopack's production build in this specific sandboxed Windows environment is still the root cause. `pnpm dev` is unaffected (boot-tested repeatedly all session, including with the new `global-error.tsx` present) — this only blocks the static-export `next build` step, not running either app. Needs a real investigation with a working `next build` elsewhere (a normal Linux CI runner, most likely) to say more.
 
 **Not verified in this environment** (same root cause as every milestone so far — no Docker/live Postgres, see `docs/LOCAL_SETUP.md`): the full mock-courier acceptance scenario end-to-end (confirm → pack with scan → book → poll sweep → delivered; a second order → rejected_at_door → refund + restock) was exercised piece-by-piece — the mock courier driver's time-based status progression is unit-tested with fake timers, the doorstep-refund math is unit-tested, the state machine's transitions and cancellation side effects are unit-tested against a mocked Prisma — but never run as one live sequence against a real database and a real `SchedulerService` tick. Steadfast/Pathao/RedX are implemented against each provider's publicly documented API shape (endpoints, field names, status values) with no merchant account to verify against, same caveat already accepted for the M5 payment drivers; their webhook payload field names in particular are a best guess (`shipments-webhook.controller.ts` says so directly) and should be re-checked against a real payload before going live. The admin orders/fulfillment/returns/refunds pages were typechecked, linted, and boot-tested (routes mapped, 401s where expected) but never click-tested in a browser against seeded data.
+
+---
+
+## 2026-11-04 — Milestone 7: notifications and messaging
+
+**Context.** §16 M7: message templates (SMS/email/WhatsApp, bn/en) with
+editor/preview/test-send; a per-event channel matrix with fallback order;
+SMS drivers (generic HTTP + two named BD gateways); email drivers (SMTP,
+Brevo, Resend); WhatsApp click-to-chat (already built M3) + a real Cloud API
+driver; notification logs; staff notifications (in-app + email). Acceptance:
+placing/confirming/shipping/delivering an order sends the configured
+messages via mock drivers in the chosen language, and switching an event
+from SMS to WhatsApp needs no code.
+
+**Decision — the two named BD SMS gateways are SSL Wireless and BulkSMSBD.**
+Both are widely used BD gateways with a simple HTTP API documentable from
+public integration guides (no official reference doc was found for either —
+flagged directly in each driver's own doc comment, same "re-verify before
+going live" caveat already attached to every courier/payment driver since
+M5/M6). SSL Wireless: `POST /api/v3/send-sms` with a JSON body
+(`api_token`/`sid`/`msisdn`/`sms`), success is `status: "SUCCESS"`.
+BulkSMSBD: `GET /api/smsapi` with query params
+(`api_key`/`number`/`senderid`/`message`/`type`), success is
+`response_code: 202`; `type` is set to `"unicode"` or `"text"` per message
+using the same GSM-7 detection the length counter uses
+(`isGsm7Text`/`estimateSmsLength`, `packages/shared/src/notifications/sms-length.ts`).
+Both also back a `balance()` call (SSL Wireless's isn't documented well
+enough publicly to implement safely, so only BulkSMSBD's is wired — the
+`SmsDriver.balance` method stays optional for exactly this reason).
+
+**Decision — a third `generic_http` SMS driver** lets any BD gateway not
+worth a named driver work with zero code (§10.3's own requirement): the
+admin defines the URL, method, body shape (`query`/`json`/`form`), a
+params template with `{to}`/`{message}`/`{api_key}`/`{sender_id}`
+placeholders, and a success-detection rule (`successField`/`successValue`,
+dot-path into the JSON response). SSL Wireless/BulkSMSBD are really just
+pre-filled, tested special cases of this same shape — kept as separate
+named drivers anyway because that's what the spec asks for by name, and a
+named driver's `testConnection`/`balance` can be real where a generic one
+can't.
+
+**Decision — Brevo and Resend follow the exact pattern SMTP (M1) already
+established**: plain `fetch`, no vendor SDK (same reasoning as every other
+driver — S3's AWS SDK is this project's one accepted vendor-SDK exception).
+Brevo: `POST /v3/smtp/email` with an `api-key` header. Resend: `POST
+/emails` with a `Bearer` token. Neither verified against a live account (no
+merchant credentials — same caveat as every real driver since M5).
+
+**Decision — WhatsApp gets a new `whatsapp` capability in the driver
+catalog (`mock` + `whatsapp_cloud`), while `click_to_chat` (M3) stays exactly
+what it already was: a settings-driven `wa.me` link builder for the
+storefront's chat button and "Order on WhatsApp" link, not a capability
+driver.** `click_to_chat` has no server-side "send" operation at all — it
+can't participate in the provider framework's `WhatsappDriver.send()`
+interface because there is nothing to call. `whatsapp_cloud` is implemented
+against Meta's documented `POST /{api_version}/{phone_number_id}/messages`
+endpoint, sending a plain `type: "text"` message. **Known limitation,
+documented directly on `WhatsappDriver` in `providers/types.ts`:** Meta only
+allows a business-initiated message (every transactional notification this
+capability sends) to go out as a pre-approved message *template*, not free
+text, unless there's an open 24h customer-initiated session — modeling real
+template-name/parameter mapping per notification event is a meaningfully
+bigger integration (a second mapping layer between our `MessageTemplate`
+rows and Meta's own approved template library) and is deferred rather than
+half-built. In this environment, the `mock` WhatsApp driver is what the
+acceptance scenario's "WhatsApp" channel actually exercises.
+
+**Decision — "available" (for the §6.11 fallback rule "fall back to SMS if
+not delivered or not available") means an admin has an *active*
+`provider_instances` row for that capability; "nothing configured" falls
+back to that capability's own `mock` driver, exactly like M5's
+`SmsProvidersService` already did for SMS.** `NotificationDriversService`
+generalizes that one-capability pattern to sms/email/whatsapp. This keeps a
+fresh install's acceptance scenario working with zero admin setup (every
+channel always resolves to *something*, so "sends the configured messages
+via mock drivers" is true out of the box) while still giving a real
+"unavailable" signal once a driver is actually configured and its `send()`
+genuinely fails — `NotificationDispatchService` treats that failure (after
+retries) exactly like "not delivered," not differently.
+
+**Decision — the dispatch pipeline is: `NotificationsService.enqueue()`
+writes one `notification_logs` row for the *first* eligible channel in the
+event's channel-matrix order (inside the caller's own transaction, same
+`tx`-threading pattern `StockReservationService`/M6's state machine already
+use); `NotificationDispatchService`'s recurring sweep (`registerRecurring`,
+same mechanism as M2's publish sweep/M3's price-schedule sweep — no
+`scheduled_tasks` row needed) actually calls the driver; a failure retries
+with exponential backoff (30s → 60s → 120s → … capped at 1h, 5 attempts by
+default) before creating the *next* eligible channel's log row and marking
+this one `failed`.** "Eligible" means the recipient has an address for that
+channel *and* an active template exists for (event, channel) — a missing
+template skips a channel exactly like a failed driver does, so an admin can
+effectively disable a channel for one event by clearing its body rather
+than needing a separate toggle.
+
+**Decision — `NotificationLog` stores every channel the recipient could be
+reached on (`contacts: { sms?, whatsapp?, email? }`), not just the one
+channel actually attempted.** The fallback step needs the *next* channel's
+address once the current one is exhausted, and by the time that happens the
+order/customer row that originally triggered the notification may have
+moved on — persisting `contacts` (and `variables`) on the log row itself
+means `NotificationDispatchService` never needs to know how to re-derive
+them from an order, a customer, or anything else; it only ever talks to
+`NotificationsService`/`NotificationLog`. Added as a schema change *before*
+generating this milestone's migration (no live DB/migration has ever run
+against the original `contacts`-less version), not as a follow-up patch.
+
+**Decision — OTP (§6.13) is NOT routed through the queued/retried dispatch
+pipeline.** The customer is waiting for the code right now; queuing it for
+a sweep that might run 60 seconds later would break the feature. `OtpService`
+still sends synchronously through `SmsProvidersService` exactly as M5 built
+it — the only M7 change is that the message text now comes from the
+`otp_verification` template (via `NotificationsService.renderOtpMessage()`,
+bn/en, admin-editable with the `{otp}` variable) instead of a hardcoded
+English string, and the outcome is recorded with
+`NotificationsService.logImmediate()` so it's visible on the same
+Notifications Log screen as everything else. Locale isn't threaded from the
+storefront request into this call yet (always renders `bn`) — a reasonable
+simplification until a real need to localize OTP by request locale shows
+up; noted here so it isn't mistaken for an oversight.
+
+**Decision — staff notifications (in-app + email) are a separate, smaller
+system, not built on `MessageTemplate`/`NotificationChannelRule`.**
+`StaffNotificationsService` resolves every active staff user holding a
+given permission (currently just `orders.manage`, for "new order"),
+inserts one `StaffNotification` row per recipient (the deferred-from-M1
+`notifications_admin` table, finally built), and best-effort emails each
+one via `NotificationDriversService.resolveEmail()`. There is exactly one
+staff event today; building the full customer-facing channel-matrix/
+template-editor machinery for it would be speculative scope with no second
+use case yet to validate the design against. The in-app bell polls
+`GET /staff/notifications` every 30s (`apps/admin/components/notification-bell.tsx`)
+— simplest thing that works for a handful of staff on a free-tier,
+single-instance deployment (golden rule 8), not a websocket/SSE push.
+
+**Decision — which order-status transitions actually notify the customer.**
+`OrdersLifecycleService.transition()` is the one place every status change
+goes through (established M6), so a single
+`ORDER_STATUS_TO_NOTIFICATION_EVENT` lookup table there covers
+confirmed/shipped/out_for_delivery/delivered/partially_delivered/
+rejected_at_door/cancelled generically — `order_placed` is handled
+separately in `CheckoutService.placeOrder()` since order creation doesn't
+go through `transition()` (no prior state to transition from). Deliberately
+**not** mapped: `processing`/`packed` (internal warehouse states with no
+customer-facing message in the spec's own example set),
+`on_hold`/`expired`/`returned_to_sender`/`returned_to_warehouse`/`completed`
+(not reached by anything that calls `transition()` with an established
+customer-notification need yet). `return_requested`/`return_approved`/
+`refund_processed` are documented as real gaps below, not silently
+dropped — adding any of these later is a one-line map entry plus, for the
+return/refund ones, a call into `NotificationsService.enqueue()` from
+`ReturnsService`/`OrdersLifecycleService`'s refund-creation path, not a new
+mechanism.
+
+**Decision — the SMS length counter (§6.11) approximates GSM 03.38, not a
+byte-exact implementation.** `estimateSmsLength` (`packages/shared/src/notifications/sms-length.ts`)
+checks every character against the GSM-7 *basic* charset (one septet each)
+and falls back to UCS-2 (unicode, 70/67-char limits) otherwise — it does not
+model the handful of GSM 03.38 *extended*-charset Latin symbols that cost
+two septets apiece (`{`, `}`, `€`, …), since none of those appear in
+Bangla/English commerce copy and modeling them precisely adds real
+complexity for no practical benefit here. The estimated cost shown in the
+template editor (`notifications.smsCostPerSegmentPoisha` setting, default 50
+poisha) is explicitly labeled an estimate — real gateway billing varies.
+
+**Decision — quiet hours and marketing opt-out have real settings
+(`notifications.quietHoursEnabled/Start/End`) and a real data model
+(`Customer.marketingConsentSms/Email/Whatsapp`, already built in M5) but no
+enforcement point yet.** Every M7 event is transactional (order placed,
+confirmed, OTP, …) — §6.11's own text scopes quiet hours/opt-out to
+*marketing* messages, and no marketing-broadcast feature exists before M8's
+campaigns. Wiring enforcement in now, against zero marketing-flagged
+events, would be guessing at a design M8 should actually drive. Recorded
+here so this isn't mistaken for a forgotten requirement.
+
+**Decision — the admin Notifications screen is three tabs (templates,
+channel matrix, logs) in one page, matching the established "simple,
+functionally-complete MVP" pattern (M1's settings-ergonomics, M2's category
+tree, M5's payment-rules JSON editor).** The channel-matrix editor reorders
+with up/down buttons, not drag-and-drop; the template editor is plain
+bn/en textareas per channel, not a rich-text/variable-autocomplete editor.
+Both are fully functional (every event/channel is admin-editable, the
+fallback order is admin-editable) with reduced ergonomics, the same
+trade-off this project has made repeatedly rather than a new one.
+
+**Bugfix, unrelated to this milestone's own scope — `courier-mock.test.ts`
+(M6) called `driver.createParcel()` with no arguments, but
+`CourierDriver.createParcel(input: CourierParcelInput)` requires one.**
+This compiled under M6 only because nothing had run `tsc --noEmit` on
+`@clothing/shared` with this exact combination since; discovered because
+this milestone's own `pnpm --filter @clothing/shared typecheck` run
+surfaced it. Fixed by giving the test a minimal fixture `CourierParcelInput`
+— a pure test bug, no production code changed.
+
+**Not verified in this environment** (same root cause as every milestone so
+far — no Docker/live Postgres): the actual dispatch sweep running against a
+real Postgres (`NotificationLog` row lifecycle, backoff timing, the
+fallback-channel creation) is unit-tested against a mocked Prisma client,
+not exercised live. SSL Wireless, BulkSMSBD, Brevo, Resend, and the
+WhatsApp Cloud API driver are implemented against each provider's publicly
+documented (or, for the two SMS gateways, community-documented) API shape
+with no live account to verify against — same caveat as every real driver
+added since M5. The full acceptance scenario (place → confirm → ship →
+deliver an order in a real browser, watch `notification_logs` fill in,
+switch an event's channel order in the admin UI, see the next send honor
+it) was boot-tested for wiring/routing/DI correctness (every new route maps,
+returns the right 401/400, the real API dev server resolves the full
+module graph with the new `NotificationsModule` wired into `CheckoutModule`/
+`OrdersLifecycleModule`/`CustomerAuthModule`) and the admin page renders
+(`/notifications` and `/en/notifications` both 200 against the real `next
+dev` server) but not click-tested end to end against seeded data — no
+database available here to seed. `pnpm build`'s pre-existing static-export
+failure (flagged in M6) persists, unrelated to this milestone (reproduces
+on `/_global-error` and a different "collateral" page each run — this time
+`/bn/integrations`/`/bn/returns` — exactly the pattern already documented
+there).

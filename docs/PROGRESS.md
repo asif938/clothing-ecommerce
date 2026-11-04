@@ -1109,11 +1109,171 @@ a real database — see "Not verified" below.
 
 ---
 
+## Milestone 7 — Notifications and messaging
+
+Status: complete (§16 M7) at the code/test level. The acceptance scenario
+("placing, confirming, shipping, delivering an order sends the configured
+messages via mock drivers in the chosen language; switching an event from
+SMS to WhatsApp needs no code") is implemented, boot-tested for wiring, and
+exercised unit-by-unit (template rendering/fallback logic, backoff timing,
+driver request shapes); the live end-to-end sequence against a real
+database was not run — see "Not verified" below, same limitation as every
+prior milestone.
+
+### Built
+
+- **`packages/db`**: `message_templates` (one row per event×channel,
+  bn/en subject+body, `isActive`), `notification_channel_rules` (one row
+  per event, an ordered JSON channel array — missing row falls back to the
+  catalog default, same pattern the settings registry already uses),
+  `notification_logs` (one row per channel *attempt*, with `contacts`/
+  `variables` persisted so a fallback to the next channel never needs to
+  re-derive them — see docs/DECISIONS.md), `staff_notifications` (the
+  M1-deferred `notifications_admin` table, finally built). New enums
+  `NotificationChannel`/`NotificationEvent`/`NotificationRecipientType`/
+  `NotificationLogStatus`. One hand-written migration
+  (`20261104100000_notifications`), generated via `prisma migrate diff`
+  between the committed schema and this one — confirmed byte-identical to
+  a fresh diff before committing, same reasoning as every prior
+  milestone's migration. `pnpm db:seed` now also seeds one default bn/en
+  template per (event, channel) from `@clothing/shared/notifications`'
+  `NOTIFICATION_EVENTS` catalog — channel rules are deliberately *not*
+  seeded (an event with no row just uses the catalog's own default order).
+- **`packages/shared`**: new `@clothing/shared/notifications` subpath —
+  `NOTIFICATION_EVENTS`/`NOTIFICATION_CHANNELS` (the event catalog: label,
+  help, documented variables, default channel fallback order, mirroring
+  the Prisma enum by hand, same pattern `ShipmentStatusValue` already
+  uses), `renderTemplate`/`formatTakaFromPoisha`, `estimateSmsLength`/
+  `isGsm7Text` (the §6.11 SMS length/segment/encoding counter). New
+  provider drivers: `generic_http`/`sslwireless`/`bulksmsbd` (sms),
+  `brevo`/`resend` (email), `mock`/`whatsapp_cloud` (the new `whatsapp`
+  capability) — each following the existing plain-`fetch`-no-SDK pattern.
+  New `WhatsappDriver` interface in `providers/types.ts`. 17 new unit
+  tests (SMS length/encoding across GSM-7/unicode/empty/multi-segment
+  cases, template variable substitution, the mock WhatsApp driver) plus a
+  pre-existing `courier-mock.test.ts` bug fixed along the way (see
+  docs/DECISIONS.md — unrelated to this milestone's own scope).
+- **`apps/api`**: new `NotificationsModule` —
+  `NotificationDriversService` (resolves the active sms/email/whatsapp
+  driver, mock fallback when nothing's configured, mirroring M5's
+  `SmsProvidersService` pattern), `NotificationsService` (the core
+  `enqueue()`/`renderForChannel()`/`createFallbackLog()`/`commonVariables()`
+  used by other modules), `NotificationDispatchService` (the queued-send
+  sweep — backoff on failure, creates the next fallback channel's log once
+  retries exhaust, registered via `SchedulerService.registerRecurring`
+  like M2/M3's sweeps), `NotificationTemplatesService`/`Controller`
+  (list/update/preview/test-send), `NotificationChannelRulesService`/
+  `Controller`, `NotificationLogsController` (paginated, filterable),
+  `StaffNotificationsService`/`Controller` (in-app bell + best-effort
+  email). New admin routes: `/admin/notifications/templates[...]`,
+  `/admin/notifications/channel-rules[...]`, `/admin/notifications/logs`;
+  new staff routes: `/staff/notifications[...]`. New permissions
+  `notifications.manage`/`settings.notifications.write`; new settings
+  `notifications.quietHoursEnabled/Start/End`,
+  `notifications.smsCostPerSegmentPoisha`. Wired into the order lifecycle:
+  `OrdersLifecycleService.transition()` enqueues the mapped event generically
+  for every status it already handles (confirmed/shipped/out_for_delivery/
+  delivered/partially_delivered/rejected_at_door/cancelled);
+  `CheckoutService.placeOrder()` enqueues `order_placed` and calls
+  `StaffNotificationsService.notifyNewOrder()`; `OtpService` now renders
+  its message through the `otp_verification` template (still sent
+  synchronously, not through the queued pipeline — see docs/DECISIONS.md)
+  and logs the outcome. 13 new unit tests (notification enqueue/fallback
+  channel selection, dispatch backoff/retry/exhaustion, the extended
+  `OrdersLifecycleService` transition tests covering the new notification
+  hook).
+- **`apps/admin`**: new `/notifications` page (tabs: message templates per
+  event×channel with bn/en editors + SMS segment/cost estimate + preview +
+  test-send; channel matrix per event with up/down reordering; a
+  filterable/paginated notification-logs table), new `NotificationBell`
+  component (polls `/staff/notifications` every 30s, unread badge,
+  mark-all-read) wired into the dashboard shell's sidebar footer. New
+  `notifications` message namespace (bn + en) + `navNotifications` nav
+  entry + bell-related `shell.*` strings.
+
+### Verified
+
+- `pnpm typecheck`/`pnpm lint`/`pnpm test` pass per-package across every
+  touched package (`@clothing/shared`: 96 tests; `@clothing/db`: 7 tests;
+  `api`: 235 tests — 25 new; `admin`: typecheck/lint clean) — same
+  per-package-is-authoritative caveat as every prior milestone (full
+  workspace `lint`/`typecheck` in parallel via Turbo still intermittently
+  OOMs on this Windows machine).
+- `pnpm --filter api run build` (`nest build`) succeeds.
+- **Ran the real API dev server with no database available**: the full DI
+  graph resolves (`NotificationsModule` wires cleanly into
+  `CheckoutModule`/`OrdersLifecycleModule`/`CustomerAuthModule` with no
+  circular-dependency error), every new route maps correctly (confirmed via
+  curl: `/admin/notifications/templates[...]`, `/admin/notifications/
+  channel-rules[...]`, `/admin/notifications/logs`, `/staff/notifications
+  [...]` all return 401 unauthenticated rather than 404; `/health` stays
+  200), and `POST /store/auth/otp/send` / `POST /store/checkout/place-order`
+  still fail with the real "can't reach database" error / a 400 validation
+  error respectively, not a code-bug crash — same graceful-degradation
+  property verified every milestone since M0.
+- **Ran the real admin dev server** and confirmed `GET /notifications` and
+  `GET /en/notifications` both render 200 (the new tabbed page compiles and
+  mounts without crashing) against the real `next dev` server.
+
+### Not verified in this environment
+
+- No live Postgres, so: the actual dispatch sweep's full lifecycle
+  (`notification_logs` row created → picked up by the sweep → driver called
+  → backoff-retried on failure → falls back to the next channel once
+  exhausted) is unit-tested against a mocked Prisma client, not run live.
+  The acceptance scenario's literal "place → confirm → ship → deliver,
+  watch messages go out, switch an event's channel order, see it take
+  effect" was never clicked through in a browser against seeded data.
+- SSL Wireless, BulkSMSBD, Brevo, Resend, and the WhatsApp Cloud API driver
+  are implemented against publicly/community-documented API shapes with no
+  live merchant account to verify against — same caveat accepted for every
+  real driver since M5 (SSLCommerz/bKash/Nagad/Steadfast/Pathao/RedX).
+- `pnpm build`'s pre-existing static-export failure (flagged in M6,
+  unrelated to this milestone) still reproduces — this time naming
+  `/bn/integrations`/`/bn/returns` as the "collateral" page, matching the
+  already-documented "a different one each run" pattern exactly.
+
+### Known issues / explicitly deferred
+
+- `return_requested`/`return_approved`/`refund_processed` are not wired to
+  any notification event this milestone (not in the event catalog at all
+  yet) — the order-lifecycle events the acceptance scenario actually names
+  (placed/confirmed/shipped/delivered, plus partially_delivered/
+  rejected_at_door/cancelled for completeness) are. Adding them is a
+  catalog entry plus a call into `NotificationsService.enqueue()` from
+  `ReturnsService`/the refund-creation path, not a new mechanism.
+- `processing`/`packed`/`on_hold`/`expired`/`returned_to_sender`/
+  `returned_to_warehouse`/`completed` order statuses don't notify the
+  customer (no example in the spec's own acceptance text calls for it;
+  easy one-line additions to `ORDER_STATUS_TO_NOTIFICATION_EVENT` later).
+- Quiet hours and marketing opt-out have real settings and a real consent
+  data model (`Customer.marketingConsentSms/Email/Whatsapp`, M5) but no
+  enforcement point — nothing marketing-flagged exists before M8's
+  campaigns (see docs/DECISIONS.md).
+- OTP's message locale is always `bn` — the storefront request's locale
+  isn't threaded into `OtpService.send()` yet.
+- The WhatsApp Cloud API driver sends plain text, not a real Meta-approved
+  template with parameters — business-initiated messages outside an open
+  session will be rejected by Meta in production (documented directly on
+  `WhatsappDriver` in `providers/types.ts`).
+- The channel-matrix admin UI reorders with up/down buttons, not
+  drag-and-drop; the template editor is plain bn/en textareas, not a
+  rich-text/variable-autocomplete editor (same MVP trade-off made
+  repeatedly since M1's settings UI).
+- SSL Wireless's balance isn't exposed (no publicly documented endpoint
+  found) — only BulkSMSBD's `balance()` is wired.
+- Staff notifications cover exactly one event ("new order") — not a
+  general-purpose staff-notification-per-event system; see
+  docs/DECISIONS.md for why that's deliberate, not a gap.
+
+---
+
 ### Next up
 
-Milestone 7 — Notifications and messaging (§16 M7): message templates
-(SMS/email/WhatsApp, bn/en) with editor, preview, test send; channel
-matrix per event with fallback order; SMS drivers (generic HTTP + two BD
-gateways), email drivers (SMTP, Brevo, Resend), WhatsApp click-to-chat +
-Cloud API driver; notification logs; staff notifications (in-app +
-email).
+Milestone 8 — Marketing basics, customers, reviews, tracking, reports
+(§16 M8): discounts & coupons full UI (types except loyalty/gift cards),
+bulk unique codes, margin guard, flash sales UI; customers list/profile/
+tags/segments (rule builder); reviews & moderation with photo reviews and
+fit feedback; Meta Pixel + CAPI, GA4 + MP, GTM, TikTok with dedup and event
+log; product feeds; dashboard KPIs; core reports (sales, products,
+courier, staff, discounts, search terms) with export.

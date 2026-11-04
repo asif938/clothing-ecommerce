@@ -1028,3 +1028,64 @@ export const RETURNS_DOORSTEP_REFUND_METHOD = defineSetting({
     ],
   },
 });
+
+/**
+ * Milestone 7 (docs/PROJECT_SPEC.md §6.11, §16 M7): notification dispatch
+ * behavior. Quiet hours and the per-channel SMS cost estimate are the two
+ * settings §6.11 calls out by name; marketing opt-out itself is already
+ * modeled on `Customer.marketingConsent{Sms,Email,Whatsapp}` (M5) but has no
+ * *enforcement* point yet — every M7 event is transactional, not marketing,
+ * so quiet hours/consent gating has nothing to apply to until M8's campaign
+ * sends exist. Both settings are real and read by `NotificationDispatchService`
+ * now, just not yet exercised by any marketing-flagged event — see
+ * docs/DECISIONS.md.
+ */
+export const NOTIFICATIONS_QUIET_HOURS_ENABLED = defineSetting({
+  key: "notifications.quietHoursEnabled",
+  group: "notifications",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "নিরিবিলি সময় সক্রিয় করুন", en: "Enable quiet hours" },
+  help: { bn: "শুধু মার্কেটিং বার্তার জন্য প্রযোজ্য, জরুরি অর্ডার বার্তার জন্য নয়", en: "Applies to marketing messages only, never transactional order messages" },
+  secret: false,
+  public: false,
+  permission: "settings.notifications.write",
+  ui: { widget: "toggle" },
+});
+
+export const NOTIFICATIONS_QUIET_HOURS_START = defineSetting({
+  key: "notifications.quietHoursStart",
+  group: "notifications",
+  type: z.string().regex(/^\d{2}:\d{2}$/),
+  default: "21:00",
+  label: { bn: "নিরিবিলি সময় শুরু (HH:MM)", en: "Quiet hours start (HH:MM)" },
+  secret: false,
+  public: false,
+  permission: "settings.notifications.write",
+  ui: { widget: "text" },
+});
+
+export const NOTIFICATIONS_QUIET_HOURS_END = defineSetting({
+  key: "notifications.quietHoursEnd",
+  group: "notifications",
+  type: z.string().regex(/^\d{2}:\d{2}$/),
+  default: "09:00",
+  label: { bn: "নিরিবিলি সময় শেষ (HH:MM)", en: "Quiet hours end (HH:MM)" },
+  secret: false,
+  public: false,
+  permission: "settings.notifications.write",
+  ui: { widget: "text" },
+});
+
+export const SMS_COST_PER_SEGMENT_POISHA = defineSetting({
+  key: "notifications.smsCostPerSegmentPoisha",
+  group: "notifications",
+  type: z.number().int().min(0),
+  default: 50,
+  label: { bn: "প্রতি SMS সেগমেন্টের আনুমানিক খরচ (পয়সা)", en: "Estimated cost per SMS segment (poisha)" },
+  help: { bn: "টেমপ্লেট এডিটরে আনুমানিক খরচ দেখানোর জন্য ব্যবহৃত হয়; আসল বিলিং গেটওয়ে অনুযায়ী ভিন্ন হতে পারে", en: "Used only to estimate cost in the template editor — actual billing varies by gateway" },
+  secret: false,
+  public: false,
+  permission: "settings.notifications.write",
+  ui: { widget: "text" },
+});

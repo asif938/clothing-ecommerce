@@ -102,6 +102,23 @@ export interface SmsDriver {
 }
 
 /**
+ * WhatsApp Cloud API notes (docs/PROJECT_SPEC.md §10.3, §16 M7): Meta only
+ * lets a business send free-form text within a 24h customer-initiated
+ * session window; outside it, a *business-initiated* message (every
+ * transactional notification this capability sends) must use a pre-approved
+ * message template, not arbitrary text — our `send()` still takes plain
+ * text for a uniform interface across drivers, and the real Cloud API
+ * driver sends it as a `text` message, which Meta will reject outside an
+ * open session. Modeling real template-name/parameter mapping is deferred
+ * (see docs/DECISIONS.md) — `click_to_chat` (M3, a link builder, not a
+ * capability driver) remains unaffected since it never sends anything
+ * itself.
+ */
+export interface WhatsappDriver {
+  send(to: string, text: string): Promise<void>;
+}
+
+/**
  * Online payment drivers (docs/PROJECT_SPEC.md §10.1) — SSLCommerz, bKash
  * and Nagad each have a different real flow (session+IPN,
  * grant-token+execute, initialize+complete) but all funnel down to the

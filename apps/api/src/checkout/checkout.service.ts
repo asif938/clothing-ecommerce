@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Prisma } from "@clothing/db";
+import { formatTakaFromPoisha } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { StaffNotificationsService } from "../notifications/staff-notifications.service";
 import { SettingsService } from "../settings/settings.service";
 import type { CartIdentity } from "../cart/cart.service";
 import { CartService } from "../cart/cart.service";
@@ -55,6 +58,8 @@ export class CheckoutService {
     private readonly captcha: CaptchaProvidersService,
     private readonly stock: StockReservationService,
     private readonly orderNumbers: OrderNumberService,
+    private readonly notifications: NotificationsService,
+    private readonly staffNotifications: StaffNotificationsService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -140,6 +145,7 @@ export class CheckoutService {
     const orderNumber = await this.orderNumbers.generate();
     // §6.6 duplicate detection — checked against orders that already exist, before this one is created.
     const possibleDuplicateOrderIds = await this.riskScoring.findPossibleDuplicates(cartRow.contactPhone, priceableLines.map((l) => l.variantId));
+    const notificationCommonVariables = await this.notifications.commonVariables();
 
     const discountAllocatedByVariant = new Map<string, number>();
     for (const applied of quote.discounts.applied) {
@@ -214,8 +220,26 @@ export class CheckoutService {
         if (line.flashSaleItemId) await this.flashSales.recordSold(line.flashSaleItemId, line.quantity);
       }
 
+      await this.notifications.enqueue(tx, {
+        event: "order_placed",
+        recipientType: requestContext.identity.customerId ? "customer" : "guest",
+        recipientId: requestContext.identity.customerId ?? null,
+        locale: cartRow.locale,
+        contacts: { sms: cartRow.contactPhone, whatsapp: cartRow.contactPhone, email: cartRow.contactEmail ?? null },
+        variables: {
+          ...notificationCommonVariables,
+          customer_name: cartRow.contactName,
+          order_number: created.orderNumber,
+          order_total: formatTakaFromPoisha(created.total),
+          cod_amount: formatTakaFromPoisha(created.codAmount),
+        },
+        related: { type: "order", id: created.id },
+      });
+
       return created;
     });
+
+    await this.staffNotifications.notifyNewOrder(order);
 
     for (const applied of quote.discounts.applied) {
       await this.discounts.recordUsage(applied.discountId, order.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);

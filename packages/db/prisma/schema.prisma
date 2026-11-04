@@ -74,9 +74,10 @@ model StaffUser {
   updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt     DateTime?       @map("deleted_at")
 
-  avatar   Media?         @relation(fields: [avatarMediaId], references: [id], onDelete: SetNull)
-  sessions StaffSession[]
-  roles    StaffRole[]
+  avatar        Media?               @relation(fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  sessions      StaffSession[]
+  roles         StaffRole[]
+  notifications StaffNotification[]
 
   @@index([status])
   @@index([avatarMediaId])
@@ -1726,6 +1727,142 @@ model OrderEvent {
 
   @@index([orderId, createdAt])
   @@map("order_events")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 7 (docs/PROJECT_SPEC.md §6.11, §10.3, §16 M7) — message
+// templates, the per-event channel matrix with fallback order, the queued/
+// retried notification log, and staff in-app notifications.
+// ---------------------------------------------------------------------------
+
+enum NotificationChannel {
+  sms
+  email
+  whatsapp
+}
+
+// Mirrors `@clothing/shared`'s `NOTIFICATION_EVENTS` catalog keys exactly
+// (packages/shared/src/notifications/events.ts) — kept in sync by hand, the
+// same "static catalog in shared, enum in db" split every other provider
+// capability already uses (see that file's own doc comment).
+enum NotificationEvent {
+  otp_verification
+  order_placed
+  order_confirmed
+  order_shipped
+  order_out_for_delivery
+  order_delivered
+  order_partially_delivered
+  order_rejected_at_door
+  order_cancelled
+}
+
+enum NotificationRecipientType {
+  customer
+  guest
+}
+
+enum NotificationLogStatus {
+  queued
+  retrying
+  sent
+  failed
+}
+
+// One row per (event, channel) — the admin-editable bn/en copy for that
+// event on that channel (§6.11). Seeded with a default for every event the
+// catalog defines; editing one never needs a code change (golden rule 1).
+model MessageTemplate {
+  id        String               @id @default(cuid(2))
+  event     NotificationEvent
+  channel   NotificationChannel
+  isActive  Boolean              @default(true) @map("is_active")
+  subjectBn String?              @map("subject_bn")
+  subjectEn String?              @map("subject_en")
+  bodyBn    String               @map("body_bn")
+  bodyEn    String               @map("body_en")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  @@unique([event, channel])
+  @@map("message_templates")
+}
+
+// The channel matrix per event (§6.11: "admin chooses per event which
+// channels are active and the order of preference"). `channels` is an
+// ordered JSON array of `NotificationChannel` strings — position is the
+// fallback order, absence means disabled. No DB row for an event means "use
+// the catalog default" (same fallback-to-registry-default pattern the
+// settings registry already uses).
+model NotificationChannelRule {
+  id        String            @id @default(cuid(2))
+  event     NotificationEvent @unique
+  channels  Json
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  @@map("notification_channel_rules")
+}
+
+// One row per channel attempt for one notification (§6.11: "all sends are
+// queued, retried with backoff, logged in notification_logs"). A fallback to
+// the next channel in the rule's order creates a *new* row
+// (`fallbackIndex` + 1) rather than mutating this one, so the log reads as a
+// true history of every attempt across every channel tried.
+model NotificationLog {
+  id                 String                    @id @default(cuid(2))
+  event              NotificationEvent
+  channel            NotificationChannel
+  fallbackIndex      Int                       @default(0) @map("fallback_index")
+  recipientType      NotificationRecipientType @map("recipient_type")
+  recipientId        String?                   @map("recipient_id")
+  to                 String
+  // Every channel the recipient *could* be reached on at enqueue time
+  // (`{ sms?, whatsapp?, email? }`) — kept alongside `to` (the one channel
+  // actually attempted) so a fallback to the next channel in the rule's
+  // order can look up its address without re-querying the order/customer
+  // that triggered this notification.
+  contacts           Json?
+  locale             String
+  subject            String?
+  body               String
+  status             NotificationLogStatus     @default(queued)
+  attempts           Int                       @default(0)
+  maxAttempts        Int                       @default(5) @map("max_attempts")
+  nextAttemptAt      DateTime?                 @map("next_attempt_at")
+  lastError          String?                   @map("last_error")
+  providerInstanceId String?                   @map("provider_instance_id")
+  driver             String?
+  relatedEntityType  String?                   @map("related_entity_type")
+  relatedEntityId    String?                   @map("related_entity_id")
+  variables          Json?
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  @@index([status, nextAttemptAt])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("notification_logs")
+}
+
+// In-app staff bell (§16 M7 "staff notifications (in-app + email)";
+// deferred from M1's `notifications_admin` — see docs/DECISIONS.md there).
+// One row per staff recipient, not a broadcast table with a separate
+// read-receipt join — simpler, and staff notification volume is low enough
+// that per-recipient rows cost nothing worth optimizing for.
+model StaffNotification {
+  id          String    @id @default(cuid(2))
+  staffUserId String    @map("staff_user_id")
+  type        String
+  title       String
+  body        String
+  link        String?
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  staffUser StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  @@index([staffUserId, readAt])
+  @@map("staff_notifications")
 }
 
 enum PaymentMethod {

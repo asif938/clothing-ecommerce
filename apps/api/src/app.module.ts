@@ -50,6 +50,7 @@ import { FulfillmentModule } from "./fulfillment/fulfillment.module";
 import { OrdersModule } from "./orders/orders.module";
 import { ReturnsModule } from "./returns/returns.module";
 import { RefundsModule } from "./refunds/refunds.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 
 @Module({
   imports: [
@@ -124,6 +125,8 @@ import { RefundsModule } from "./refunds/refunds.module";
     OrdersModule,
     ReturnsModule,
     RefundsModule,
+    // Milestone 7 (docs/PROJECT_SPEC.md §16 M7) — notifications and messaging.
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import type { OrderStatus, PaymentPurpose, Prisma } from "@clothing/db";
+import { formatTakaFromPoisha } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { AuditService } from "../audit/audit.service";
 import { StockReservationService } from "./stock-reservation.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export type TransitionActor = { type: "staff"; id: string } | { type: "customer"; id: string } | { type: "system" };
 
@@ -43,6 +45,26 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 const CANCELLING_RELEASES_STOCK = new Set<OrderStatus>(["pending_payment", "pending", "confirmed", "on_hold", "processing", "packed"]);
 
 /**
+ * Which status transitions notify the customer (§6.11), and under which
+ * event key (`@clothing/shared/notifications`'s `NOTIFICATION_EVENTS`
+ * catalog). Deliberately not every status: `processing`/`packed` are
+ * internal warehouse states with no customer-facing message in the spec's
+ * own example set, `on_hold`/`expired`/`returned_to_sender`/
+ * `returned_to_warehouse`/`completed` are not reached by anything that
+ * calls `transition()` with a customer-notification need yet — adding one
+ * later is a one-line addition here, not a new code path.
+ */
+const ORDER_STATUS_TO_NOTIFICATION_EVENT: Partial<Record<OrderStatus, string>> = {
+  confirmed: "order_confirmed",
+  shipped: "order_shipped",
+  out_for_delivery: "order_out_for_delivery",
+  delivered: "order_delivered",
+  partially_delivered: "order_partially_delivered",
+  rejected_at_door: "order_rejected_at_door",
+  cancelled: "order_cancelled",
+};
+
+/**
  * The full §6.8 order state machine. `transition()` is the one place every
  * status change (staff action, courier webhook/poll, QC, automatic sweep)
  * goes through: it validates the move against `ALLOWED_TRANSITIONS`, writes
@@ -67,6 +89,7 @@ export class OrdersLifecycleService {
     private readonly settings: SettingsService,
     private readonly audit: AuditService,
     private readonly stock: StockReservationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async transition(input: TransitionInput, tx?: Prisma.TransactionClient): Promise<void> {
@@ -75,7 +98,7 @@ export class OrdersLifecycleService {
   }
 
   private async apply(tx: Prisma.TransactionClient, input: TransitionInput): Promise<void> {
-    const order = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { items: true, payments: true } });
+    const order = await tx.order.findUniqueOrThrow({ where: { id: input.orderId }, include: { items: true, payments: true, customer: true } });
     const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
     if (!allowed.includes(input.to)) {
       throw new BadRequestException({ code: "INVALID_TRANSITION", message: `Cannot move an order from "${order.status}" to "${input.to}".` });
@@ -140,6 +163,47 @@ export class OrdersLifecycleService {
       });
     }
     this.logger.log(`Order ${order.orderNumber} ${order.status} → ${input.to}`);
+
+    const notificationEvent = ORDER_STATUS_TO_NOTIFICATION_EVENT[input.to];
+    if (notificationEvent) {
+      await this.enqueueStatusNotification(tx, order, notificationEvent);
+    }
+  }
+
+  private async enqueueStatusNotification(
+    tx: Prisma.TransactionClient,
+    order: Prisma.OrderGetPayload<{ include: { customer: true } }>,
+    event: string,
+  ): Promise<void> {
+    const billingContact = (order.billingContact as { name?: string; phone?: string; email?: string } | null) ?? null;
+    const phone = order.customer?.phone ?? billingContact?.phone ?? null;
+    const email = order.customer?.email ?? billingContact?.email ?? null;
+    const locale = order.customer?.locale ?? "bn";
+
+    const variables: Record<string, string | number | null> = {
+      ...(await this.notifications.commonVariables()),
+      customer_name: order.customer?.name ?? billingContact?.name ?? "",
+      order_number: order.orderNumber,
+      order_total: formatTakaFromPoisha(order.total),
+      cod_amount: formatTakaFromPoisha(order.codAmount),
+    };
+
+    if (event === "order_shipped" || event === "order_out_for_delivery") {
+      const shipment = await tx.shipment.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } });
+      variables.tracking_code = shipment?.trackingCode ?? "";
+      variables.tracking_link = shipment?.trackingUrl ?? "";
+      variables.courier_name = shipment?.courierDriver ?? "";
+    }
+
+    await this.notifications.enqueue(tx, {
+      event,
+      recipientType: order.customerId ? "customer" : "guest",
+      recipientId: order.customerId,
+      locale,
+      contacts: { sms: phone, whatsapp: phone, email },
+      variables,
+      related: { type: "order", id: order.id },
+    });
   }
 
   /** §6.8 "pending_payment → pending on payment success, or → on_hold instead when high-risk" — unchanged from M5 (this is not a generic `transition()` move since it originates from a payment event, not a staff/courier action). */

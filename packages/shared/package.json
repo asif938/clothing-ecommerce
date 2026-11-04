@@ -13,7 +13,8 @@
     "./permissions": "./src/permissions/index.ts",
     "./crypto": "./src/crypto/index.ts",
     "./providers": "./src/providers/index.ts",
-    "./media": "./src/media/url.ts"
+    "./media": "./src/media/url.ts",
+    "./notifications": "./src/notifications/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

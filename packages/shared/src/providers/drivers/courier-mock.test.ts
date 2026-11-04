@@ -1,12 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import { createMockCourierDriver, mockCourierConfigSchema } from "./courier-mock.ts";
+import type { CourierParcelInput } from "../types.ts";
+
+const PARCEL_INPUT: CourierParcelInput = {
+  reference: "ORD-0001",
+  recipientName: "Test Customer",
+  recipientPhone: "+8801700000000",
+  recipientAddress: "123 Test Road, Dhaka",
+  areaCode: null,
+  areaName: null,
+  codAmount: 150000,
+  weightGrams: 500,
+  itemDescription: "1 item",
+  quantity: 1,
+};
 
 describe("createMockCourierDriver", () => {
   it("progresses through booked → picked_up → in_transit → out_for_delivery → delivered as time passes", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const driver = createMockCourierDriver(mockCourierConfigSchema.parse({ finalStatus: "delivered", stepMinutes: 1 }));
-    const { consignmentId } = await driver.createParcel();
+    const { consignmentId } = await driver.createParcel(PARCEL_INPUT);
 
     expect((await driver.getStatus(consignmentId)).status).toBe("booked");
     vi.advanceTimersByTime(60_000);
@@ -24,7 +38,7 @@ describe("createMockCourierDriver", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const driver = createMockCourierDriver(mockCourierConfigSchema.parse({ finalStatus: "rejected_at_door", stepMinutes: 1, deliveryFeeCollected: 6000 }));
-    const { consignmentId } = await driver.createParcel();
+    const { consignmentId } = await driver.createParcel(PARCEL_INPUT);
 
     vi.advanceTimersByTime(10 * 60_000);
     const result = await driver.getStatus(consignmentId);
@@ -37,7 +51,7 @@ describe("createMockCourierDriver", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     const driver = createMockCourierDriver(mockCourierConfigSchema.parse({ finalStatus: "delivered", stepMinutes: 1 }));
-    const { consignmentId } = await driver.createParcel();
+    const { consignmentId } = await driver.createParcel(PARCEL_INPUT);
 
     vi.advanceTimersByTime(10 * 60_000);
     const result = await driver.getStatus(consignmentId);
@@ -48,8 +62,8 @@ describe("createMockCourierDriver", () => {
 
   it("gives each booking a distinct consignment id", async () => {
     const driver = createMockCourierDriver(mockCourierConfigSchema.parse({}));
-    const a = await driver.createParcel();
-    const b = await driver.createParcel();
+    const a = await driver.createParcel(PARCEL_INPUT);
+    const b = await driver.createParcel(PARCEL_INPUT);
     expect(a.consignmentId).not.toBe(b.consignmentId);
   });
 });

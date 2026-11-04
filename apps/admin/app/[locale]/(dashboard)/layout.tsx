@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter, Link } from "../../../i18n/navigation";
 import { useCurrentStaff } from "../../../lib/use-current-staff";
 import { api } from "../../../lib/api";
+import { NotificationBell } from "../../../components/notification-bell";
 
 const NAV_ITEMS = [
   { href: "/", labelKey: "navDashboard" },
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/payment-rules", labelKey: "navPaymentRules" },
   { href: "/courier-area-mapping", labelKey: "navCourierAreaMapping" },
   { href: "/blocklist", labelKey: "navBlocklist" },
+  { href: "/notifications", labelKey: "navNotifications" },
   { href: "/import-export", labelKey: "navImportExport" },
   { href: "/search", labelKey: "navSearch" },
   { href: "/settings", labelKey: "navSettings" },
@@ -72,11 +74,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ))}
           </nav>
         </div>
-        <div className="flex flex-col gap-2 px-2 text-sm">
-          <span className="truncate text-surface-foreground/70">{staff.email}</span>
-          <button onClick={handleLogout} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
-            {tAuth("logout")}
-          </button>
+        <div className="flex flex-col gap-2 text-sm">
+          <NotificationBell />
+          <div className="flex flex-col gap-2 px-2">
+            <span className="truncate text-surface-foreground/70">{staff.email}</span>
+            <button onClick={handleLogout} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
+              {tAuth("logout")}
+            </button>
+          </div>
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>

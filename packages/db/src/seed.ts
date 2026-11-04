@@ -12,8 +12,9 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type NotificationChannel, type NotificationEvent } from "@prisma/client";
 import { PERMISSIONS, UI_STRING_DEFAULTS } from "@clothing/shared";
+import { NOTIFICATION_CHANNELS, NOTIFICATION_EVENTS } from "@clothing/shared/notifications";
 
 const isDemo = process.argv.includes("--demo");
 const prisma = new PrismaClient();
@@ -220,6 +221,103 @@ async function seedDefaultPages() {
   console.log(`[db:seed] CMS: ${systemPages.length} system page(s), ${policyPlaceholders.length} policy placeholder(s) ensured.`);
 }
 
+/**
+ * Milestone 7 (docs/PROJECT_SPEC.md §6.11, §16 M7): one default bn/en
+ * template per (event, channel) so the acceptance scenario ("placing,
+ * confirming, shipping, delivering an order sends the configured messages")
+ * works on a fresh install with no admin editing required. Content keyed by
+ * `NOTIFICATION_EVENTS`' catalog (`@clothing/shared/notifications`) — a new
+ * event there with no entry here is simply skipped, not a seed error, so
+ * adding an event doesn't retroactively break seeding of the others.
+ * Channel rules are *not* seeded: an event with no `NotificationChannelRule`
+ * row falls back to the catalog's own `defaultChannelOrder` (the same
+ * "missing key falls back to the registry default" pattern the settings
+ * registry already uses), so there is nothing to seed there.
+ */
+const NOTIFICATION_TEMPLATE_CONTENT: Record<string, { subjectBn: string; subjectEn: string; bodyBn: string; bodyEn: string }> = {
+  otp_verification: {
+    subjectBn: "আপনার ভেরিফিকেশন কোড",
+    subjectEn: "Your verification code",
+    bodyBn: "{brand_name}: আপনার OTP কোড {otp}। এটি কাউকে শেয়ার করবেন না।",
+    bodyEn: "{brand_name}: Your OTP code is {otp}. Do not share this with anyone.",
+  },
+  order_placed: {
+    subjectBn: "আপনার অর্ডার {order_number} গ্রহণ করা হয়েছে",
+    subjectEn: "Your order {order_number} has been placed",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} সফলভাবে গ্রহণ করা হয়েছে। মোট: {order_total}। ধন্যবাদ — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} has been placed. Total: {order_total}. Thank you — {brand_name}",
+  },
+  order_confirmed: {
+    subjectBn: "আপনার অর্ডার {order_number} কনফার্ম হয়েছে",
+    subjectEn: "Your order {order_number} is confirmed",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} কনফার্ম করা হয়েছে। মোট: {order_total}। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} has been confirmed. Total: {order_total}. — {brand_name}",
+  },
+  order_shipped: {
+    subjectBn: "আপনার অর্ডার {order_number} পাঠানো হয়েছে",
+    subjectEn: "Your order {order_number} has shipped",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} পাঠানো হয়েছে। ট্র্যাকিং কোড: {tracking_code}। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} has shipped. Tracking code: {tracking_code}. — {brand_name}",
+  },
+  order_out_for_delivery: {
+    subjectBn: "আপনার অর্ডার {order_number} ডেলিভারির জন্য বের হয়েছে",
+    subjectEn: "Your order {order_number} is out for delivery",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} ডেলিভারির জন্য বের হয়েছে। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} is out for delivery. — {brand_name}",
+  },
+  order_delivered: {
+    subjectBn: "আপনার অর্ডার {order_number} ডেলিভার হয়েছে",
+    subjectEn: "Your order {order_number} has been delivered",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} সফলভাবে ডেলিভার করা হয়েছে। ধন্যবাদ! — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} has been delivered. Thank you! — {brand_name}",
+  },
+  order_partially_delivered: {
+    subjectBn: "আপনার অর্ডার {order_number} আংশিক ডেলিভার হয়েছে",
+    subjectEn: "Your order {order_number} was partially delivered",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} আংশিকভাবে ডেলিভার করা হয়েছে। সংগৃহীত: {cod_amount}। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} was partially delivered. Collected: {cod_amount}. — {brand_name}",
+  },
+  order_rejected_at_door: {
+    subjectBn: "আপনার অর্ডার {order_number} ফেরত দেওয়া হয়েছে",
+    subjectEn: "Your order {order_number} was refused at the door",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} দরজায় ফেরত দেওয়া হয়েছে। প্রশ্ন থাকলে কল করুন {support_phone}। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} was refused at the door. Questions? Call {support_phone}. — {brand_name}",
+  },
+  order_cancelled: {
+    subjectBn: "আপনার অর্ডার {order_number} বাতিল হয়েছে",
+    subjectEn: "Your order {order_number} has been cancelled",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} বাতিল করা হয়েছে। — {brand_name}",
+    bodyEn: "{customer_name}, your order {order_number} has been cancelled. — {brand_name}",
+  },
+};
+
+async function seedNotificationTemplates() {
+  let created = 0;
+  for (const event of NOTIFICATION_EVENTS) {
+    const content = NOTIFICATION_TEMPLATE_CONTENT[event.key];
+    if (!content) continue;
+    for (const channel of NOTIFICATION_CHANNELS) {
+      const existing = await prisma.messageTemplate.findUnique({
+        where: { event_channel: { event: event.key as NotificationEvent, channel: channel as NotificationChannel } },
+      });
+      if (existing) continue;
+      await prisma.messageTemplate.create({
+        data: {
+          event: event.key as NotificationEvent,
+          channel: channel as NotificationChannel,
+          isActive: true,
+          subjectBn: channel === "email" ? content.subjectBn : null,
+          subjectEn: channel === "email" ? content.subjectEn : null,
+          bodyBn: content.bodyBn,
+          bodyEn: content.bodyEn,
+        },
+      });
+      created += 1;
+    }
+  }
+  console.log(`[db:seed] ${created} default message templates created.`);
+}
+
 async function seedDemoBrand() {
   const overrides: [string, unknown][] = [
     ["brand.name", { bn: "ডেমো ফ্যাশন", en: "Demo Fashion" }],
@@ -247,6 +345,7 @@ async function main() {
   await seedDefaultStockLocation();
   await seedDefaultReturnReasons();
   await seedDefaultPages();
+  await seedNotificationTemplates();
   if (isDemo) {
     await seedDemoBrand();
   }
