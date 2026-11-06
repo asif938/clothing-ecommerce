@@ -5,7 +5,7 @@ import { AuditService } from "../audit/audit.service";
 import { BlocklistService } from "../blocklist/blocklist.service";
 import type { AuthenticatedStaff } from "../common/types";
 import { SegmentsService } from "./segments.service";
-import type { BlockCustomerDto, ListCustomersQueryDto, UpdateCustomerDto } from "./dto";
+import type { AnonymizeCustomerDto, BlockCustomerDto, ListCustomersQueryDto, UpdateCustomerDto } from "./dto";
 
 /**
  * Admin customer list/profile (docs/PROJECT_SPEC.md §8.2 "Customers"). The
@@ -98,5 +98,79 @@ export class CustomersAdminService {
       this.prisma.customer.update({ where: { id: mergeCustomerId }, data: { deletedAt: new Date() } }),
     ]);
     await this.audit.record({ actorType: "staff", actorId: actor.id, action: "customer.merge", entityType: "customer", entityId: keepCustomerId, after: { mergedFrom: mergeCustomerId } });
+  }
+
+  /**
+   * §12 "customer data export ... on request (admin action)". A sensitive
+   * read, so it's audit-logged like one even though nothing is mutated —
+   * the admin is handing this bundle to the customer (or to a regulator).
+   */
+  async exportData(id: string, actor: AuthenticatedStaff) {
+    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    if (!customer) throw new NotFoundException("Customer not found");
+
+    const [orders, addresses, reviews, returns] = await Promise.all([
+      this.prisma.order.findMany({ where: { customerId: id }, orderBy: { createdAt: "desc" }, include: { items: true } }),
+      this.prisma.address.findMany({ where: { customerId: id } }),
+      this.prisma.review.findMany({ where: { customerId: id } }),
+      this.prisma.return.findMany({ where: { order: { customerId: id } } }),
+    ]);
+
+    await this.audit.record({ actorType: "staff", actorId: actor.id, action: "customer.privacy_export", entityType: "customer", entityId: id });
+    return { customer, orders, addresses, reviews, returns, exportedAt: new Date().toISOString() };
+  }
+
+  /**
+   * §12 "deletion on request ... orders anonymized, not deleted, for
+   * accounting". Scrubs PII on the customer row and on every one of their
+   * orders' own embedded contact snapshots (orders aren't FK-cascaded away
+   * by design — their totals/items stay for bookkeeping). `deletedAt`
+   * doubles as the "this identity no longer exists" marker, same as
+   * `merge()` already uses it.
+   */
+  async anonymize(id: string, dto: AnonymizeCustomerDto, actor: AuthenticatedStaff): Promise<void> {
+    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    if (!customer) throw new NotFoundException("Customer not found");
+
+    await this.prisma.$transaction([
+      this.prisma.customer.update({
+        where: { id },
+        data: {
+          name: null,
+          email: null,
+          phone: null,
+          googleId: null,
+          gender: null,
+          birthday: null,
+          notes: null,
+          tags: [],
+          marketingConsentSms: false,
+          marketingConsentEmail: false,
+          marketingConsentWhatsapp: false,
+          deletedAt: new Date(),
+        },
+      }),
+      this.prisma.order.updateMany({
+        where: { customerId: id },
+        data: {
+          billingContact: { anonymized: true },
+          shippingAddress: { anonymized: true },
+          customerNote: null,
+          ip: null,
+          userAgent: null,
+          deviceId: null,
+        },
+      }),
+      this.prisma.address.deleteMany({ where: { customerId: id } }),
+    ]);
+
+    await this.audit.record({
+      actorType: "staff",
+      actorId: actor.id,
+      action: "customer.anonymize",
+      entityType: "customer",
+      entityId: id,
+      after: { reason: dto.reason ?? null },
+    });
   }
 }

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Logical backup (pg_dump) to a local file. In VPS mode the `backup` sidecar
-# runs this on a schedule and uploads to R2; in free mode a GitHub Actions
-# workflow runs the same command against the managed Postgres URL.
-# docs/PROJECT_SPEC.md §15.4. TODO (Milestone 9): wire up R2 upload + 30-day
-# retention + monthly restore-test job.
+# Logical backup (pg_dump) to a local file. In VPS mode the `backup`
+# sidecar (backup-cron.sh) runs this daily, then uploads the result to R2
+# and prunes local copies older than 30 days; in free mode
+# .github/workflows/backup.yml does the equivalent against the managed
+# Postgres URL. docs/PROJECT_SPEC.md §15.4. The monthly restore-test is a
+# runbook step (docs/DEPLOYMENT.md), not automated — restoring into a
+# scratch database and diffing row counts isn't something to run
+# unattended against production credentials.
 set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL must be set}"

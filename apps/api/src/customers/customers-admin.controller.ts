@@ -7,10 +7,12 @@ import { RequirePermissions } from "../common/require-permissions.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { CustomersAdminService } from "./customers-admin.service";
 import {
+  anonymizeCustomerSchema,
   blockCustomerSchema,
   listCustomersQuerySchema,
   mergeCustomersSchema,
   updateCustomerSchema,
+  type AnonymizeCustomerDto,
   type BlockCustomerDto,
   type ListCustomersQueryDto,
   type MergeCustomersDto,
@@ -48,5 +50,18 @@ export class CustomersAdminController {
   @Post(":id/block")
   block(@Param("id") id: string, @Body(new ZodValidationPipe(blockCustomerSchema)) body: BlockCustomerDto, @Req() req: Request) {
     return this.customers.block(id, body, req.staff!);
+  }
+
+  @Post(":id/privacy-export")
+  @RequirePermissions("customers.privacy")
+  exportData(@Param("id") id: string, @Req() req: Request) {
+    return this.customers.exportData(id, req.staff!);
+  }
+
+  @Post(":id/anonymize")
+  @RequirePermissions("customers.privacy")
+  async anonymize(@Param("id") id: string, @Body(new ZodValidationPipe(anonymizeCustomerSchema)) body: AnonymizeCustomerDto, @Req() req: Request) {
+    await this.customers.anonymize(id, body, req.staff!);
+    return { ok: true };
   }
 }

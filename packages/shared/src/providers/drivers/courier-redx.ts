@@ -12,6 +12,8 @@ import type { CourierDriver, CourierStatusResult, ProviderDriverDefinition, Ship
 export const redxConfigSchema = z.object({
   apiToken: z.string().min(1),
   baseUrl: z.string().url().default("https://openapi.redx.com.bd/v1.0.0-beta"),
+  /** §12 "webhook signature verification" — shared-secret header (`X-Webhook-Secret`), see courier-pathao.ts for why. */
+  webhookSecret: z.string().optional(),
 });
 export type RedxConfig = z.infer<typeof redxConfigSchema>;
 

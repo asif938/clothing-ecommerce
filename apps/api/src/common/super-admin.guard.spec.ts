@@ -15,12 +15,12 @@ describe("SuperAdminGuard", () => {
   });
 
   it("throws for a staff member who isn't Super Admin, even with every permission", () => {
-    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["providers.manage"]), isSuperAdmin: false };
+    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(["providers.manage"]), isSuperAdmin: false, totpEnabled: true };
     expect(() => guard.canActivate(makeContext(staff))).toThrow(ForbiddenException);
   });
 
   it("allows a Super Admin through", () => {
-    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(), isSuperAdmin: true };
+    const staff: AuthenticatedStaff = { id: "1", name: "A", email: "a@b.com", locale: "bn", permissions: new Set(), isSuperAdmin: true, totpEnabled: true };
     expect(guard.canActivate(makeContext(staff))).toBe(true);
   });
 });

@@ -59,12 +59,25 @@ export class SessionService {
     if (session.staffUser.status !== "active") return null;
     if (session.staffUser.deletedAt) return null;
 
+    // §12 idle timeout — independent of the absolute `expiresAt` lifetime.
+    const idleMinutes = await this.settings.getValue<number>("security.staffSessionIdleMinutes");
+    if (Date.now() - session.lastSeenAt.getTime() > idleMinutes * 60 * 1000) return null;
+
+    await this.prisma.staffSession.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
     return session;
   }
 
   async revokeSession(rawToken: string): Promise<void> {
     await this.prisma.staffSession.updateMany({
       where: { tokenHash: hashToken(rawToken), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** §12 "log out all sessions". */
+  async revokeAllSessions(staffUserId: string): Promise<void> {
+    await this.prisma.staffSession.updateMany({
+      where: { staffUserId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }

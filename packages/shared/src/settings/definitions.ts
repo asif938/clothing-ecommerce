@@ -262,8 +262,63 @@ export const SECURITY_PASSWORD_MIN_LENGTH = defineSetting({
   key: "security.passwordMinLength",
   group: "security",
   type: z.number().int().min(8).max(64),
-  default: 10,
+  default: 12,
   label: { bn: "পাসওয়ার্ডের সর্বনিম্ন দৈর্ঘ্য", en: "Minimum password length" },
+  secret: false,
+  public: false,
+  permission: "settings.security.write",
+  ui: { widget: "text" },
+});
+
+/** §12 — idle timeout: a session with no authenticated request for this long is treated as expired, independent of its absolute `staffSessionTtlHours` lifetime. */
+export const SECURITY_STAFF_SESSION_IDLE_MINUTES = defineSetting({
+  key: "security.staffSessionIdleMinutes",
+  group: "security",
+  type: z.number().int().min(5).max(24 * 60),
+  default: 60,
+  label: { bn: "নিষ্ক্রিয়তার মেয়াদ (মিনিট)", en: "Idle timeout (minutes)" },
+  secret: false,
+  public: false,
+  permission: "settings.security.write",
+  ui: { widget: "text" },
+});
+
+/** §12 "login rate limit and lockout" — failed attempts at or above this count lock the account for `loginLockoutMinutes`. */
+export const SECURITY_LOGIN_MAX_ATTEMPTS = defineSetting({
+  key: "security.loginMaxAttempts",
+  group: "security",
+  type: z.number().int().min(3).max(20),
+  default: 5,
+  label: { bn: "সর্বোচ্চ ব্যর্থ লগইন চেষ্টা", en: "Max failed login attempts" },
+  secret: false,
+  public: false,
+  permission: "settings.security.write",
+  ui: { widget: "text" },
+});
+
+export const SECURITY_LOGIN_LOCKOUT_MINUTES = defineSetting({
+  key: "security.loginLockoutMinutes",
+  group: "security",
+  type: z.number().int().min(1).max(24 * 60),
+  default: 15,
+  label: { bn: "লকআউটের মেয়াদ (মিনিট)", en: "Lockout duration (minutes)" },
+  secret: false,
+  public: false,
+  permission: "settings.security.write",
+  ui: { widget: "text" },
+});
+
+/** §12 "optional IP allow-list setting" for the admin panel. Empty = disabled. Comma-separated IPv4/IPv6 addresses or CIDR blocks. */
+export const SECURITY_ADMIN_IP_ALLOWLIST = defineSetting({
+  key: "security.adminIpAllowlist",
+  group: "security",
+  type: z.string(),
+  default: "",
+  label: { bn: "অ্যাডমিন আইপি অ্যালাউলিস্ট", en: "Admin IP allow-list" },
+  help: {
+    bn: "কমা দিয়ে আলাদা করা আইপি/CIDR (যেমন 203.0.113.4, 10.0.0.0/8)। খালি রাখলে বন্ধ থাকবে।",
+    en: "Comma-separated IPs/CIDR blocks (e.g. 203.0.113.4, 10.0.0.0/8) allowed to reach the admin API. Leave empty to disable.",
+  },
   secret: false,
   public: false,
   permission: "settings.security.write",
@@ -1225,4 +1280,32 @@ export const SMS_COST_PER_SEGMENT_POISHA = defineSetting({
   public: false,
   permission: "settings.notifications.write",
   ui: { widget: "text" },
+});
+
+// Milestone 9 (§16 M9) — launch checklist / operations.
+
+/** Written by `/public/cron/backup-heartbeat` (§15.4) after a successful `pg_dump`+upload — never set from the admin UI directly. ISO datetime string, null until the first backup ever reports in. */
+export const OPS_LAST_BACKUP_AT = defineSetting({
+  key: "ops.lastBackupAt",
+  group: "ops",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "সর্বশেষ ব্যাকআপ", en: "Last backup" },
+  secret: false,
+  public: false,
+  permission: "settings.ops.write",
+  ui: { widget: "text" },
+});
+
+/** The one launch-checklist item with no system signal to check (§15/§13.2 "sitemap submitted" to Search Console) — the owner just marks it done. */
+export const OPS_SITEMAP_SUBMITTED = defineSetting({
+  key: "ops.sitemapSubmitted",
+  group: "ops",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "সাইটম্যাপ জমা দেওয়া হয়েছে", en: "Sitemap submitted to search engines" },
+  secret: false,
+  public: false,
+  permission: "settings.ops.write",
+  ui: { widget: "toggle" },
 });

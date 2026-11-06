@@ -12,7 +12,8 @@
     "next": "Next",
     "finish": "Finish",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "remove": "Remove"
   },
   "auth": {
     "loginTitle": "Log in",
@@ -25,7 +26,11 @@
     "totpPrompt": "Enter the 6-digit code from your app",
     "invalidCode": "That code isn't right",
     "logout": "Log out",
-    "forbidden": "You don't have permission to do that"
+    "logoutAll": "Log out everywhere",
+    "forbidden": "You don't have permission to do that",
+    "totpRequiredTitle": "Set up two-factor authentication",
+    "totpRequiredBody": "Every staff account needs 2FA enabled before using the admin panel. Scan this QR code with an authenticator app, then enter the 6-digit code it shows.",
+    "totpRequiredDone": "2FA enabled — continuing to the dashboard…"
   },
   "setup": {
     "welcomeTitle": "Welcome",
@@ -269,6 +274,7 @@
     "navMedia": "Media",
     "navIntegrations": "Integrations",
     "navSystemHealth": "System health",
+    "navLaunchChecklist": "Launch checklist",
     "navAudit": "Audit log",
     "navCatalog": "Catalog",
     "navCmsPages": "Pages",
@@ -691,5 +697,13 @@
     "save": "Save",
     "saved": "Saved",
     "disabledHelp": "Enable feeds and save a secret token to activate these URLs."
+  },
+  "launchChecklist": {
+    "title": "Launch checklist",
+    "subtitle": "Everything here is checked against real system state except \"sitemap submitted\", which you mark done yourself.",
+    "allDone": "Every item is done — ready to launch.",
+    "pendingCount": "{count} item(s) still need your attention.",
+    "ownerAction": "Needs you",
+    "refresh": "Refresh"
   }
 }

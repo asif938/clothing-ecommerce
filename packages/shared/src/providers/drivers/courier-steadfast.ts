@@ -13,6 +13,8 @@ export const steadfastConfigSchema = z.object({
   apiKey: z.string().min(1),
   secretKey: z.string().min(1),
   baseUrl: z.string().url().default("https://portal.packzy.com/api/v1"),
+  /** §12 "webhook signature verification" — shared-secret header (`X-Webhook-Secret`), see courier-pathao.ts for why. */
+  webhookSecret: z.string().optional(),
 });
 export type SteadfastConfig = z.infer<typeof steadfastConfigSchema>;
 

@@ -15,18 +15,19 @@
     "@clothing/sdk": "workspace:*",
     "@clothing/shared": "workspace:*",
     "@clothing/ui": "workspace:*",
-    "next": "16.4.2",
+    "next": "16.4.5",
     "next-intl": "4.14.9",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@clothing/config": "workspace:*",
-    "@next/eslint-plugin-next": "16.4.2",
+    "@next/eslint-plugin-next": "16.4.5",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.13.0",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3"

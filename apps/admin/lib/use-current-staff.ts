@@ -10,6 +10,7 @@ export interface CurrentStaff {
   locale: string;
   permissions: string[];
   isSuperAdmin: boolean;
+  totpEnabled: boolean;
 }
 
 export function useCurrentStaff() {

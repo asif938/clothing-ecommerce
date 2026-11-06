@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { InventoryService } from "./inventory.service";
 import type { AuthenticatedStaff } from "../common/types";
 
-const actor: AuthenticatedStaff = { id: "staff-1", name: "A", email: "a@test.dev", locale: "en", permissions: new Set(), isSuperAdmin: false };
+const actor: AuthenticatedStaff = { id: "staff-1", name: "A", email: "a@test.dev", locale: "en", permissions: new Set(), isSuperAdmin: false, totpEnabled: true };
 
 function makeService(level: { id: string; onHand: number; locationId: string; variantId: string }) {
   const prisma = {

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common
 import { ApiTags } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
+import { SkipTotpEnforcement } from "../common/skip-totp-enforcement.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import type { Env } from "../config/env.schema";
 import { AuthService } from "./auth.service";
@@ -33,6 +34,7 @@ export class AuthController {
 
   @Post("logout")
   @UseGuards(StaffAuthGuard)
+  @SkipTotpEnforcement()
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token: string = req.cookies[STAFF_SESSION_COOKIE];
     await this.auth.logout(token, req.staff!.id, this.context(req));
@@ -40,21 +42,34 @@ export class AuthController {
     return { ok: true };
   }
 
+  /** §12 "log out all sessions". */
+  @Post("logout-all")
+  @UseGuards(StaffAuthGuard)
+  @SkipTotpEnforcement()
+  async logoutAll(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.auth.logoutAll(req.staff!.id, this.context(req));
+    res.clearCookie(STAFF_SESSION_COOKIE, { path: "/" });
+    return { ok: true };
+  }
+
   @Get("me")
   @UseGuards(StaffAuthGuard)
+  @SkipTotpEnforcement()
   me(@Req() req: Request) {
     const staff = req.staff!;
-    return { id: staff.id, name: staff.name, email: staff.email, locale: staff.locale, permissions: [...staff.permissions], isSuperAdmin: staff.isSuperAdmin };
+    return { id: staff.id, name: staff.name, email: staff.email, locale: staff.locale, permissions: [...staff.permissions], isSuperAdmin: staff.isSuperAdmin, totpEnabled: staff.totpEnabled };
   }
 
   @Post("totp/setup")
   @UseGuards(StaffAuthGuard)
+  @SkipTotpEnforcement()
   async setupTotp(@Req() req: Request) {
     return await this.auth.setupTotp(req.staff!.id);
   }
 
   @Post("totp/confirm")
   @UseGuards(StaffAuthGuard)
+  @SkipTotpEnforcement()
   async confirmTotp(@Body(new ZodValidationPipe(totpConfirmSchema)) body: TotpConfirmDto, @Req() req: Request) {
     await this.auth.confirmTotp(req.staff!.id, body.code, this.context(req));
     return { ok: true };

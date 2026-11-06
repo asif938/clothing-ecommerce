@@ -20,6 +20,8 @@ export const pathaoConfigSchema = z.object({
   password: z.string().min(1),
   storeId: z.string().min(1),
   sandbox: z.boolean().default(true),
+  /** §12 "webhook signature verification" — Pathao's webhook docs don't specify a signing scheme we've verified against a sandbox; this is a shared-secret header (`X-Webhook-Secret`) the admin sets here and pastes into Pathao's webhook config, checked by `ShipmentsWebhookController`. */
+  webhookSecret: z.string().optional(),
 });
 export type PathaoConfig = z.infer<typeof pathaoConfigSchema>;
 

@@ -5,6 +5,10 @@ function makeMediaProviders() {
   return { resolveDriverForAsset: vi.fn() };
 }
 
+function makeCache() {
+  return { get: vi.fn(), set: vi.fn(), delete: vi.fn(), invalidateTag: vi.fn() };
+}
+
 describe("StoreCatalogService price-sorted listing", () => {
   it("sorts by ascending min variant price and paginates the sorted order", async () => {
     const candidates = [
@@ -25,7 +29,7 @@ describe("StoreCatalogService price-sorted listing", () => {
         }),
       },
     };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method, exercised directly for the core sort/paginate correctness
     const result = await service.listPriceSorted({}, "price_asc", 1, 2);
@@ -43,7 +47,7 @@ describe("StoreCatalogService price-sorted listing", () => {
         ),
       },
     };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method
     const result = await service.listPriceSorted({}, "price_desc", 1, 10);
@@ -65,7 +69,7 @@ describe("StoreCatalogService.getVariantAvailability", () => {
         ),
       },
     };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method
     const totals = await service.getVariantAvailability(["v1", "v2"]);
@@ -76,7 +80,7 @@ describe("StoreCatalogService.getVariantAvailability", () => {
 
   it("returns an empty map without querying when given no variant ids", async () => {
     const prisma = { inventoryLevel: { findMany: vi.fn() } };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method
     const totals = await service.getVariantAvailability([]);
@@ -94,7 +98,7 @@ describe("StoreCatalogService.buildCategoryBreadcrumb", () => {
       leaf: { id: "leaf", slug: "cotton-panjabi", name: {}, parentId: "mid" },
     };
     const prisma = { category: { findUnique: vi.fn(({ where: { id } }: { where: { id: string } }) => Promise.resolve(categories[id] ?? null)) } };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method
     const breadcrumb = await service.buildCategoryBreadcrumb("leaf");
@@ -108,7 +112,7 @@ describe("StoreCatalogService.buildCategoryBreadcrumb", () => {
       b: { id: "b", slug: "b", name: {}, parentId: "a" },
     };
     const prisma = { category: { findUnique: vi.fn(({ where: { id } }: { where: { id: string } }) => Promise.resolve(categories[id] ?? null)) } };
-    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never);
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
 
     // @ts-expect-error -- private method
     const breadcrumb = await service.buildCategoryBreadcrumb("a");

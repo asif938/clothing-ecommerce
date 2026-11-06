@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { href: "/media", labelKey: "navMedia" },
   { href: "/integrations", labelKey: "navIntegrations" },
   { href: "/system-health", labelKey: "navSystemHealth" },
+  { href: "/launch-checklist", labelKey: "navLaunchChecklist" },
   { href: "/audit", labelKey: "navAudit" },
 ] as const;
 
@@ -54,12 +55,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (unauthenticated) router.replace("/login");
   }, [unauthenticated, router]);
 
-  if (loading || !staff) {
+  useEffect(() => {
+    if (staff && !staff.totpEnabled) router.replace("/totp-setup");
+  }, [staff, router]);
+
+  if (loading || !staff || !staff.totpEnabled) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-surface-foreground/60">…</div>;
   }
 
   async function handleLogout() {
     await api.post("/auth/logout");
+    router.replace("/login");
+  }
+
+  async function handleLogoutAll() {
+    await api.post("/auth/logout-all");
     router.replace("/login");
   }
 
@@ -88,6 +98,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="truncate text-surface-foreground/70">{staff.email}</span>
             <button onClick={handleLogout} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
               {tAuth("logout")}
+            </button>
+            <button onClick={handleLogoutAll} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
+              {tAuth("logoutAll")}
             </button>
           </div>
         </div>

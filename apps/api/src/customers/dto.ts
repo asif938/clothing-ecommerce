@@ -31,6 +31,11 @@ export const mergeCustomersSchema = z.object({
 });
 export type MergeCustomersDto = z.infer<typeof mergeCustomersSchema>;
 
+export const anonymizeCustomerSchema = z.object({
+  reason: z.string().max(500).nullable().optional(),
+});
+export type AnonymizeCustomerDto = z.infer<typeof anonymizeCustomerSchema>;
+
 const segmentRuleConditionSchema = z.object({
   field: z.enum(["totalSpent", "ordersCount", "deliveredCount", "rejectedAtDoorCount", "riskScore", "tag", "status", "inactiveDays", "districtId"]),
   op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in"]),

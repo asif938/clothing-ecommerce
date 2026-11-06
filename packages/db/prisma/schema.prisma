@@ -70,6 +70,9 @@ model StaffUser {
   avatarMediaId String?         @map("avatar_media_id")
   status        StaffUserStatus @default(active)
   lastLoginAt   DateTime?       @map("last_login_at")
+  // Login lockout (docs/PROJECT_SPEC.md §12 "login rate limit and lockout").
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt     DateTime?       @map("deleted_at")
@@ -91,6 +94,9 @@ model StaffSession {
   ip          String?
   userAgent   String?   @map("user_agent")
   expiresAt   DateTime  @map("expires_at")
+  // Idle timeout (§12): bumped on every authenticated request, independent
+  // of `expiresAt`'s absolute lifetime.
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
   revokedAt   DateTime? @map("revoked_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
@@ -1702,6 +1708,7 @@ model Order {
 
   @@index([customerId])
   @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
@@ -2157,6 +2164,7 @@ model Shipment {
   @@index([orderId])
   @@index([status])
   @@index([consignmentId])
+  @@index([createdAt])
   @@map("shipments")
 }
 

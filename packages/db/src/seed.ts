@@ -2,8 +2,12 @@
  * `pnpm db:seed` — base data only: the "Super Admin" system role (granted
  * every permission in the catalog), default UI strings, and the Bangladesh
  * locations tree. `pnpm db:seed --demo` additionally sets a few "Demo
- * Fashion" brand settings; the rest of the demo seed (catalog, pages, menus,
- * orders) lands as each milestone that owns that data arrives (§4.4.6).
+ * Fashion" brand settings and a small browsable/purchasable demo catalog
+ * (Milestone 9 "demo seed polish" — see docs/DECISIONS.md for why it's
+ * deliberately small: just enough for the E2E journeys in `e2e/tests/` and
+ * a screenshot-ready storefront, not a realistic product count). CMS
+ * pages/menus/demo orders are still not seeded here — unlike the catalog,
+ * nothing in `e2e/` or the launch checklist depends on them existing.
  *
  * Settings rows are intentionally NOT seeded: `settings` is a sparse
  * override table and missing keys fall back to the registry's own default
@@ -332,10 +336,138 @@ async function seedDemoBrand() {
       create: { key, value: value as object },
     });
   }
-  console.log(
-    '[db:seed] Demo brand settings applied ("Demo Fashion"). Demo catalog/pages/menus/orders are seeded by the ' +
-      "milestone that introduces that data (§4.4.6) — not implemented yet.",
-  );
+  console.log('[db:seed] Demo brand settings applied ("Demo Fashion").');
+}
+
+interface DemoVariantSeed {
+  sku: string;
+  size: "S" | "M" | "L" | null;
+  price: number;
+  compareAtPrice?: number;
+  onHand: number;
+}
+
+interface DemoProductSeed {
+  slug: string;
+  title: { bn: string; en: string };
+  shortDescription: { bn: string; en: string };
+  categorySlug: string;
+  variants: DemoVariantSeed[];
+}
+
+const DEMO_CATEGORIES: { slug: string; name: { bn: string; en: string } }[] = [
+  { slug: "panjabi", name: { bn: "পাঞ্জাবি", en: "Panjabi" } },
+  { slug: "shirt", name: { bn: "শার্ট", en: "Shirt" } },
+];
+
+const DEMO_PRODUCTS: DemoProductSeed[] = [
+  {
+    slug: "cotton-panjabi-navy",
+    title: { bn: "কটন পাঞ্জাবি নেভি", en: "Cotton Panjabi Navy" },
+    shortDescription: { bn: "নরম কটন কাপড়ে তৈরি ক্লাসিক নেভি পাঞ্জাবি।", en: "A classic navy panjabi in soft cotton." },
+    categorySlug: "panjabi",
+    variants: [
+      { sku: "PNJ-NVY-S", size: "S", price: 190000, compareAtPrice: 220000, onHand: 25 },
+      { sku: "PNJ-NVY-M", size: "M", price: 190000, compareAtPrice: 220000, onHand: 40 },
+      { sku: "PNJ-NVY-L", size: "L", price: 190000, compareAtPrice: 220000, onHand: 30 },
+    ],
+  },
+  {
+    slug: "cotton-panjabi-white",
+    title: { bn: "কটন পাঞ্জাবি সাদা", en: "Cotton Panjabi White" },
+    shortDescription: { bn: "উৎসবের জন্য উপযুক্ত সাদা পাঞ্জাবি, ফ্রি সাইজ।", en: "A free-size white panjabi for festive occasions." },
+    categorySlug: "panjabi",
+    variants: [{ sku: "PNJ-WHT-FS", size: null, price: 170000, onHand: 50 }],
+  },
+  {
+    slug: "formal-shirt-sky-blue",
+    title: { bn: "ফরমাল শার্ট স্কাই ব্লু", en: "Formal Shirt Sky Blue" },
+    shortDescription: { bn: "অফিস ও ফরমাল অনুষ্ঠানের জন্য স্কাই ব্লু শার্ট।", en: "A sky blue shirt for the office or formal occasions." },
+    categorySlug: "shirt",
+    variants: [
+      { sku: "SHT-SKY-S", size: "S", price: 140000, onHand: 20 },
+      { sku: "SHT-SKY-M", size: "M", price: 140000, onHand: 35 },
+      { sku: "SHT-SKY-L", size: "L", price: 140000, onHand: 15 },
+    ],
+  },
+  {
+    slug: "casual-shirt-checked",
+    title: { bn: "ক্যাজুয়াল চেকড শার্ট", en: "Casual Shirt Checked" },
+    shortDescription: { bn: "প্রতিদিনের জন্য আরামদায়ক চেকড শার্ট।", en: "A comfortable checked shirt for everyday wear." },
+    categorySlug: "shirt",
+    // Deliberately low stock — exercises the low-stock dashboard alert (M8) and the storefront's near-sold-out messaging.
+    variants: [{ sku: "SHT-CHK-FS", size: null, price: 120000, onHand: 2 }],
+  },
+];
+
+async function seedDemoCatalog() {
+  const location = await prisma.stockLocation.findFirst({ where: { isDefault: true } });
+  if (!location) throw new Error('No default stock location — run the base seed (seedDefaultStockLocation) first.');
+
+  const categoryIdBySlug = new Map<string, string>();
+  for (const category of DEMO_CATEGORIES) {
+    const row = await prisma.category.upsert({
+      where: { slug: category.slug },
+      update: {},
+      create: { slug: category.slug, name: category.name, isActive: true },
+    });
+    categoryIdBySlug.set(category.slug, row.id);
+  }
+
+  let created = 0;
+  for (const demo of DEMO_PRODUCTS) {
+    const existing = await prisma.product.findUnique({ where: { slug: demo.slug } });
+    if (existing) continue;
+
+    const categoryId = categoryIdBySlug.get(demo.categorySlug);
+    const hasSizes = demo.variants.some((v) => v.size !== null);
+
+    await prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          slug: demo.slug,
+          title: demo.title,
+          shortDescription: demo.shortDescription,
+          categoryId,
+          status: "active",
+          publishedAt: new Date(),
+          requiresShipping: true,
+        },
+      });
+
+      let sizeOptionValueBySize: Map<string, string> | null = null;
+      if (hasSizes) {
+        const option = await tx.productOption.create({
+          data: { productId: product.id, name: { bn: "সাইজ", en: "Size" }, type: "size" },
+        });
+        const sizes: ("S" | "M" | "L")[] = ["S", "M", "L"];
+        const entries = await Promise.all(
+          sizes.map(async (size, position) => {
+            const value = await tx.productOptionValue.create({ data: { productOptionId: option.id, value: { bn: size, en: size }, position } });
+            return [size, value.id] as const;
+          }),
+        );
+        sizeOptionValueBySize = new Map(entries);
+      }
+
+      for (const variant of demo.variants) {
+        const optionValueIds = variant.size && sizeOptionValueBySize ? [sizeOptionValueBySize.get(variant.size)!] : [];
+        const createdVariant = await tx.productVariant.create({
+          data: {
+            productId: product.id,
+            sku: variant.sku,
+            optionValueIds,
+            price: variant.price,
+            compareAtPrice: variant.compareAtPrice,
+            weightGrams: 400,
+          },
+        });
+        await tx.inventoryLevel.create({ data: { variantId: createdVariant.id, locationId: location.id, onHand: variant.onHand } });
+      }
+    });
+    created += 1;
+  }
+  console.log(`[db:seed] ${created} demo products created (categories: ${DEMO_CATEGORIES.map((c) => c.slug).join(", ")}).`);
 }
 
 async function main() {
@@ -348,6 +480,7 @@ async function main() {
   await seedNotificationTemplates();
   if (isDemo) {
     await seedDemoBrand();
+    await seedDemoCatalog();
   }
   console.log(`[db:seed] Done (${isDemo ? "base + demo" : "base"}).`);
 }

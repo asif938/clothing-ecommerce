@@ -10,6 +10,19 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
   app.use(cookieParser());
 
+  // §12 baseline security headers. No CSP here — this is a JSON API
+  // consumed server-side by the storefront/admin's own proxy routes, not an
+  // HTML-rendering surface (the two Next.js apps carry the real CSP, in
+  // their own next.config.mjs `headers()`).
+  app.use((_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) => {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    next();
+  });
+
   // /health, /ready (uptime checks, §11.2) and /media/* (public file serving,
   // see MediaFilesController) stay unprefixed. Everything else lives under
   // /api/v1/{store,admin,webhooks,public}.

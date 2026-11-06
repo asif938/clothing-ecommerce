@@ -1,8 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { hashPassword } from "@clothing/shared/crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { AuthService } from "../auth/auth.service";
+import { SettingsService } from "../settings/settings.service";
 
 const SUPER_ADMIN_ROLE_NAME = "Super Admin";
 
@@ -19,6 +20,7 @@ export class SetupService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly auth: AuthService,
+    private readonly settings: SettingsService,
   ) {}
 
   async status(): Promise<{ hasSuperAdmin: boolean }> {
@@ -51,6 +53,11 @@ export class SetupService {
         code: "SETUP_IN_PROGRESS",
         message: "A Super Admin account was already started — confirm its 2FA code, or ask an operator to remove it and retry",
       });
+    }
+
+    const minLength = await this.settings.getValue<number>("security.passwordMinLength");
+    if (password.length < minLength) {
+      throw new BadRequestException({ code: "PASSWORD_TOO_SHORT", message: `Password must be at least ${minLength} characters`, minLength });
     }
 
     const passwordHash = await hashPassword(password);

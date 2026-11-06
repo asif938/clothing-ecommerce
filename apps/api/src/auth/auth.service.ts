@@ -31,9 +31,23 @@ export class AuthService {
       throw new UnauthorizedException({ code: "ACCOUNT_DISABLED", message: "This account has been disabled" });
     }
 
+    // §12 "login rate limit and lockout".
+    if (staffUser.lockedUntil && staffUser.lockedUntil.getTime() > Date.now()) {
+      throw new ForbiddenException({
+        code: "ACCOUNT_LOCKED",
+        message: "Too many failed attempts — try again later",
+        lockedUntil: staffUser.lockedUntil,
+      });
+    }
+
     const passwordOk = await verifyPassword(staffUser.passwordHash, password);
     if (!passwordOk) {
+      await this.recordFailedLogin(staffUser.id, staffUser.failedLoginAttempts);
       throw new UnauthorizedException({ code: "INVALID_CREDENTIALS", message: "Incorrect email or password" });
+    }
+
+    if (staffUser.failedLoginAttempts > 0 || staffUser.lockedUntil) {
+      await this.prisma.staffUser.update({ where: { id: staffUser.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
     }
 
     if (staffUser.totpEnabled) {
@@ -65,6 +79,31 @@ export class AuthService {
       entityType: "staff_session",
       ip: context.ip,
       userAgent: context.userAgent,
+    });
+  }
+
+  /** §12 "log out all sessions" — e.g. after a password reset or a suspected compromise. */
+  async logoutAll(staffUserId: string, context: RequestContext): Promise<void> {
+    await this.sessions.revokeAllSessions(staffUserId);
+    await this.audit.record({
+      actorType: "staff",
+      actorId: staffUserId,
+      action: "auth.logout_all",
+      entityType: "staff_user",
+      entityId: staffUserId,
+      ip: context.ip,
+      userAgent: context.userAgent,
+    });
+  }
+
+  private async recordFailedLogin(staffUserId: string, currentAttempts: number): Promise<void> {
+    const maxAttempts = await this.settings.getValue<number>("security.loginMaxAttempts");
+    const lockoutMinutes = await this.settings.getValue<number>("security.loginLockoutMinutes");
+    const attempts = currentAttempts + 1;
+    const lockedUntil = attempts >= maxAttempts ? new Date(Date.now() + lockoutMinutes * 60 * 1000) : null;
+    await this.prisma.staffUser.update({
+      where: { id: staffUserId },
+      data: { failedLoginAttempts: lockedUntil ? 0 : attempts, lockedUntil },
     });
   }
 

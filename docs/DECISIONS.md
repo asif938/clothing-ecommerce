@@ -1683,3 +1683,330 @@ TikTok account. `pnpm build`'s pre-existing static-export failure (flagged
 in M6, unrelated to this milestone) still reproduces on the storefront app
 this time (collateral page `/en/checkout`), matching the exact
 already-documented pattern.
+
+## 2026-11-06 — Milestone 9
+
+**Context**: M9 is "hardening and launch readiness" — full test suites
+(§14), E2E, a security review against §12, a performance pass against
+§13.1, an accessibility pass, demo seed polish, `docs/ADMIN_GUIDE.md`,
+`docs/DEPLOYMENT.md`, and a launch-checklist admin page, closing out
+Phase 1. Three parallel audit forks (security/§12, performance+
+accessibility/§13, test-coverage/§14) surveyed the existing codebase
+first; everything below responds to a real, cited finding from one of
+those, not a guess.
+
+**Security (§12), what was fixed**:
+- 2FA was optional (`totpEnabled` only gated the *login* TOTP challenge,
+  not route access). Decision: `StaffAuthGuard` now blocks every route
+  except `/auth/{me,logout,totp/setup,totp/confirm}` (a new
+  `@SkipTotpEnforcement()` decorator marks the exemption) for a staff
+  account with `totpEnabled: false` — mandatory, not optional, enforced
+  structurally rather than by convention. Alternative considered: a
+  separate pre-session "setup token" issued at login instead of a real
+  session. Rejected — it would have meant building a second, parallel
+  auth-token mechanism next to the real session one for no behavioral
+  difference (the existing `totp/setup`+`totp/confirm` endpoints already
+  required an authenticated session, so reusing that mechanism and
+  gating *other* routes was the smaller, more consistent change). The
+  admin app gained a forced `/totp-setup` page the dashboard layout
+  redirects to whenever `staff.totpEnabled === false`.
+- Password policy: the DTO only enforced `min(10)`; the *admin-configurable*
+  `security.passwordMinLength` setting (already existed, default 10, but
+  nothing actually read it). Decision: lowered the DTO's static floor to
+  `min(8)` (the setting's own allowed minimum) and added a real runtime
+  check in `StaffUsersService`/`SetupService` that reads the setting and
+  rejects anything shorter — the setting now actually does something,
+  default bumped to 12 to match the spec's own stated policy.
+- No login rate limit/lockout at all. Decision: `StaffUser` gained
+  `failedLoginAttempts`/`lockedUntil`; two new settings
+  (`security.loginMaxAttempts` default 5, `security.loginLockoutMinutes`
+  default 15) control the thresholds.
+- Session timeout was absolute-only (`security.staffSessionTtlHours`), no
+  idle timeout, no "log out all sessions". Decision: added
+  `StaffSession.lastSeenAt` (bumped on every validated request) + a new
+  `security.staffSessionIdleMinutes` setting (default 60) checked
+  alongside the absolute expiry; added `SessionService.revokeAllSessions`
+  + `POST /auth/logout-all` + a "log out everywhere" button in the admin
+  shell.
+- No CSP/HSTS/security headers anywhere. Decision: admin's CSP is static
+  (`next.config.mjs` `headers()` — admin renders zero inline scripts, so
+  no nonce complexity is needed there); the API got the simple headers
+  (HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) via
+  an Express middleware in `main.ts`, no CSP (it's a JSON API, not an
+  HTML-rendering surface — the real CSP lives in the two apps that
+  render HTML). **Storefront's CSP was originally designed nonce-based**
+  (a `middleware.ts` generating a per-request nonce, threaded to
+  `tracking-scripts.tsx`'s inline `<Script>` tags via an `x-nonce`
+  header) — this **broke the production build outright**: Next.js 16
+  renamed `middleware.ts` to `proxy.ts`, and the storefront already had
+  one (`next-intl`'s own locale-routing proxy), so the two files
+  conflicted (`pnpm build` refused to start at all, a real, newly-caused
+  bug fixed by merging the CSP header logic into the existing
+  `proxy.ts`). Once merged, threading a nonce through next-intl's
+  `createMiddleware()` return value turned out not to be possible without
+  rebuilding next-intl's own request-forwarding internals (its middleware
+  already returns a fully-built `NextResponse`; this file can only add
+  response headers to it, not rebuild its `NextResponse.next({request:
+  {headers}})` request-forwarding). Decision: dropped the nonce, used
+  `'unsafe-inline'` on `script-src` instead, scoped by a tight static
+  host allow-list (exactly the four tracking platforms
+  `tracking-scripts.tsx` can ever render — GTM/Meta/GA4/TikTok, `'strict-
+  dynamic'` for GTM's own dynamic tag injection) plus `frame-ancestors`
+  allowing the admin's own origin (for the page builder's live-preview
+  iframe). A real nonce is still the better answer for whoever revisits
+  this with time to either drop next-intl's own middleware and
+  reimplement locale routing here, or find/request composition support
+  from next-intl for exactly this.
+- No MIME sniffing on file uploads, no SVG rejection. Decision: added
+  `apps/api/src/media/media-sniff.ts` (magic-byte signatures for
+  JPEG/PNG/GIF/WebP; anything that looks like SVG/HTML/XML by its first
+  ~1KB is refused outright, regardless of claimed MIME type — no
+  sanitizer exists for it) and wired it into both real upload paths:
+  `MediaService.upload` (staff-only) and `StoreReviewsService.uploadPhoto`
+  (the one *unauthenticated* upload surface in the app — a shopper with a
+  delivered order can hit it, making it the higher-priority of the two;
+  the stored file's extension is now derived from the sniffed real MIME
+  type, not the client-supplied filename).
+- No SSRF protection on admin-configured URLs. Decision: added
+  `packages/shared/src/providers/ssrf-guard.ts` (resolves the hostname
+  and checks the *resolved* address against private/reserved ranges —
+  catches DNS rebinding, not just a literal `127.0.0.1` in the URL) and
+  applied it to `sms-generic-http.ts` specifically — the one driver
+  whose whole point is fetching an admin-typed arbitrary URL. The other
+  drivers hit vendor-fixed endpoints (a `baseUrl` override field with a
+  sane default, not a "paste any URL" feature), so they're a much lower
+  SSRF risk and out of scope here.
+- Courier webhooks had zero signature verification (a documented gap
+  since M6: "no signature verification yet either — add it per-driver
+  before going live"). Decision: rather than invent an HMAC scheme
+  against docs that were never confirmed against a live sandbox (same
+  root cause already accepted for these three drivers since M5/M6), added
+  an optional `webhookSecret` to each real courier driver's config and a
+  shared-secret `X-Webhook-Secret` header check in
+  `ShipmentsWebhookController`, looked up via the shipment's own
+  `courierProviderInstanceId` (more precise than guessing "the" instance
+  for a driver name, since courier is a multi-instance-active
+  capability). Unset secret (sandbox/dev default) still lets requests
+  through, matching every other "mock-friendly, hardenable later"
+  pattern in this codebase.
+- No customer data export/deletion action (§12 "customer data export and
+  deletion on request"). Decision: added `customers.privacy` (a
+  permission distinct from `customers.manage`, so a store can grant
+  ordinary staff customer management without privacy/export rights) with
+  two new `CustomersAdminService` methods: `exportData` (a JSON bundle,
+  audit-logged as a sensitive read) and `anonymize` (scrubs the
+  customer's own PII plus every one of their orders' embedded contact
+  JSON — `billingContact`/`shippingAddress`/`ip`/`userAgent`/`deviceId` —
+  while leaving order totals/items/status alone, since §12 explicitly
+  wants orders "anonymized, not deleted, for accounting"; `deletedAt`
+  doubles as the "this identity no longer exists" marker, same convention
+  `merge()` already used).
+- Report CSV exports weren't audit-logged (§12 "sensitive reads ...
+  exports"). Decision: `ReportsController`'s shared `respond()` helper
+  now records an audit entry (actor, report name, date range, row count)
+  whenever `?format=csv` is used; viewing the same numbers on-screen
+  isn't logged, only the download.
+- No dependency scanning. Decision: `.github/dependabot.yml` (npm +
+  github-actions + docker ecosystems, weekly) plus a `pnpm audit
+  --audit-level=high` CI step. Deliberately **non-blocking**
+  (`|| true`) — an upstream transitive advisory nobody's had a chance to
+  triage yet shouldn't block every PR; a human reviews the report.
+- Admin IP allow-list (§12 "optional ... setting") didn't exist. Decision:
+  `security.adminIpAllowlist` (comma-separated IPs/CIDR, empty =
+  disabled) checked in `StaffAuthGuard` before the session cookie even —
+  IPv4-only CIDR matching (`apps/api/src/common/ip-allowlist.ts`); IPv6
+  entries only match literally, not by prefix, documented as a known
+  limitation rather than a silent gap.
+- Custom HTML/CSS/script-injection restriction (§12's last bullet) has no
+  feature to restrict — no `customCss`/custom-tracking-snippet setting
+  exists anywhere in the admin (checked: M3's theme settings don't have
+  one either). Decision: left unbuilt. Building a brand-new raw-code-
+  injection feature from scratch, this deep into a hardening milestone,
+  is new scope the spec names as a *property of a feature*, not a
+  feature to build — when/if a future milestone adds one, gate it by a
+  Super-Admin-only permission and audit-log it from day one, per this
+  bullet.
+
+**Security, considered and explicitly deferred**:
+- A full `next/image` migration (srcset/blur placeholders — the
+  performance-audit finding that plain `<img>` is used everywhere, custom
+  `mediaImageLoader` unused) needs every image-bearing API response
+  (`ProductCard.imageUrl: string`, etc.) to carry a full `MediaRef`
+  object (provider/variants/dimensions) instead of a flat URL string —
+  a cross-cutting API-shape change touching catalog, search, cart,
+  reviews DTOs on top of 7 storefront components, with no way to verify
+  the rendered result in a browser here. Deferred rather than risk a
+  half-correct migration; the two highest-LCP-impact surfaces (PDP
+  gallery, category/search grid) are the right place to start whenever
+  someone can verify it live.
+- Coverage gating (§14 "coverage target ≥ 80% for domain folders"):
+  measured `apps/api`'s real coverage at ~61% statements/51% branches.
+  The 80%-for-"domain"-folders target assumes a domain/infrastructure
+  split this codebase's folder structure doesn't have (folders are
+  per-feature — `discounts/`, `returns/`, `inventory/` — not separated
+  into "pure business rule" vs. "Prisma-orchestration service" layers).
+  Every specific business rule §14's own table names (money math, phone
+  normalization, pricing pipeline, discount eligibility, shipping fee
+  calc, payment rules engine, risk scoring, order state machine, return
+  eligibility, localized text fallback, settings registry validation)
+  already has a dedicated, well-tested pure-logic file (`discount-
+  math.ts` ~93%, `shipping-calc.ts` ~89%, `risk-score.ts` ~90%, `payment-
+  rules-engine.ts` ~73%, etc.) — the low overall number comes from
+  thinner Prisma-orchestration service/controller code the spec's table
+  doesn't actually name. Decision: `test:coverage` scripts + a CI
+  artifact upload exist (informational), no hard-fail threshold yet.
+  Enforcing one correctly would mean either curating an explicit
+  per-file include list of just the true domain-rule files (arbitrary
+  and a maintenance burden) or retrofitting service-layer tests across
+  9 milestones of code (multi-day, far beyond this milestone's budget) —
+  recorded here as a real, named gap rather than silently declared "done".
+
+**Performance (§13.1)**:
+- `Order`/`Shipment` had no `@@index([createdAt])` despite every report
+  and the dashboard filtering/grouping by a `createdAt` range on every
+  call. Added both (new migration).
+- Facet counts were computed fresh on every listing request despite the
+  spec naming "facet counts cached per category" as a technique. Added
+  an in-memory cache (`CacheService`, 60s TTL, keyed by
+  category/collection/tag id) around `StoreCatalogService`'s facet
+  computation — a short TTL rather than wiring precise invalidation into
+  every place a product's price/attributes/stock can change, consistent
+  with this cache's own "lost on restart, single-process" free-tier
+  philosophy.
+- `infra/loadtest/browse-cart-checkout.js` (k6, browse+search+cart+COD
+  checkout mix, §13.1's own p95 thresholds as k6 thresholds) is written
+  but not run — no k6 binary and nothing to point it at here, same
+  limitation as every other "not verified in this environment" item.
+- Third-party tracking script deferral (`afterInteractive`, not idle/
+  interaction-gated) and the full `next/image` migration were both
+  looked at and left as the M8/M9 trims they already were — see "Security,
+  considered and explicitly deferred" above for the image one; the
+  script-deferral one still has no settings-driven timing knob, same
+  trim M8 already recorded.
+
+**Accessibility**: an automated sweep (not exhaustive) found one real
+unlabeled icon-only button (`orders/new/page.tsx`'s line-item remove "×")
+and fixed it with a new `common.remove` i18n key; every other icon-only
+control checked already had a real accessible name (via adjacent text or
+an existing `aria-label`). `@axe-core/playwright` is wired into both new
+E2E specs (see below) rather than run as a separate manual pass — a real
+browser is needed for a real axe scan, which this sandbox doesn't have.
+
+**Testing (§14)**:
+- Integration tests (Supertest + real Postgres), E2E (Playwright), and
+  `packages/db/factories` were *entirely* greenfield before this
+  milestone — confirmed by audit: `test:integration` was still M0's
+  placeholder `echo`, `e2e/tests/` was one `test.skip`, no `factories`
+  directory existed. Built: a scoped factory module (staff user,
+  customer, category, product+variant+stock, stock location — not every
+  model, just what the integration/E2E specs below actually need); a
+  real `apps/api/test/setup.ts` harness (boots the real `AppModule` via
+  `Test.createTestingModule`, same wiring `main.ts` uses); three
+  integration spec files (auth/mandatory-2FA/RBAC/login-lockout; the
+  concurrent-last-unit-purchase race — M5's own acceptance line, never
+  actually run before now; courier webhook secret verification); two
+  Playwright specs (storefront guest COD checkout with browse→PDP→cart→
+  checkout→success→track, using response interception to capture the
+  order number since the success page doesn't surface it for a "track
+  it now" link — a real, separate UX gap recorded here, not fixed, since
+  fixing it is a product decision about what the success page should
+  show, not a hardening task; and the admin Super-Admin setup→forced-
+  2FA→re-login flow, computing real TOTP codes from the `otpauthUrl` the
+  API returns rather than trying to read the QR code image).
+- None of this can actually run here (no live Postgres, no browser) — it
+  was still verified as far as this sandbox allows: `pnpm test:integration`
+  reaches real Prisma queries inside the test bodies and fails with
+  exactly one error, `PrismaClientInitializationError: Can't reach
+  database server`, on all 8 tests across all 3 files — meaning the full
+  `AppModule` DI graph, every import, and every query's syntax are
+  correct; only a live database is missing. The two E2E spec files
+  typecheck and lint clean (`e2e/` gained its own `tsconfig.json`/
+  `eslint.config.cjs` — it had neither before, so `pnpm typecheck`/`pnpm
+  lint` were silently skipping it entirely).
+- CI (`.github/workflows/ci.yml`) gained `dependency-audit`,
+  `integration-tests` (real Postgres 16 service container, migrate+seed
+  then `pnpm test:integration`), and `e2e` (Postgres + demo seed + all
+  three apps started for real, Playwright smoke — tests tagged
+  `@smoke` — on PRs to `main`, the full suite nightly via a cron
+  trigger) jobs, plus coverage-artifact upload on the existing `build`
+  job.
+- A missing unit test the audit specifically flagged (return eligibility
+  — §14 names it, `ReturnsService` had zero tests) was added
+  (`returns.service.spec.ts`, the delivered-status/window/type/quantity/
+  exchange-variant gates in `createRequest`).
+
+**Demo seed (§16 M9 "demo seed polish")**: there was nothing to polish —
+`seedDemoBrand()`'s own comment said demo catalog/pages/menus/orders were
+"not implemented yet" despite M2–M8 all shipping the features that would
+need them. Built a small `seedDemoCatalog()` (2 categories, 4 products —
+one with real S/M/L size options, the rest free-size, one deliberately
+low-stock to exercise the dashboard alert — real stock at the default
+location): enough for the E2E journeys above and a screenshot-ready
+storefront, deliberately not a realistic full catalog. CMS pages/menus/
+demo orders are still unseeded — nothing in `e2e/` or the launch checklist
+needs them, unlike the catalog.
+
+**`pnpm build`'s pre-existing static-export crash** (flagged M4/M6,
+re-investigated here since M9's own acceptance line is "all CI checks
+green"): confirmed it is **not** fixable by any change made this
+milestone. Reproduces identically — `TypeError: Cannot read properties of
+null (reading 'useContext')` prerendering `/_global-error` plus one other,
+different-every-run page (e.g. `/en/checkout`, `/bn/orders`+`/en/
+discounts`+`/en/segments` in one admin run) — across: Turbopack vs.
+`--webpack`; Next 16.4.2 vs. 16.4.5 (upgraded regardless, since it's a
+legitimate patch bump even though it didn't fix this); `experimental.
+serverMinification: false` alone (no effect); `experimental.
+prerenderEarlyExit: false` (made things *worse* — 30 pages failed with a
+different error instead of 2). The one thing that **does** avoid it —
+`next build --debug-prerender` — is explicitly documented by Next.js as
+unsafe for production use, so it's not a real fix, just the clearest
+signal yet that this is a genuine upstream Next.js 16.4.x production
+static-generation-worker bug (the pervasive "each child in a list should
+have a unique key" warnings on Next's *own* internal elements — `<head>`,
+`<meta>`, `<__next_viewport_boundary__>` — during every build, success or
+failure, point the same way: something inside Next's own rendering
+machinery, not this project's application code, which never touches
+those elements directly). Recorded here as confirmed-not-app-code rather
+than re-deferred with the same vague note a fourth time; CI's `build` and
+`e2e` jobs will go red on this until an upstream fix lands or someone can
+attach a debugger to the actual worker process, neither of which was
+possible in this sandbox. **Separately, and already fixed**: this
+investigation surfaced a real, newly-introduced bug of this milestone's
+own making — adding `apps/storefront/middleware.ts` for CSP conflicted
+with the `proxy.ts` the app already had for next-intl's locale routing
+(Next 16 renamed `middleware.ts` → `proxy.ts`; having both is a hard
+build error, not the pre-existing crash above). Fixed by merging the CSP
+logic into the existing `proxy.ts` instead of adding a second file.
+
+**Launch checklist** (§16 M9): built as a computed page, not a plain
+checkbox list — every item queries real state (policy pages with
+`needsContent: true`, a non-mock enabled provider per capability, a
+`TrackingEventLog` row with `status: "sent"`, active staff with
+`totpEnabled: false`, a `ops.lastBackupAt` setting fresher than 48h)
+except "sitemap submitted" (no system signal exists for that one — a
+plain settings-backed toggle the owner flips themselves). "Backups
+running" needed something to report success back to the app, so a
+`POST /public/cron/backup-heartbeat` endpoint (same `CRON_SECRET` pattern
+as the existing cron endpoint) was added, called by both the new
+`.github/workflows/backup.yml` (free mode) and an upgraded
+`infra/scripts/backup-cron.sh` (VPS sidecar — previously local-only, now
+uploads to R2 and prunes anything older than 30 days too, closing out a
+TODO that had been sitting in that script since M0). Backup credentials
+(`R2_ACCOUNT_ID`/`R2_BUCKET`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`)
+are deliberately separate env vars from `STORAGE_DRIVER`'s `S3_*` ones,
+even when pointed at the same R2 account — a token scoped to only the
+backup bucket can't also touch live media storage if it ever leaks, and
+vice versa.
+
+**`pnpm test` vs. `pnpm e2e`**: `e2e/package.json`'s `"test"` script
+(`playwright test`) existed since M0, but it only ever ran one
+`test.skip` placeholder, so root `pnpm test` (`turbo run test`, which
+matches *any* package with a `test` script) silently included it at zero
+cost. Adding real spec files this milestone turned that into root
+`pnpm test` launching a real browser against `localhost:3000`/`3001` and
+failing with connection-refused whenever those apps aren't already
+running — contradicting `CLAUDE.md`'s own documented split (`pnpm test` =
+unit tests, `pnpm e2e` = end-to-end). Fixed by excluding `e2e` from the
+root script (`turbo run test --filter=!e2e`) rather than renaming its
+own `test` script, since `pnpm e2e` is itself defined as `pnpm --filter
+e2e test` and renaming would have broken that instead.

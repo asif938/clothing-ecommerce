@@ -7,6 +7,7 @@ import { AuditService } from "../audit/audit.service";
 import type { AuthenticatedStaff } from "../common/types";
 import { MediaProvidersService } from "./media-providers.service";
 import { kindFromMimeType, toCloudinaryResourceType, type MediaVariantMap } from "./media-driver";
+import { assertSafeUpload } from "./media-sniff";
 import type { CreateDirectUploadTicketDto, FinalizeDirectUploadDto, UpdateMediaDto } from "./dto";
 
 type RequestContext = { ip: string | null; userAgent: string | null };
@@ -29,7 +30,9 @@ export class MediaService {
       throw new BadRequestException({ code: "VALIDATION_ERROR", message: "No file uploaded" });
     }
 
-    const kind = kindFromMimeType(file.mimetype);
+    const sniffedImageMime = assertSafeUpload(file.buffer, file.mimetype);
+    const mimeType = sniffedImageMime ?? file.mimetype;
+    const kind = kindFromMimeType(mimeType);
     const { driver, fellBackFromProviderInstanceId } = await this.providers.resolveActiveDriver();
 
     const media = await this.prisma.media.create({
@@ -41,13 +44,13 @@ export class MediaService {
         resourceType: toCloudinaryResourceType(kind),
         providerInstanceId: driver.providerInstanceId,
         originalName: file.originalname,
-        mimeType: file.mimetype,
+        mimeType,
         sizeBytes: file.size,
         uploadedBy: actor.id,
       },
     });
 
-    const result = await driver.upload({ buffer: file.buffer, mimeType: file.mimetype, mediaId: media.id, kind });
+    const result = await driver.upload({ buffer: file.buffer, mimeType, mediaId: media.id, kind });
 
     const updated = await this.prisma.media.update({
       where: { id: media.id },

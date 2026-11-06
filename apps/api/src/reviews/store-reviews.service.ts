@@ -4,6 +4,7 @@ import type { StorageDriver } from "@clothing/shared/providers";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { STORAGE_DRIVER } from "../storage/storage.module";
+import { sniffImageMime } from "../media/media-sniff";
 import { ReviewsService } from "./reviews.service";
 import type { ListApprovedReviewsQueryDto, SubmitReviewDto } from "./dto";
 
@@ -89,10 +90,15 @@ export class StoreReviewsService {
     return { items, total, page: query.page, pageSize: query.pageSize };
   }
 
+  /** §12 "file upload validation (MIME sniffing ...)" — this is the one unauthenticated upload surface in the app (any shopper with a delivered order), so it's the one most worth not trusting the client's claimed type or filename extension for. */
   async uploadPhoto(file: { buffer: Buffer; mimetype: string; originalname: string }): Promise<{ url: string }> {
-    const extension = file.originalname.split(".").pop() ?? "jpg";
+    const sniffedMime = sniffImageMime(file.buffer);
+    if (!sniffedMime) {
+      throw new BadRequestException({ code: "UNRECOGNIZED_IMAGE", message: "This doesn't look like a JPEG, PNG, GIF, or WebP file" });
+    }
+    const extension = sniffedMime.split("/")[1];
     const key = `reviews/${new Date().getFullYear()}/${randomBytes(8).toString("hex")}.${extension}`;
-    await this.storage.put(key, file.buffer, file.mimetype);
+    await this.storage.put(key, file.buffer, sniffedMime);
     return { url: this.storage.publicUrl(key) };
   }
 }

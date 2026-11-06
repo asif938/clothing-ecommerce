@@ -1437,13 +1437,185 @@ milestone.
 
 ---
 
+## Milestone 9 — Hardening and launch readiness
+
+**Status: complete**, with the same no-Docker/no-live-Postgres/no-browser
+caveat as every prior milestone — see "Not verified in this environment"
+below. Three parallel audit forks (security/§12, performance+
+accessibility/§13, test-coverage/§14) surveyed the codebase first; every
+item below responds to a cited finding, not a guess (full reasoning in
+`docs/DECISIONS.md`, 2026-11-06).
+
+### Built
+
+- **Security (§12)**: mandatory staff TOTP 2FA (`StaffAuthGuard` blocks
+  every route except `/auth/{me,logout,totp/setup,totp/confirm}` until
+  enabled; a forced `/totp-setup` admin page); real enforcement of the
+  admin-configurable `security.passwordMinLength` (default raised to 12);
+  login rate limiting/lockout (`StaffUser.failedLoginAttempts`/
+  `lockedUntil`, `security.loginMaxAttempts`/`loginLockoutMinutes`);
+  session idle timeout (`StaffSession.lastSeenAt`,
+  `security.staffSessionIdleMinutes`) plus "log out all sessions"
+  (`POST /auth/logout-all`); CSP + HSTS + the usual security headers on
+  both Next apps (admin static via `next.config.mjs`, storefront via its
+  `proxy.ts` — see "Known issues" for why it's `'unsafe-inline'` rather
+  than nonce-based) and baseline headers on the API; MIME-sniffing +
+  SVG/HTML rejection on both real upload paths (`media.service.ts`,
+  `store-reviews.service.ts`); an SSRF guard
+  (`packages/shared/src/providers/ssrf-guard.ts`, resolves-and-checks the
+  real address, not just the literal hostname) applied to the generic
+  HTTP SMS driver; a shared-secret `X-Webhook-Secret` check on courier
+  webhooks (`webhookSecret` added to the 3 real courier drivers'
+  config); customer data export + anonymize (`customers.privacy`
+  permission, `CustomersAdminService.exportData`/`.anonymize`); audit
+  logging on report CSV exports; an admin IP allow-list
+  (`security.adminIpAllowlist`, IPv4 CIDR); `.github/dependabot.yml` +
+  a non-blocking `pnpm audit` CI step.
+- **Performance (§13.1)**: `@@index([createdAt])` on `Order`/`Shipment`;
+  an in-memory 60s facet-count cache in `StoreCatalogService`;
+  `infra/loadtest/browse-cart-checkout.js` (k6, written per spec, not
+  run — see below).
+- **Accessibility**: one real unlabeled icon-only button fixed
+  (`orders/new` line-item remove); `@axe-core/playwright` wired into both
+  new E2E specs.
+- **Testing (§14)**: `packages/db/factories` (new — staff user, customer,
+  category, product+variant+stock, stock location); a real integration
+  test harness (`apps/api/test/setup.ts`, boots the actual `AppModule`)
+  + 3 integration spec files (auth/mandatory-2FA/RBAC/lockout; the
+  concurrent-last-unit-purchase race — M5's acceptance line, never
+  actually run before now; courier webhook secret verification); 2
+  Playwright E2E specs (storefront guest COD checkout
+  browse→PDP→cart→checkout→success→track; admin Super-Admin
+  setup→forced-2FA→re-login, with real TOTP codes computed from the
+  API's own `otpauthUrl`) — `e2e/` also gained its own
+  `tsconfig.json`/`eslint.config.cjs` (it had neither, so
+  `pnpm typecheck`/`pnpm lint` silently skipped it entirely before);
+  `returns.service.spec.ts` (the one missing unit test the audit
+  specifically flagged — return eligibility); `test:coverage` scripts +
+  CI artifact upload (informational, no gate — see "Known issues");
+  `.github/workflows/ci.yml` gained `dependency-audit`,
+  `integration-tests` (real Postgres 16 service container), and `e2e`
+  (Postgres + demo seed + all 3 apps + Playwright, smoke on PRs to
+  `main`/full nightly) jobs.
+- **Demo seed**: `seedDemoCatalog()` (2 categories, 4 products — one
+  real S/M/L sized, one deliberately low-stock — real inventory at the
+  default location), wired into `pnpm db:seed:demo`.
+- **Launch checklist**: `/launch-checklist` admin page
+  (`launch_checklist.read`), backed by `LaunchChecklistService.compute()`
+  — every item queries real state except "sitemap submitted"
+  (`ops.sitemapSubmitted`, a plain toggle). `POST
+  /public/cron/backup-heartbeat` + `.github/workflows/backup.yml` (free
+  mode) + an upgraded `infra/scripts/backup-cron.sh` (VPS sidecar, now
+  does real R2 upload + 30-day local pruning, closing a TODO that had
+  been open since M0) feed its "backups running" item.
+- **Docs**: `docs/ADMIN_GUIDE.md` (full rewrite, bn/en, one section per
+  admin module — ~30 modules) and `docs/DEPLOYMENT.md` (full rewrite:
+  free-tier table, VPS mode, free→VPS migration steps, backups/restore,
+  launch checklist, env vars).
+- Next.js bumped 16.4.2 → 16.4.5 in both Next apps (legitimate patch
+  release; didn't fix the build issue below, kept anyway).
+
+### Verified
+
+- Every new/changed unit test passes: `shared` 107/107 (+8), `db` 7/7
+  (unchanged — factories have no dedicated unit test, they're exercised
+  by the integration specs that use them), `api` 279/279 (+22,
+  including the new `returns.service.spec.ts`, `ip-allowlist.spec.ts`,
+  `media-sniff.spec.ts`), `storefront` 10/10 (unchanged).
+- `pnpm typecheck`/`pnpm lint` clean across every touched package,
+  including `e2e/` (now wired into both commands for the first time) and
+  the new `apps/api/tsconfig.test.json` (so `test/*.integration-spec.ts`
+  is typechecked too, not just `src/`).
+- `prisma generate` + `prisma migrate diff` succeed against the updated
+  schema (`StaffUser.failedLoginAttempts`/`lockedUntil`,
+  `StaffSession.lastSeenAt`, `Order`/`Shipment` `createdAt` indexes).
+- `pnpm test:integration` reaches real Prisma queries inside every one
+  of the 8 new integration tests and fails with exactly one error,
+  `PrismaClientInitializationError: Can't reach database server`, on
+  all of them — confirms the full `AppModule` DI graph, every new
+  module's wiring, and every test's query syntax are correct; only a
+  live Postgres is missing here.
+- `apps/api`'s real unit-test coverage was measured (`vitest run
+  --coverage`): ~61% statements / 51% branches / 57% functions overall,
+  with every §14-named business-rule file specifically well above that
+  (discount-math ~93%, shipping-calc ~89%, risk-score ~90%,
+  payment-rules-engine ~73%).
+
+### Not verified in this environment
+
+Same root cause flagged in every milestone since M0 (no Docker, no live
+Postgres, no browser here):
+
+- The 3 integration spec files and 2 E2E spec files are real, typecheck-
+  and-lint-clean code that has never actually run to completion — see
+  "Verified" above for exactly how far they got.
+- The security/performance items that need a live request to prove
+  (mandatory-2FA lockout actually blocking a browser session, the
+  concurrent-checkout race actually resolving to one winner, CSP headers
+  actually present in a real response, the facet cache actually being
+  hit on a second request) are only verified by the (unrun) tests above
+  and by direct code reading — not by a browser or curl against a live
+  server.
+- `infra/loadtest/browse-cart-checkout.js` (k6) has never been run — no
+  k6 binary, no deployment to point it at.
+- `.github/workflows/backup.yml` and the upgraded
+  `infra/scripts/backup-cron.sh` have never run against a real Postgres/
+  R2 account.
+- `pnpm build` fails on the pre-existing static-export crash (see "Known
+  issues") — confirmed to reproduce identically across Turbopack vs.
+  Webpack and Next 16.4.2 vs. 16.4.5, so this is not something a live
+  environment with Docker would have let this session actually fix
+  either; it needs either an upstream Next.js fix or a debugger attached
+  to the actual build-worker process.
+
+### Known issues / explicitly deferred
+
+- **`pnpm build` still fails** on the `/_global-error` + one random-each-
+  run page `TypeError: Cannot read properties of null (reading
+  'useContext')` crash, flagged since M4/M6. This milestone did a real
+  investigation (not just re-flagged it): confirmed across both bundlers
+  and two Next patch versions, ruled out two `experimental` config flags
+  (one does nothing, one makes it worse), and concluded it's a genuine
+  upstream Next.js 16.4.x production-build-worker bug, not application
+  code — see `docs/DECISIONS.md` for the full trail. **This means CI's
+  `build` and `e2e` jobs will show red** until either Next.js ships a
+  fix or someone can attach a debugger to the real build-worker process,
+  neither possible in this sandbox. Every other check (lint, typecheck,
+  unit tests, the dependency-audit job) is unaffected.
+- Storefront's CSP uses `'unsafe-inline'` + a tight host allow-list on
+  `script-src`, not per-request nonces as §12 literally asks for —
+  threading a nonce through `next-intl`'s own `proxy.ts` middleware
+  turned out to need either dropping next-intl's middleware entirely or
+  composition support it doesn't currently expose; see
+  `docs/DECISIONS.md` for what was tried.
+- A full `next/image` migration (real `srcset`/blur placeholders) is
+  still not done — every image-bearing API response would need to carry
+  a full `MediaRef` object instead of a flat URL string, a cross-cutting
+  DTO change across catalog/search/cart/reviews this milestone didn't
+  risk doing blind. `mediaImageLoader` remains the ready extension point.
+- Unit-test coverage (§14 "≥ 80% for domain folders") is measured and
+  reported, not gated — the codebase has no clean domain/infrastructure
+  folder split for an 80% threshold to apply to without being arbitrary;
+  see `docs/DECISIONS.md`.
+- The storefront checkout-success page doesn't surface the order number,
+  so there's no "track it now" link after placing an order — a real UX
+  gap surfaced while writing the guest-checkout E2E spec (which works
+  around it via response interception), not fixed here since it's a
+  product decision about that page's content, not a hardening task.
+- Everything M1–M8 already listed as a known gap (buy_x_get_y/bundle_
+  price/tiered discounts, non-materialized segments, review photo
+  uploads bypassing the media library, unverified real provider drivers,
+  on-demand-only feeds, approximated dashboard metrics, fail-closed
+  cookie-consent tracking, loyalty/gift cards/referrals out of scope,
+  no report "compare period") is unchanged by this milestone — none of
+  it was in scope for M9's own acceptance line.
+
+---
+
 ### Next up
 
-Milestone 9 — Hardening and launch readiness (§16 M9): full test suites
-(§14), E2E for the listed journeys, security review against §12,
-performance pass against §13.1, accessibility pass, demo seed polish,
-`docs/ADMIN_GUIDE.md` (bilingual, per module), `docs/DEPLOYMENT.md` (free
-mode + VPS mode), launch checklist page in admin (policies filled, payment
-live, courier live, SMS live, tracking verified, sitemap submitted,
-backups running, staff 2FA). This closes Phase 1 (MVP, launch-ready
-store).
+Phase 1 (MVP) is feature-complete per the milestone plan. Phase 2 (§16):
+**M10 — Conversion features** (size recommender, shop-the-look bundles,
+abandoned cart recovery, preorders, self-service exchange portal, Q&A —
+already partly built in M8 — storefront PWA + web push, audience-targeted
+blocks, blog/lookbook).

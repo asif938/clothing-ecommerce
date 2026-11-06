@@ -2,6 +2,7 @@ import { Controller, ForbiddenException, Headers, Param, Post } from "@nestjs/co
 import { ApiExcludeController } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import type { Env } from "../config/env.schema";
+import { PrismaService } from "../prisma/prisma.service";
 import { SchedulerService } from "./scheduler.service";
 
 /**
@@ -18,14 +19,39 @@ export class CronController {
   constructor(
     private readonly scheduler: SchedulerService,
     private readonly config: ConfigService<Env, true>,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * §15.4 "Daily logical DB backup ... free mode via GitHub Actions
+   * workflow" (.github/workflows/backup.yml) — called after a successful
+   * `pg_dump` + upload, so the launch checklist's "backups running" item
+   * (apps/api/src/launch-checklist/) has something real to check instead
+   * of just trusting the workflow exists and hoping it's green. Registered
+   * before `:task` — Nest/Express match routes in registration order, and
+   * `:task` would otherwise swallow this specific path too.
+   */
+  @Post("backup-heartbeat")
+  async backupHeartbeat(@Headers("x-cron-secret") providedSecret: string | undefined) {
+    this.assertSecret(providedSecret);
+    await this.prisma.setting.upsert({
+      where: { key: "ops.lastBackupAt" },
+      update: { value: new Date().toISOString() },
+      create: { key: "ops.lastBackupAt", value: new Date().toISOString() },
+    });
+    return { ok: true };
+  }
 
   @Post(":task")
   async run(@Param("task") _task: string, @Headers("x-cron-secret") providedSecret: string | undefined) {
+    this.assertSecret(providedSecret);
+    return await this.scheduler.runDueTasks();
+  }
+
+  private assertSecret(providedSecret: string | undefined): void {
     const expected = this.config.get("CRON_SECRET", { infer: true });
     if (!expected || providedSecret !== expected) {
       throw new ForbiddenException({ code: "FORBIDDEN", message: "Invalid cron secret" });
     }
-    return await this.scheduler.runDueTasks();
   }
 }

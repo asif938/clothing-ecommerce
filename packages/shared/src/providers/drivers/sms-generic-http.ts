@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertPublicHttpUrl } from "../ssrf-guard.ts";
 import type { ProviderDriverDefinition, SmsDriver } from "../types.ts";
 
 /**
@@ -42,6 +43,7 @@ function readPath(body: unknown, path: string): unknown {
 }
 
 export async function genericHttpSmsRequest(config: GenericHttpSmsConfig, to: string, text: string): Promise<{ ok: boolean; body: unknown; status: number }> {
+  await assertPublicHttpUrl(config.url);
   const params = buildParams(config, to, text);
   let response: Response;
   if (config.bodyType === "query") {

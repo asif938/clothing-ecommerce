@@ -5,13 +5,14 @@ import { StockReservationModule } from "../checkout/stock-reservation.module";
 import { OrdersLifecycleModule } from "../checkout/orders-lifecycle.module";
 import { CouriersModule } from "../couriers/couriers.module";
 import { CourierAreaMappingModule } from "../courier-area-mapping/courier-area-mapping.module";
+import { ProvidersModule } from "../providers/providers.module";
 import { ShipmentsService } from "./shipments.service";
 import { ShipmentTrackingPollService } from "./shipment-tracking-poll.service";
 import { ShipmentsController } from "./shipments.controller";
 import { ShipmentsWebhookController } from "./shipments-webhook.controller";
 
 @Module({
-  imports: [LocationsModule, StockReservationModule, OrdersLifecycleModule, CouriersModule, CourierAreaMappingModule],
+  imports: [LocationsModule, StockReservationModule, OrdersLifecycleModule, CouriersModule, CourierAreaMappingModule, ProvidersModule],
   controllers: [ShipmentsController, ShipmentsWebhookController],
   providers: [ShipmentsService, ShipmentTrackingPollService],
   exports: [ShipmentsService],

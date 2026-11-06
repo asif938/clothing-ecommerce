@@ -35,6 +35,7 @@ function money(poisha: number) {
 
 export default function NewManualOrderPage() {
   const t = useTranslations("orders");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -189,7 +190,7 @@ export default function NewManualOrderPage() {
                 </td>
                 <td className="py-2 text-right text-surface-foreground">{money(l.price * l.quantity)}</td>
                 <td className="py-2 text-right">
-                  <button onClick={() => setLines(lines.filter((x) => x.variantId !== l.variantId))} className="text-danger">×</button>
+                  <button onClick={() => setLines(lines.filter((x) => x.variantId !== l.variantId))} className="text-danger" aria-label={tCommon("remove")}>×</button>
                 </td>
               </tr>
             ))}

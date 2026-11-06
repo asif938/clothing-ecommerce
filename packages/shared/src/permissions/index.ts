@@ -110,6 +110,11 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "reports.read", group: "reports", label: { bn: "ড্যাশবোর্ড ও রিপোর্ট দেখুন", en: "View dashboard & reports" } },
   { key: "settings.tracking.write", group: "settings", label: { bn: "ট্র্যাকিং সেটিংস পরিবর্তন করুন", en: "Edit tracking settings" } },
   { key: "settings.feeds.write", group: "settings", label: { bn: "প্রোডাক্ট ফিড সেটিংস পরিবর্তন করুন", en: "Edit product feed settings" } },
+
+  // Milestone 9 (§16 M9) — hardening & launch readiness.
+  { key: "customers.privacy", group: "customers", label: { bn: "গ্রাহকের তথ্য এক্সপোর্ট/অ্যানোনিমাইজ করুন", en: "Export or anonymize customer data" } },
+  { key: "settings.ops.write", group: "settings", label: { bn: "অপারেশন সেটিংস পরিবর্তন করুন", en: "Edit operations settings" } },
+  { key: "launch_checklist.read", group: "launch_checklist", label: { bn: "লঞ্চ চেকলিস্ট দেখুন", en: "View launch checklist" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

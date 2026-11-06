@@ -1,0 +1,54 @@
+name: Daily database backup
+
+# §15.4 "Daily logical DB backup (pg_dump) to R2 with 30-day retention
+# (... free mode via GitHub Actions workflow using the DB URL secret);
+# monthly restore test documented" (docs/DEPLOYMENT.md has the restore
+# procedure). Requires these repository secrets to actually run:
+#   DATABASE_URL        — the production Postgres connection string
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+#   API_URL, CRON_SECRET — to report success to the launch checklist
+# Not runnable in this sandbox (no production database or R2 bucket
+# exists here) — written to spec, verify against a real deployment.
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        run: |
+          FILENAME="backup-$(date -u +%Y-%m-%dT%H-%M-%SZ).sql.gz"
+          pg_dump "$DATABASE_URL" --no-owner --no-privileges | gzip > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> "$GITHUB_ENV"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Upload to R2 (S3-compatible)
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws_bucket: ${{ secrets.R2_BUCKET }}
+          endpoint: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          source_dir: .
+          destination_dir: db-backups
+          file_glob: false
+
+      # 30-day retention is a bucket lifecycle rule on the R2 side
+      # (docs/DEPLOYMENT.md), not something this workflow enforces.
+
+      - name: Report success to the launch checklist
+        if: success()
+        run: |
+          curl -fsS -X POST "$API_URL/api/v1/public/cron/backup-heartbeat" \
+            -H "X-Cron-Secret: $CRON_SECRET"
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

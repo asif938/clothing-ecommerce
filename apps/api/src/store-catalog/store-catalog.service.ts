@@ -3,11 +3,20 @@ import { Prisma, type Media } from "@clothing/db";
 import { getMediaUrl } from "@clothing/shared/media";
 import { PrismaService } from "../prisma/prisma.service";
 import { MediaProvidersService } from "../media/media-providers.service";
+import { CacheService } from "../cache/cache.service";
 import type { MediaVariantMap } from "../media/media-driver";
 import type { ListingQuery } from "./dto";
 
 const CARD_IMAGE_WIDTH = 480;
 const PDP_IMAGE_WIDTH = 1200;
+// §13.1 "facet counts cached per category". A short TTL rather than
+// precise invalidation on every product/category mutation — this is the
+// free-tier in-memory cache (lost on restart, single-process, no
+// cross-instance sharing, see CacheService), so a minute of staleness on
+// a facet count is an acceptable trade for not having to hook facet-cache
+// invalidation into every place a product's price/attributes/stock can
+// change.
+const FACETS_CACHE_TTL_SECONDS = 60;
 
 export interface CategoryCard {
   id: string;
@@ -45,6 +54,7 @@ export class StoreCatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaProviders: MediaProvidersService,
+    private readonly cache: CacheService,
   ) {}
 
   private async resolveImageUrl(media: Media | null, width: number = CARD_IMAGE_WIDTH): Promise<string | null> {
@@ -213,7 +223,7 @@ export class StoreCatalogService {
       query.sort === "price_asc" || query.sort === "price_desc"
         ? this.listPriceSorted(where, query.sort, page, pageSize)
         : this.listOrdered(where, this.listingOrderBy(query.sort), page, pageSize),
-      this.computeFacets(scope),
+      this.computeFacetsCached(query, scope),
     ]);
 
     const data = await Promise.all(
@@ -323,6 +333,16 @@ export class StoreCatalogService {
       default:
         return { sortWeight: "desc" };
     }
+  }
+
+  /** Cache key is the scope identity alone (category/collection/tag id) — the same facet counts serve every shopper browsing that same listing regardless of their own filter selections (facets never re-filter by themselves, see `buildListingScope`). */
+  private async computeFacetsCached(query: ListingQuery, scope: Prisma.ProductWhereInput) {
+    const key = `facets:${query.categoryId ?? ""}:${query.collectionId ?? ""}:${query.tag ?? ""}`;
+    const cached = this.cache.get<Awaited<ReturnType<typeof this.computeFacets>>>(key);
+    if (cached) return cached;
+    const facets = await this.computeFacets(scope);
+    this.cache.set(key, facets, { ttlSeconds: FACETS_CACHE_TTL_SECONDS, tags: ["facets"] });
+    return facets;
   }
 
   /**

@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { hashPassword } from "@clothing/shared/crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { SettingsService } from "../settings/settings.service";
 import type { AuthenticatedStaff } from "../common/types";
 import type { CreateStaffUserDto, UpdateStaffUserDto } from "./dto";
 
@@ -12,7 +13,16 @@ export class StaffUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: SettingsService,
   ) {}
+
+  /** §12 "password policy (min 12 chars...)" — the DTO only enforces an 8-char floor; the real, admin-configurable minimum (`security.passwordMinLength`) is checked here since settings require a DB read. */
+  private async assertPasswordLength(password: string): Promise<void> {
+    const minLength = await this.settings.getValue<number>("security.passwordMinLength");
+    if (password.length < minLength) {
+      throw new BadRequestException({ code: "PASSWORD_TOO_SHORT", message: `Password must be at least ${minLength} characters`, minLength });
+    }
+  }
 
   async list() {
     return await this.prisma.staffUser.findMany({
@@ -35,6 +45,7 @@ export class StaffUsersService {
   async create(dto: CreateStaffUserDto, actor: AuthenticatedStaff, context: RequestContext) {
     const existing = await this.prisma.staffUser.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException({ code: "EMAIL_TAKEN", message: "A staff account with this email already exists" });
+    await this.assertPasswordLength(dto.password);
 
     const passwordHash = await hashPassword(dto.password);
     const staffUser = await this.prisma.$transaction(async (tx) => {

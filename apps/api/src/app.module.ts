@@ -57,6 +57,7 @@ import { TrackingModule } from "./tracking/tracking.module";
 import { FeedsModule } from "./feeds/feeds.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { ReportsModule } from "./reports/reports.module";
+import { LaunchChecklistModule } from "./launch-checklist/launch-checklist.module";
 
 @Module({
   imports: [
@@ -141,6 +142,7 @@ import { ReportsModule } from "./reports/reports.module";
     ProductQuestionsModule,
     TrackingModule,
     FeedsModule,
+    LaunchChecklistModule,
     DashboardModule,
     ReportsModule,
   ],
