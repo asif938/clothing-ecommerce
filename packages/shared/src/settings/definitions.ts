@@ -1309,3 +1309,173 @@ export const OPS_SITEMAP_SUBMITTED = defineSetting({
   permission: "settings.ops.write",
   ui: { widget: "toggle" },
 });
+
+/**
+ * Milestone 10 (docs/PROJECT_SPEC.md §16 M10) — conversion features:
+ * abandoned-cart recovery, the size recommender, the storefront PWA + web
+ * push, and the blog/lookbook post list.
+ */
+export const MARKETING_ABANDONED_CART_ENABLED = defineSetting({
+  key: "marketing.abandonedCart.enabled",
+  group: "marketing",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "পরিত্যক্ত কার্ট পুনরুদ্ধার সক্রিয় করুন", en: "Enable abandoned-cart recovery" },
+  help: { bn: "যোগাযোগের তথ্যসহ নিষ্ক্রিয় কার্টে স্বয়ংক্রিয়ভাবে SMS/WhatsApp/ইমেইল পাঠানো হবে", en: "Automatically sends SMS/WhatsApp/email to idle carts that have contact info" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "toggle" },
+});
+
+/** Minutes of inactivity before a cart is marked abandoned (step 0, not itself a message) — step 1/2/3 then fire this many additional minutes apart per `stepDelaysMinutes`. */
+export const MARKETING_ABANDONED_CART_IDLE_MINUTES = defineSetting({
+  key: "marketing.abandonedCart.idleMinutes",
+  group: "marketing",
+  type: z.number().int().min(10).max(1440),
+  default: 60,
+  label: { bn: "কত মিনিট নিষ্ক্রিয় থাকলে কার্ট পরিত্যক্ত ধরা হবে", en: "Minutes idle before a cart counts as abandoned" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "text" },
+});
+
+/** Ordered minutes-after-abandonment for each of the 3 sequence steps (§16 M10 "SMS/WhatsApp/email sequence"). */
+export const MARKETING_ABANDONED_CART_STEP_DELAYS_MINUTES = defineSetting({
+  key: "marketing.abandonedCart.stepDelaysMinutes",
+  group: "marketing",
+  type: z.array(z.number().int().min(1)).length(3),
+  default: [60, 1440, 4320],
+  label: { bn: "প্রতিটি রিমাইন্ডার কতক্ষণ পর পাঠানো হবে (মিনিট)", en: "Minutes after abandonment for each reminder" },
+  help: { bn: "যেমন: [৬০, ১৪৪০, ৪৩২০] = ১ ঘণ্টা, ১ দিন, ৩ দিন পর", en: "e.g. [60, 1440, 4320] = 1 hour, 1 day, 3 days after" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "json" },
+});
+
+/** Which step (1-3) attaches a single-use discount code; 0 disables the coupon entirely. */
+export const MARKETING_ABANDONED_CART_COUPON_STEP = defineSetting({
+  key: "marketing.abandonedCart.couponStep",
+  group: "marketing",
+  type: z.number().int().min(0).max(3),
+  default: 3,
+  label: { bn: "কোন রিমাইন্ডারে কুপন যুক্ত হবে (০ = কখনো না)", en: "Which reminder attaches a coupon (0 = never)" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "text" },
+});
+
+export const MARKETING_ABANDONED_CART_COUPON_PERCENT_OFF = defineSetting({
+  key: "marketing.abandonedCart.couponPercentOff",
+  group: "marketing",
+  type: z.number().int().min(1).max(90),
+  default: 10,
+  label: { bn: "কুপন ছাড়ের শতাংশ", en: "Coupon discount percent" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "text" },
+});
+
+export const MARKETING_ABANDONED_CART_COUPON_VALID_HOURS = defineSetting({
+  key: "marketing.abandonedCart.couponValidHours",
+  group: "marketing",
+  type: z.number().int().min(1).max(720),
+  default: 72,
+  label: { bn: "কুপনের মেয়াদ (ঘণ্টা)", en: "Coupon validity (hours)" },
+  secret: false,
+  public: false,
+  permission: "settings.marketing.write",
+  ui: { widget: "text" },
+});
+
+export const SIZE_RECOMMENDER_ENABLED = defineSetting({
+  key: "sizeRecommender.enabled",
+  group: "sizeRecommender",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "সাইজ সুপারিশকারী সক্রিয় করুন", en: "Enable the size recommender" },
+  help: { bn: "যেসব প্রোডাক্টে সাইজ চার্ট আছে সেখানে পিডিপিতে \"আমার সাইজ খুঁজুন\" দেখাবে", en: "Shows \"Find my size\" on the PDP for products that have a size chart" },
+  secret: false,
+  public: true,
+  permission: "settings.marketing.write",
+  ui: { widget: "toggle" },
+});
+
+export const PWA_ENABLED = defineSetting({
+  key: "pwa.enabled",
+  group: "pwa",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "PWA সক্রিয় করুন", en: "Enable the storefront PWA" },
+  secret: false,
+  public: true,
+  permission: "settings.pwa.write",
+  ui: { widget: "toggle" },
+});
+
+export const PWA_SHORT_NAME = defineSetting({
+  key: "pwa.shortName",
+  group: "pwa",
+  type: localizedTextSchema,
+  default: { bn: "দোকান", en: "Shop" },
+  label: { bn: "PWA সংক্ষিপ্ত নাম", en: "PWA short name" },
+  help: { bn: "হোম স্ক্রিনে আইকনের নিচে যে নাম দেখা যাবে", en: "Shown under the icon once installed to a home screen" },
+  secret: false,
+  public: true,
+  permission: "settings.pwa.write",
+  ui: { widget: "localizedText" },
+});
+
+export const PWA_PUSH_ENABLED = defineSetting({
+  key: "pwa.pushEnabled",
+  group: "pwa",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "ওয়েব পুশ নোটিফিকেশন সক্রিয় করুন", en: "Enable web push notifications" },
+  help: { bn: "VAPID কী জেনারেট না করা পর্যন্ত এটি চালু করলেও কার্যকর হবে না", en: "Has no effect until a VAPID keypair is generated below" },
+  secret: false,
+  public: true,
+  permission: "settings.pwa.write",
+  ui: { widget: "toggle" },
+});
+
+/** Safe to expose to the client — this is the whole point of the public half of a VAPID keypair (passed to `pushManager.subscribe`). Generated via `POST /admin/push/generate-vapid-keys`, never typed by hand. */
+export const PWA_VAPID_PUBLIC_KEY = defineSetting({
+  key: "pwa.vapidPublicKey",
+  group: "pwa",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "VAPID পাবলিক কী", en: "VAPID public key" },
+  secret: false,
+  public: true,
+  permission: "settings.pwa.write",
+  ui: { widget: "text" },
+});
+
+export const PWA_VAPID_PRIVATE_KEY = defineSetting({
+  key: "pwa.vapidPrivateKey",
+  group: "pwa",
+  type: z.string().nullable(),
+  default: null,
+  label: { bn: "VAPID প্রাইভেট কী", en: "VAPID private key" },
+  secret: true,
+  public: false,
+  permission: "settings.pwa.write",
+  ui: { widget: "text" },
+});
+
+export const BLOG_POSTS_PER_PAGE = defineSetting({
+  key: "blog.postsPerPage",
+  group: "blog",
+  type: z.number().int().min(1).max(50),
+  default: 9,
+  label: { bn: "প্রতি পেজে ব্লগ পোস্ট সংখ্যা", en: "Blog posts per page" },
+  secret: false,
+  public: true,
+  permission: "settings.marketing.write",
+  ui: { widget: "text" },
+});

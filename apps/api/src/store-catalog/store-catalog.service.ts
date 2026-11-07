@@ -402,6 +402,7 @@ export class StoreCatalogService {
         variants: { orderBy: { position: "asc" } },
         media: { orderBy: { position: "asc" }, include: { media: true } },
         relationsFrom: { include: { relatedProduct: { include: { variants: { select: { price: true, compareAtPrice: true } }, media: { take: 1, include: { media: true } } } } } },
+        bundleItems: { orderBy: { position: "asc" }, include: { componentProduct: { include: { media: { take: 1, include: { media: true } } } }, componentVariant: true } },
       },
     });
     if (!product || product.deletedAt || product.status !== "active") return null;
@@ -440,6 +441,33 @@ export class StoreCatalogService {
       shortDescription: product.shortDescription,
       tags: product.tags,
       productType: product.productType,
+      // §16 M10 — preorders bypass the normal availability clamp entirely
+      // (see `CartPricingService`), so the PDP shows this instead of relying
+      // on the `variants[*].available` flags below, which still reflect
+      // real on-hand stock. Bundle components carry their own real price/
+      // availability so "add the look" can show a real combined total.
+      preorderReleaseDate: product.preorderReleaseDate,
+      preorderLimit: product.preorderLimit,
+      bundleDiscountType: product.bundleDiscountType,
+      bundleDiscountValue: product.bundleDiscountValue,
+      bundleItems:
+        product.productType === "bundle"
+          ? await Promise.all(
+              product.bundleItems.map(async (item) => ({
+                id: item.id,
+                quantity: item.quantity,
+                product: { id: item.componentProduct.id, slug: item.componentProduct.slug, title: item.componentProduct.title },
+                variant: {
+                  id: item.componentVariant.id,
+                  sku: item.componentVariant.sku,
+                  optionValueIds: item.componentVariant.optionValueIds,
+                  price: item.componentVariant.price,
+                  isActive: item.componentVariant.isActive,
+                },
+                imageUrl: await this.resolveImageUrl(item.componentProduct.media[0]?.media ?? null),
+              })),
+            )
+          : [],
       careInstructions: product.careInstructions,
       fabric: product.fabric,
       modelInfo: product.modelInfo,

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { NotifyMeService } from "../notify-me/notify-me.service";
 import type { AuthenticatedStaff } from "../common/types";
 import type { AdjustStockDto, ListInventoryQueryDto, ListMovementsQueryDto } from "./dto";
 
@@ -9,6 +10,7 @@ export class InventoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifyMe: NotifyMeService,
   ) {}
 
   /** Called whenever a new variant is created (manual or via the matrix generator/import) — every variant always has a level row at every active location, defaulting to zero on hand. */
@@ -69,6 +71,13 @@ export class InventoryService {
       before: { onHand: level.onHand },
       after: { onHand: updated.onHand, quantityDelta: dto.quantityDelta, reason: dto.reason },
     });
+
+    // Milestone 10 (§16 M10) — fires the "back in stock" notify-me sequence
+    // the moment this exact level crosses from out-of-stock to available
+    // again; a decrease, or a level that was already available, is a no-op.
+    if (level.available <= 0 && updated.available > 0) {
+      await this.notifyMe.fulfillForVariant(dto.variantId);
+    }
     return { movement, level: updated };
   }
 

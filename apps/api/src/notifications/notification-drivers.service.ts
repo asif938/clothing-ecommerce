@@ -26,6 +26,7 @@ import {
 } from "@clothing/shared/providers";
 import type { NotificationChannel } from "@clothing/shared/notifications";
 import { ProviderRegistryService } from "../providers/provider-registry.service";
+import { PushService } from "../push/push.service";
 
 export interface ResolvedDriver<T> {
   driver: T;
@@ -48,7 +49,10 @@ export interface ResolvedDriver<T> {
  */
 @Injectable()
 export class NotificationDriversService {
-  constructor(private readonly registry: ProviderRegistryService) {}
+  constructor(
+    private readonly registry: ProviderRegistryService,
+    private readonly push: PushService,
+  ) {}
 
   async resolveSms(): Promise<ResolvedDriver<SmsDriver>> {
     const active = await this.registry.findActiveInstance("sms");
@@ -104,6 +108,10 @@ export class NotificationDriversService {
   }
 
   async send(channel: NotificationChannel, to: string, subject: string | null, body: string): Promise<{ driverName: string; instanceId: string | null }> {
+    if (channel === "push") {
+      await this.push.sendRaw(to, subject, body);
+      return { driverName: "web_push", instanceId: null };
+    }
     if (channel === "email") {
       const { driver, driverName, instanceId } = await this.resolveEmail();
       await driver.send({ to, subject: subject ?? "", html: body.replace(/\n/g, "<br/>"), text: body });

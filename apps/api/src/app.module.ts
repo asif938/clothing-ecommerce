@@ -58,6 +58,11 @@ import { FeedsModule } from "./feeds/feeds.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { ReportsModule } from "./reports/reports.module";
 import { LaunchChecklistModule } from "./launch-checklist/launch-checklist.module";
+import { PushModule } from "./push/push.module";
+import { SizeRecommenderModule } from "./size-recommender/size-recommender.module";
+import { AudienceModule } from "./audience/audience.module";
+import { AbandonedCartModule } from "./abandoned-cart/abandoned-cart.module";
+import { BlogModule } from "./blog/blog.module";
 
 @Module({
   imports: [
@@ -145,6 +150,14 @@ import { LaunchChecklistModule } from "./launch-checklist/launch-checklist.modul
     LaunchChecklistModule,
     DashboardModule,
     ReportsModule,
+    // Milestone 10 (docs/PROJECT_SPEC.md §16 M10) — conversion features.
+    // `PushModule` is imported early since `NotificationsModule` (M7,
+    // already above) now depends on it for the `push` channel.
+    PushModule,
+    SizeRecommenderModule,
+    AudienceModule,
+    AbandonedCartModule,
+    BlogModule,
   ],
 })
 export class AppModule {}

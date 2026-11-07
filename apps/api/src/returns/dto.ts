@@ -28,6 +28,13 @@ export const createReturnRequestSchema = z.object({
 });
 export type CreateReturnRequestDto = z.infer<typeof createReturnRequestSchema>;
 
+/** §16 M10 — the guest (phone+order-number-verified) path, closing the gap flagged since M6 ("the order-tracking page links out to login rather than also supporting phone+order-number verification for this one flow"). */
+export const createReturnRequestByTrackingSchema = createReturnRequestSchema.omit({ orderId: true }).extend({
+  phone: z.string().min(1),
+  orderNumber: z.string().min(1),
+});
+export type CreateReturnRequestByTrackingDto = z.infer<typeof createReturnRequestByTrackingSchema>;
+
 export const approveReturnSchema = z.object({
   returnShippingPaidBy: z.enum(["customer", "brand"]).nullable().default(null),
 });

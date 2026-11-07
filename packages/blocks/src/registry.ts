@@ -11,9 +11,24 @@ import type { LocalizedText } from "@clothing/shared";
  * crashed page) rather than rejected at read time — content authored
  * against an older block-type version must keep rendering.
  */
+/**
+ * Milestone 10 (§16 M10) — audience-targeted blocks. `mode: "all"` (the
+ * default, omitted entirely on most blocks) skips the check completely —
+ * only `"guest"`/`"customer"` and a non-empty `segmentIds` list opt a
+ * block into client-side gating (`AudienceGate`, apps/storefront), since
+ * segment membership and login state can't be known at the SSR-cached
+ * layer without personalizing every page's cache key. See docs/DECISIONS.md.
+ */
+export interface BlockAudience {
+  mode: "all" | "guest" | "customer";
+  /** Customer must belong to at least one of these segments (ANDed with `mode: "customer"`, ignored for "all"/"guest"). */
+  segmentIds?: string[];
+}
+
 export interface BlockVisibility {
   devices?: ("mobile" | "tablet" | "desktop")[];
   locales?: string[];
+  audience?: BlockAudience;
 }
 
 export interface BlockSchedule {
@@ -72,6 +87,11 @@ export function isBlockVisibleForLocale(instance: Pick<BlockInstance, "visibilit
   const locales = instance.visibility?.locales;
   if (!locales || locales.length === 0) return true;
   return locales.includes(locale);
+}
+
+/** Whether a block needs `AudienceGate`'s client-side check at all — `"all"` (or no audience config) never does. */
+export function needsAudienceGate(visibility: BlockVisibility | undefined): boolean {
+  return visibility?.audience !== undefined && visibility.audience.mode !== "all";
 }
 
 /** Tailwind responsive-display classes so a device restriction doesn't need a server/client device sniff. */

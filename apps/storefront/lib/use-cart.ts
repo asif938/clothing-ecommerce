@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { addCartItem, getCart, removeCartItem, updateCartItem, type CartResponse } from "./cart-api";
+import { addCartBundle, addCartItem, getCart, removeCartItem, updateCartItem, type CartResponse } from "./cart-api";
 
 /** Loads the cart once on mount and exposes mutations that each refetch the server's authoritative totals (golden rule 6) — no client-side price math anywhere in the storefront. */
 export function useCart() {
@@ -32,6 +32,17 @@ export function useCart() {
     }
   }, []);
 
+  /** §16 M10 shop-the-look — adds every component of a bundle product in one call. */
+  const addBundle = useCallback(async (bundleProductId: string) => {
+    setError(null);
+    try {
+      setData(await addCartBundle(bundleProductId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add this look to your cart");
+      throw err;
+    }
+  }, []);
+
   const updateItem = useCallback(async (id: string, quantity: number) => {
     setError(null);
     try {
@@ -52,5 +63,5 @@ export function useCart() {
 
   const itemCount = data?.cart.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
-  return { data, loading, error, itemCount, refresh, addItem, updateItem, removeItem, setCart: setData };
+  return { data, loading, error, itemCount, refresh, addItem, addBundle, updateItem, removeItem, setCart: setData };
 }

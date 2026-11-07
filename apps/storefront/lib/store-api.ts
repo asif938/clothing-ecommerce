@@ -35,7 +35,7 @@ export interface BlockInstance {
   id: string;
   type: string;
   props: Record<string, unknown>;
-  visibility?: { devices?: ("mobile" | "tablet" | "desktop")[]; locales?: string[] };
+  visibility?: { devices?: ("mobile" | "tablet" | "desktop")[]; locales?: string[]; audience?: { mode: "all" | "guest" | "customer"; segmentIds?: string[] } };
   schedule?: { startsAt?: string | null; endsAt?: string | null };
 }
 
@@ -51,6 +51,34 @@ export interface PageData {
 
 export async function getPage(slug: string): Promise<PageData | null> {
   return await storeGet<PageData>(`/store/pages/${slug}`, [`page:${slug}`, "pages"]);
+}
+
+// §16 M10 — blog/lookbook. A "lookbook" post is simply one built from the
+// `lookbook` block type; there is no separate model/fetch path for it.
+export interface BlogPostSummary {
+  id: string;
+  slug: string;
+  title: LocalizedText;
+  excerpt: LocalizedText | null;
+  coverMediaId: string | null;
+  tags: string[];
+  publishedAt: string | null;
+}
+
+export interface BlogPostDetail extends BlogPostSummary {
+  blocksPublished: BlockInstance[];
+  seoTitle: LocalizedText | null;
+  seoDescription: LocalizedText | null;
+}
+
+export async function getBlogPosts(page = 1, tag?: string): Promise<{ items: BlogPostSummary[]; total: number; page: number; pageSize: number }> {
+  const query = new URLSearchParams({ page: String(page) });
+  if (tag) query.set("tag", tag);
+  return (await storeGet(`/store/blog-posts?${query.toString()}`, ["blog_posts"])) ?? { items: [], total: 0, page, pageSize: 9 };
+}
+
+export async function getBlogPost(slug: string): Promise<BlogPostDetail | null> {
+  return await storeGet<BlogPostDetail>(`/store/blog-posts/${slug}`, [`blog_post:${slug}`, "blog_posts"]);
 }
 
 export interface MenuItem {
@@ -279,6 +307,18 @@ export interface ProductDetail {
   shortDescription: LocalizedText | null;
   tags: string[];
   productType: string;
+  // §16 M10 — preorders/shop-the-look bundles.
+  preorderReleaseDate: string | null;
+  preorderLimit: number | null;
+  bundleDiscountType: "none" | "percent" | "fixed_price";
+  bundleDiscountValue: number | null;
+  bundleItems: {
+    id: string;
+    quantity: number;
+    product: { id: string; slug: string; title: LocalizedText };
+    variant: { id: string; sku: string; optionValueIds: string[]; price: number; isActive: boolean };
+    imageUrl: string | null;
+  }[];
   careInstructions: LocalizedText | null;
   fabric: LocalizedText | null;
   modelInfo: LocalizedText | null;

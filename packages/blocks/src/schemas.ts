@@ -28,6 +28,8 @@ import { spacerSchema } from "./blocks/spacer/schema.ts";
 import { spacerDefaults } from "./blocks/spacer/defaults.ts";
 import { customHtmlSchema } from "./blocks/custom-html/schema.ts";
 import { customHtmlDefaults } from "./blocks/custom-html/defaults.ts";
+import { lookbookSchema } from "./blocks/lookbook/schema.ts";
+import { lookbookDefaults } from "./blocks/lookbook/defaults.ts";
 
 export interface BlockSchemaEntry {
   type: string;
@@ -47,6 +49,7 @@ export const BLOCK_SCHEMAS: Record<string, BlockSchemaEntry> = {
   newsletter_signup: { type: "newsletter_signup", schema: newsletterSignupSchema, defaults: newsletterSignupDefaults },
   spacer: { type: "spacer", schema: spacerSchema, defaults: spacerDefaults },
   custom_html: { type: "custom_html", schema: customHtmlSchema, defaults: customHtmlDefaults, superAdminOnly: true },
+  lookbook: { type: "lookbook", schema: lookbookSchema, defaults: lookbookDefaults },
 };
 
 export interface BlockInstanceLike {

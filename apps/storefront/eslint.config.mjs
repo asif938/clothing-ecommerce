@@ -11,6 +11,10 @@ export default [
   ...reactConfig,
   nextPlugin.configs["core-web-vitals"],
   {
-    ignores: [".next/**"],
+    // `public/sw.js` runs in the ServiceWorker global scope (`self`,
+    // `caches`), not Node/browser-window — it's a static asset served
+    // as-is, not bundled/type-checked like application source, so there's
+    // no real config worth adding just to teach ESLint that one global set.
+    ignores: [".next/**", "public/**"],
   },
 ];

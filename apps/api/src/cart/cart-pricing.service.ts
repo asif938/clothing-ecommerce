@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, type Media } from "@clothing/db";
 import { getMediaUrl } from "@clothing/shared/media";
+import { matchBundles, type BundleDefinition } from "@clothing/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { MediaProvidersService } from "../media/media-providers.service";
@@ -33,6 +34,17 @@ export interface PricedLine {
   priceChanged: boolean;
   flashSaleItemId: string | null;
   weightGrams: number;
+  /** §16 M10 — bypasses the normal on-hand clamp (see the per-item loop below); `preorderReleaseDate` lets the storefront show "ships around …". */
+  isPreorder: boolean;
+  preorderReleaseDate: Date | null;
+  /** §16 M10 — poisha already subtracted from `lineTotal` by a matched shop-the-look bundle; 0 when none applies. */
+  bundleDiscount: number;
+}
+
+export interface AppliedBundle {
+  bundleProductId: string;
+  title: unknown;
+  discountAmount: number;
 }
 
 export interface CartPricingContext {
@@ -62,6 +74,7 @@ export interface CartPricingResult {
   codAmount: number;
   freeDeliveryRemaining: number | null;
   warnings: string[];
+  appliedBundles: AppliedBundle[];
   /** Everything the payment-rules engine needs except risk/blocklist, which aren't known until order placement (§6.6) — `CheckoutService` re-evaluates with this base plus the real risk score. */
   ruleContextBase: Omit<RuleContext, "riskLevel" | "riskScore" | "phoneBlocked">;
 }
@@ -114,14 +127,38 @@ export class CartPricingService {
       const flashSale = await this.flashSales.getActivePrice(variant.id);
       const unitPrice = flashSale?.price ?? variant.price;
 
-      const inventory = await this.prisma.inventoryLevel.aggregate({
-        where: { variantId: variant.id, location: { fulfillsOnline: true } },
-        _sum: { available: true },
-      });
-      const available = inventory._sum.available ?? 0;
+      const isPreorder = product.productType === "preorder";
+      let available: number;
+      if (isPreorder) {
+        // §16 M10 — preorders bypass the normal on-hand clamp entirely; a
+        // configured `preorderLimit` caps total units ever sold across every
+        // non-cancelled order instead (checked again, authoritatively, in
+        // `CheckoutService` right before reservation).
+        if (product.preorderLimit === null) {
+          available = item.quantity;
+        } else {
+          const sold = await this.prisma.orderItem.aggregate({
+            where: { variant: { productId: product.id }, order: { status: { notIn: ["cancelled"] } } },
+            _sum: { quantity: true },
+          });
+          available = Math.max(0, product.preorderLimit - (sold._sum.quantity ?? 0));
+        }
+      } else {
+        const inventory = await this.prisma.inventoryLevel.aggregate({
+          where: { variantId: variant.id, location: { fulfillsOnline: true } },
+          _sum: { available: true },
+        });
+        available = inventory._sum.available ?? 0;
+      }
       const quantity = Math.max(0, Math.min(item.quantity, available));
       const clamped = quantity < item.quantity;
-      if (clamped) warnings.push(`Only ${available} of "${titleToString(product.title)}" is in stock — quantity adjusted.`);
+      if (clamped) {
+        warnings.push(
+          isPreorder
+            ? `This preorder has reached its limit — only ${available} of "${titleToString(product.title)}" can be ordered.`
+            : `Only ${available} of "${titleToString(product.title)}" is in stock — quantity adjusted.`,
+        );
+      }
 
       const firstMedia = await this.prisma.productMedia.findFirst({ where: { productId: product.id }, orderBy: { position: "asc" }, include: { media: true } });
 
@@ -144,8 +181,13 @@ export class CartPricingService {
         priceChanged: item.addedPrice !== unitPrice,
         flashSaleItemId: flashSale?.itemId ?? null,
         weightGrams: variant.weightGrams ?? product.weightGramsDefault ?? defaultItemWeight,
+        isPreorder,
+        preorderReleaseDate: product.preorderReleaseDate,
+        bundleDiscount: 0,
       });
     }
+
+    const appliedBundles = await this.applyBundleDiscounts(lines);
 
     const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
     const totalQty = lines.reduce((sum, l) => sum + l.quantity, 0);
@@ -258,8 +300,52 @@ export class CartPricingService {
       codAmount: total,
       freeDeliveryRemaining,
       warnings,
+      appliedBundles,
       ruleContextBase,
     };
+  }
+
+  /**
+   * §16 M10 — mutates `lines[*].lineTotal`/`bundleDiscount` in place and
+   * returns what applied, purely so every downstream consumer (discount
+   * engine, payment-rules context, the order's own line totals) just sees
+   * an already-discounted `lineTotal` without having to know bundles
+   * exist. Only bundle products whose components actually appear in this
+   * cart are even queried, so an empty/unrelated cart costs nothing extra.
+   */
+  private async applyBundleDiscounts(lines: PricedLine[]): Promise<AppliedBundle[]> {
+    const variantIds = lines.filter((l) => l.quantity > 0).map((l) => l.variantId);
+    if (variantIds.length === 0) return [];
+
+    const bundleProducts = await this.prisma.product.findMany({
+      where: { productType: "bundle", status: "active", bundleDiscountType: { not: "none" }, bundleItems: { some: { componentVariantId: { in: variantIds } } } },
+      include: { bundleItems: true },
+    });
+    if (bundleProducts.length === 0) return [];
+
+    const definitions: BundleDefinition[] = bundleProducts.map((p) => ({
+      bundleProductId: p.id,
+      discountType: p.bundleDiscountType,
+      discountValue: p.bundleDiscountValue ?? 0,
+      components: p.bundleItems.map((item) => ({ variantId: item.componentVariantId, quantity: item.quantity })),
+    }));
+    const cartLines = lines.filter((l) => l.quantity > 0).map((l) => ({ variantId: l.variantId, quantity: l.quantity, unitPrice: l.unitPrice }));
+    const applications = matchBundles(cartLines, definitions);
+    if (applications.length === 0) return [];
+
+    const lineByVariant = new Map(lines.map((l) => [l.variantId, l]));
+    const titleByBundleId = new Map(bundleProducts.map((p) => [p.id, p.title]));
+    const applied: AppliedBundle[] = [];
+    for (const application of applications) {
+      for (const [variantId, discount] of application.perVariantDiscount) {
+        const line = lineByVariant.get(variantId);
+        if (!line) continue;
+        line.lineTotal = Math.max(0, line.lineTotal - discount);
+        line.bundleDiscount += discount;
+      }
+      applied.push({ bundleProductId: application.bundleProductId, title: titleByBundleId.get(application.bundleProductId), discountAmount: application.totalDiscount });
+    }
+    return applied;
   }
 
   /** The caller-visible amount for whatever advance kind a payment rule required — delivery fee / fixed poisha / percent of total / the full total. */

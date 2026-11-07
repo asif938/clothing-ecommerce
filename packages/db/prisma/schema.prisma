@@ -611,6 +611,19 @@ model Product {
   ratingAvg          Float                    @default(0) @map("rating_avg")
   ratingCount        Int                      @default(0) @map("rating_count")
   salesCount         Int                      @default(0) @map("sales_count")
+  // Milestone 10 (§16 M10, preorders) — only meaningful when `productType`
+  // is `preorder`; a `null` limit means uncapped. Bypasses the normal
+  // stock-sufficiency guard in `StockReservationService`/`CartPricingService`
+  // (see docs/DECISIONS.md) rather than requiring real on-hand stock.
+  preorderReleaseDate DateTime?               @map("preorder_release_date")
+  preorderLimit       Int?                    @map("preorder_limit")
+  // Milestone 10 (§16 M10, shop-the-look bundles) — only meaningful when
+  // `productType` is `bundle`. The bundle `Product` itself is never added
+  // to a cart; `BundleItem` rows name its real, sellable component variants,
+  // and `CartPricingService` applies this discount live whenever a cart
+  // holds the full set — see `packages/shared/src/catalog/bundle-pricing.ts`.
+  bundleDiscountType  BundleDiscountType       @default(none) @map("bundle_discount_type")
+  bundleDiscountValue Int?                     @map("bundle_discount_value")
   // Kept in sync by a Postgres trigger (migration.sql) — see note above.
   searchDocument     Unsupported("tsvector")? @map("search_document")
   createdAt          DateTime                 @default(now()) @map("created_at")
@@ -630,6 +643,8 @@ model Product {
   collectionProducts   CollectionProduct[]
   reviews              Review[]
   questions            ProductQuestion[]
+  bundleItems          BundleItem[]            @relation("BundleItems")
+  bundledIn            BundleItem[]            @relation("BundleComponentOf")
 
   @@index([categoryId])
   @@index([sizeChartId])
@@ -733,6 +748,7 @@ model ProductVariant {
   orderItems       OrderItem[]
   flashSaleItems   FlashSaleItem[]
   reviews          Review[]
+  bundleItems      BundleItem[]
 
   @@index([productId])
   @@map("product_variants")
@@ -1256,13 +1272,15 @@ model Customer {
   updatedAt                DateTime       @updatedAt @map("updated_at")
   deletedAt                DateTime?      @map("deleted_at")
 
-  sessions  CustomerSession[]
-  addresses Address[]
-  carts     Cart[]
-  orders    Order[]
-  returns   Return[]
-  reviews   Review[]
-  questions ProductQuestion[]
+  sessions          CustomerSession[]
+  addresses         Address[]
+  carts             Cart[]
+  orders            Order[]
+  returns           Return[]
+  reviews           Review[]
+  questions         ProductQuestion[]
+  measurement       CustomerMeasurement?
+  pushSubscriptions PushSubscription[]
 
   @@map("customers")
 }
@@ -1372,6 +1390,14 @@ model Cart {
   giftWrap               Boolean    @default(false) @map("gift_wrap")
   customerNote           String?    @map("customer_note")
   lastActivityAt         DateTime   @default(now()) @map("last_activity_at")
+  // Milestone 10 (§16 M10, abandoned-cart recovery) — `AbandonedCartService`'s
+  // sweep flips `status` to `abandoned` + sets `abandonedAt` once a cart with
+  // contact info goes idle long enough; `recoverySequenceStep` tracks how far
+  // through the SMS/WhatsApp/email sequence it's gone, and `recoveredAt` is
+  // set (status untouched) the moment it actually converts to an order.
+  abandonedAt            DateTime?  @map("abandoned_at")
+  recoveredAt            DateTime?  @map("recovered_at")
+  recoverySequenceStep   Int        @default(0) @map("recovery_sequence_step")
   createdAt              DateTime   @default(now()) @map("created_at")
   updatedAt              DateTime   @updatedAt @map("updated_at")
 
@@ -1380,6 +1406,7 @@ model Cart {
 
   @@index([customerId])
   @@index([anonymousId])
+  @@index([status, lastActivityAt])
   @@map("carts")
 }
 
@@ -1797,6 +1824,13 @@ enum NotificationChannel {
   sms
   email
   whatsapp
+  // Milestone 10 (§16 M10, PWA + web push) — a 4th channel alongside the
+  // original three. Handled outside `NotificationDriversService`'s
+  // single-active-instance pattern (there's no vendor to swap — it's the
+  // W3C Web Push standard against our own VAPID identity, see
+  // `packages/shared/src/notifications/events.ts`'s doc comment and
+  // docs/DECISIONS.md) but still a real row in the channel matrix/logs.
+  push
 }
 
 // Mirrors `@clothing/shared`'s `NOTIFICATION_EVENTS` catalog keys exactly
@@ -1813,6 +1847,13 @@ enum NotificationEvent {
   order_partially_delivered
   order_rejected_at_door
   order_cancelled
+  // Milestone 10 (§16 M10) — abandoned-cart recovery sequence (3 steps) and
+  // the back-in-stock notify-me fulfillment (M4's `NotifyMeRequest`, never
+  // wired to an actual send until now).
+  abandoned_cart_1
+  abandoned_cart_2
+  abandoned_cart_3
+  back_in_stock
 }
 
 enum NotificationRecipientType {
@@ -2340,4 +2381,124 @@ model CourierAreaMapping {
 
   @@unique([courierProviderInstanceId, divisionId, districtId, areaId])
   @@map("courier_area_mappings")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 10 (docs/PROJECT_SPEC.md §16 M10) — conversion features. Q&A
+// (`ProductQuestion`) already shipped in M8; the self-service exchange
+// portal's guest gap and audience-targeted blocks reuse `Return`/`Segment`
+// (M6/M8) with no schema change; "lookbook" is a block type
+// (`@clothing/blocks`'s `lookbook`), not a model of its own.
+// ---------------------------------------------------------------------------
+
+/**
+ * §16 M10 "size recommender + customer measurements" — one profile per
+ * customer (not per order/session), reused across every product's
+ * recommender call. `unit` only affects how the form was filled in; values
+ * are always stored in cm/kg so `packages/shared/src/catalog/
+ * size-recommender.ts` never has to convert at read time.
+ */
+model CustomerMeasurement {
+  id           String     @id @default(cuid(2))
+  customerId   String     @unique @map("customer_id")
+  unit         LengthUnit @default(cm)
+  heightCm     Float?     @map("height_cm")
+  weightKg     Float?     @map("weight_kg")
+  chestCm      Float?     @map("chest_cm")
+  waistCm      Float?     @map("waist_cm")
+  hipCm        Float?     @map("hip_cm")
+  inseamCm     Float?     @map("inseam_cm")
+  preferredFit String     @default("regular") @map("preferred_fit")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_measurements")
+}
+
+enum BundleDiscountType {
+  none
+  percent
+  fixed_price
+}
+
+/**
+ * §16 M10 "shop-the-look bundles" — names a bundle `Product`'s (productType
+ * `bundle`) real, sellable component variants. The bundle product is never
+ * itself orderable; `componentVariant` is an exact pick (e.g. "the red,
+ * size M" top), not "any variant of this product", matching a styled photo.
+ * `CartPricingService` applies the parent's `bundleDiscountType`/`Value`
+ * live whenever a cart holds the full required set, whether added via the
+ * PDP's one-click "add the look" or line by line.
+ */
+model BundleItem {
+  id                 String @id @default(cuid(2))
+  bundleProductId    String @map("bundle_product_id")
+  componentProductId String @map("component_product_id")
+  componentVariantId String @map("component_variant_id")
+  quantity           Int    @default(1)
+  position           Int    @default(0)
+
+  bundleProduct    Product        @relation("BundleItems", fields: [bundleProductId], references: [id], onDelete: Cascade)
+  componentProduct Product        @relation("BundleComponentOf", fields: [componentProductId], references: [id], onDelete: Cascade)
+  componentVariant ProductVariant @relation(fields: [componentVariantId], references: [id], onDelete: Cascade)
+
+  @@index([bundleProductId])
+  @@index([componentVariantId])
+  @@map("bundle_items")
+}
+
+/**
+ * §16 M10 "storefront PWA + web push". Deliberately outside the generic
+ * provider-instance framework (golden rule 2 is about *swappable vendors*;
+ * Web Push is a W3C standard addressed straight at the browser's own push
+ * service via our site's VAPID keypair — there's no alternative "driver" to
+ * select, same reasoning already applied to the SSRF guard/JWT secret — see
+ * docs/DECISIONS.md). `customerId` is nullable: a guest who never logs in
+ * can still install the PWA and opt into push.
+ */
+model PushSubscription {
+  id         String    @id @default(cuid(2))
+  customerId String?   @map("customer_id")
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?   @map("user_agent")
+  locale     String    @default("bn")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSentAt DateTime? @map("last_sent_at")
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@map("push_subscriptions")
+}
+
+/**
+ * §16 M10 "blog/lookbook". Reuses the exact `blocksDraft`/`blocksPublished`
+ * two-column draft/publish shape `Page` established in M3 (§9.2) — a
+ * "lookbook" post is simply one built from the new `lookbook` hotspot block
+ * plus `image_text`/`product_grid`, not a separate content model.
+ */
+model BlogPost {
+  id              String     @id @default(cuid(2))
+  title           Json
+  slug            String     @unique
+  excerpt         Json?
+  coverMediaId    String?    @map("cover_media_id")
+  blocksDraft     Json       @map("blocks_draft")
+  blocksPublished Json?      @map("blocks_published")
+  tags            String[]   @default([])
+  status          PageStatus @default(draft)
+  publishedAt     DateTime?  @map("published_at")
+  seoTitle        Json?      @map("seo_title")
+  seoDescription  Json?      @map("seo_description")
+  authorStaffId   String?    @map("author_staff_id")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+
+  @@index([status])
+  @@map("blog_posts")
 }

@@ -58,6 +58,16 @@ export class CartService {
     return await this.assertAccess(cart.id, identity);
   }
 
+  /** §16 M10 "shop-the-look bundles" — the PDP's one-click "add the look" button; each component is added as its own ordinary cart line, so `CartPricingService`'s bundle match applies the same way whether a customer clicked this or added every piece by hand. */
+  async addBundle(identity: CartIdentity, bundleProductId: string) {
+    const items = await this.prisma.bundleItem.findMany({ where: { bundleProductId }, orderBy: { position: "asc" } });
+    if (items.length === 0) throw new NotFoundException("This bundle has no items configured");
+    for (const item of items) {
+      await this.addItem(identity, item.componentVariantId, item.quantity);
+    }
+    return await this.getOrCreateActiveCart(identity);
+  }
+
   async updateItemQuantity(identity: CartIdentity, cartItemId: string, quantity: number) {
     const cart = await this.getOrCreateActiveCart(identity);
     const item = cart.items.find((i) => i.id === cartItemId);
@@ -126,6 +136,9 @@ export class CartService {
   }
 
   async markConverted(cartId: string): Promise<void> {
-    await this.prisma.cart.update({ where: { id: cartId }, data: { status: "converted" } });
+    // §16 M10 — `recoveredAt` is reporting only (did an abandoned cart ever
+    // convert); `status` still becomes `converted` regardless of whether it
+    // was ever marked `abandoned` first.
+    await this.prisma.cart.update({ where: { id: cartId }, data: { status: "converted", recoveredAt: new Date() } });
   }
 }

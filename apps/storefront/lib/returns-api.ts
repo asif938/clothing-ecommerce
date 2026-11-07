@@ -30,3 +30,10 @@ export interface CreateReturnRequestInput {
   items: { orderItemId: string; quantity: number }[];
 }
 export const createReturnRequest = (input: CreateReturnRequestInput) => callApi<ReturnSummary>("/store/returns", { method: "POST", body: JSON.stringify(input) });
+
+/** §16 M10 — the guest (no account) path from the order-tracking page. */
+export interface CreateReturnRequestByTrackingInput extends Omit<CreateReturnRequestInput, "orderId"> {
+  phone: string;
+  orderNumber: string;
+}
+export const createReturnRequestByTracking = (input: CreateReturnRequestByTrackingInput) => callApi<ReturnSummary>("/store/returns/track", { method: "POST", body: JSON.stringify(input) });

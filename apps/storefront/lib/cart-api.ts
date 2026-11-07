@@ -98,6 +98,7 @@ async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getCart = () => callApi<CartResponse>("/store/cart");
 export const addCartItem = (variantId: string, quantity: number) => callApi<CartResponse>("/store/cart/items", { method: "POST", body: JSON.stringify({ variantId, quantity }) });
+export const addCartBundle = (bundleProductId: string) => callApi<CartResponse>(`/store/cart/bundles/${bundleProductId}`, { method: "POST" });
 export const updateCartItem = (id: string, quantity: number) => callApi<CartResponse>(`/store/cart/items/${id}`, { method: "PATCH", body: JSON.stringify({ quantity }) });
 export const removeCartItem = (id: string) => callApi<CartResponse>(`/store/cart/items/${id}`, { method: "DELETE" });
 export const setCartCodes = (codes: string[]) => callApi<CartResponse>("/store/cart/codes", { method: "PUT", body: JSON.stringify({ codes }) });

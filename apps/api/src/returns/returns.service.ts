@@ -59,6 +59,14 @@ export class ReturnsService {
     return await this.prisma.return.findMany({ where: { customerId }, orderBy: { createdAt: "desc" } });
   }
 
+  /** §16 M10 self-service exchange portal — the guest path `StoreReturnsController.createByTracking` uses, verified the same way `OrdersService.trackByPhoneAndNumber`/`cancelByTracking` already verify a guest order (exact phone match on the order's own billing contact). */
+  async createByTracking(phone: string, orderNumber: string, dto: Omit<CreateReturnRequestDto, "orderId">) {
+    const order = await this.prisma.order.findUnique({ where: { orderNumber } });
+    const billingPhone = (order?.billingContact as { phone?: string } | null)?.phone;
+    if (!order || billingPhone !== phone) throw new NotFoundException("Order not found");
+    return this.createRequest({ ...dto, orderId: order.id }, order.customerId);
+  }
+
   async createRequest(dto: CreateReturnRequestDto, customerId: string | null) {
     const order = await this.prisma.order.findUnique({ where: { id: dto.orderId }, include: { items: true } });
     if (!order) throw new NotFoundException("Order not found");

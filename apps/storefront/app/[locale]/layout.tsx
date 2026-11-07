@@ -8,6 +8,7 @@ import { BlockRenderer } from "../../components/block-renderer";
 import { ChatButtons } from "../../components/chat-buttons";
 import { Footer } from "../../components/footer";
 import { Header } from "../../components/header";
+import { PwaRegister } from "../../components/pwa-register";
 import { TrackingScripts } from "../../components/tracking-scripts";
 import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
@@ -85,6 +86,7 @@ export default async function LocaleLayout({
           tiktokPixelId={typeof config["tracking.tiktokPixelId"] === "string" ? (config["tracking.tiktokPixelId"] as string) : null}
           consentRequired={config["features.cookieConsent"] === true}
         />
+        <PwaRegister enabled={config["pwa.enabled"] === true} />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} />

@@ -120,6 +120,10 @@ export class ProductsService {
         requiresShipping: dto.requiresShipping ?? true,
         weightGramsDefault: dto.weightGramsDefault ?? null,
         hsCode: dto.hsCode ?? null,
+        preorderReleaseDate: dto.preorderReleaseDate ?? null,
+        preorderLimit: dto.preorderLimit ?? null,
+        bundleDiscountType: dto.bundleDiscountType ?? "none",
+        bundleDiscountValue: dto.bundleDiscountValue ?? null,
       },
     });
     await this.syncAdditionalCategories(product.id, dto.additionalCategoryIds);
@@ -161,6 +165,10 @@ export class ProductsService {
         ...(dto.requiresShipping !== undefined ? { requiresShipping: dto.requiresShipping } : {}),
         ...(dto.weightGramsDefault !== undefined ? { weightGramsDefault: dto.weightGramsDefault } : {}),
         ...(dto.hsCode !== undefined ? { hsCode: dto.hsCode } : {}),
+        ...(dto.preorderReleaseDate !== undefined ? { preorderReleaseDate: dto.preorderReleaseDate } : {}),
+        ...(dto.preorderLimit !== undefined ? { preorderLimit: dto.preorderLimit } : {}),
+        ...(dto.bundleDiscountType !== undefined ? { bundleDiscountType: dto.bundleDiscountType } : {}),
+        ...(dto.bundleDiscountValue !== undefined ? { bundleDiscountValue: dto.bundleDiscountValue } : {}),
       },
     });
     await this.syncAdditionalCategories(id, dto.additionalCategoryIds);

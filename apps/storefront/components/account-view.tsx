@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { me, myOrders, logout, type OrderSummary } from "../lib/account-api";
+import { PushOptIn } from "./push-opt-in";
 
 export function AccountView() {
   const params = useParams<{ locale: string }>();
@@ -13,6 +14,7 @@ export function AccountView() {
   const [phone, setPhone] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
   const [checked, setChecked] = useState(false);
+  const [push, setPush] = useState<{ enabled: boolean; vapidPublicKey: string | null }>({ enabled: false, vapidPublicKey: null });
 
   useEffect(() => {
     me().then((result) => {
@@ -24,6 +26,13 @@ export function AccountView() {
       myOrders().then(setOrders).catch(() => setOrders([]));
       setChecked(true);
     });
+    fetch("/api/v1/store/config", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((config: Record<string, unknown> | null) => {
+        if (!config) return;
+        setPush({ enabled: config["pwa.pushEnabled"] === true, vapidPublicKey: typeof config["pwa.vapidPublicKey"] === "string" ? (config["pwa.vapidPublicKey"] as string) : null });
+      })
+      .catch(() => undefined);
   }, [router]);
 
   if (!checked) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
@@ -48,6 +57,21 @@ export function AccountView() {
         <Link href="/account/returns" className="block text-sm text-brand underline">
           {locale === "bn" ? "রিটার্ন ও এক্সচেঞ্জ" : "Returns & exchanges"}
         </Link>
+        <Link href="/account/measurements" className="block text-sm text-brand underline">
+          {locale === "bn" ? "আমার মাপ" : "My measurements"}
+        </Link>
+      </div>
+
+      <div className="mb-6">
+        <PushOptIn
+          enabled={push.enabled}
+          vapidPublicKey={push.vapidPublicKey}
+          strings={{
+            enable: locale === "bn" ? "নোটিফিকেশন চালু করুন" : "Enable notifications",
+            enabled: locale === "bn" ? "নোটিফিকেশন চালু আছে" : "Notifications enabled",
+            unavailable: "",
+          }}
+        />
       </div>
 
       <h2 className="mb-3 text-sm font-semibold text-surface-foreground">{locale === "bn" ? "অর্ডারসমূহ" : "Orders"}</h2>

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { formatBdt } from "../lib/money";
 import { trackOrder, type TrackedOrder } from "../lib/orders-api";
+import { createReturnRequestByTracking } from "../lib/returns-api";
+
+const RETURN_ELIGIBLE_STATUSES = new Set(["delivered", "partially_delivered", "completed"]);
 
 /** §11.2 "orders: track by phone+number" — the no-account order lookup. */
 export function OrderTrackingView() {
@@ -14,6 +17,11 @@ export function OrderTrackingView() {
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnType, setReturnType] = useState<"refund" | "exchange" | "store_credit">("refund");
+  const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
+  const [returnSubmitted, setReturnSubmitted] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
 
   async function handleTrack() {
     setLoading(true);
@@ -25,6 +33,23 @@ export function OrderTrackingView() {
       setOrder(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  /** §16 M10 self-service exchange portal — the guest path, re-verified server-side against the same phone+order-number pair used to look this order up. */
+  async function submitReturnRequest() {
+    if (!order) return;
+    const items = order.items.filter((item) => (returnQuantities[item.id] ?? 0) > 0).map((item) => ({ orderItemId: item.id, quantity: returnQuantities[item.id]! }));
+    if (items.length === 0) {
+      setReturnError(locale === "bn" ? "অন্তত একটি পণ্য নির্বাচন করুন।" : "Select at least one item.");
+      return;
+    }
+    setReturnError(null);
+    try {
+      await createReturnRequestByTracking({ phone, orderNumber, type: returnType, reasonCode: null, customerComment: null, items });
+      setReturnSubmitted(true);
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Failed to submit request");
     }
   }
 
@@ -61,6 +86,45 @@ export function OrderTrackingView() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {RETURN_ELIGIBLE_STATUSES.has(order.status) && (
+            <div className="mt-4 border-t border-border pt-3">
+              {returnSubmitted ? (
+                <p className="text-sm text-success">{locale === "bn" ? "আপনার রিটার্ন/এক্সচেঞ্জ অনুরোধ জমা দেওয়া হয়েছে।" : "Your return/exchange request has been submitted."}</p>
+              ) : !showReturnForm ? (
+                <button onClick={() => setShowReturnForm(true)} className="text-xs text-brand underline">
+                  {locale === "bn" ? "রিটার্ন বা এক্সচেঞ্জ অনুরোধ করুন" : "Request a return or exchange"}
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="divide-y divide-border border-y border-border">
+                    {order.items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span className="text-surface-foreground">{item.title.en ?? item.title.bn ?? item.sku}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.quantity}
+                          value={returnQuantities[item.id] ?? 0}
+                          onChange={(e) => setReturnQuantities({ ...returnQuantities, [item.id]: Math.min(item.quantity, Number(e.target.value)) })}
+                          className="w-16 rounded-theme border border-border px-2 py-1 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <select value={returnType} onChange={(e) => setReturnType(e.target.value as typeof returnType)} className="rounded-theme border border-border px-3 py-2 text-sm">
+                    <option value="refund">{locale === "bn" ? "রিফান্ড" : "Refund"}</option>
+                    <option value="exchange">{locale === "bn" ? "এক্সচেঞ্জ" : "Exchange"}</option>
+                    <option value="store_credit">{locale === "bn" ? "স্টোর ক্রেডিট" : "Store credit"}</option>
+                  </select>
+                  {returnError && <p className="text-sm text-danger">{returnError}</p>}
+                  <button onClick={() => void submitReturnRequest()} className="w-fit rounded-theme bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">
+                    {locale === "bn" ? "জমা দিন" : "Submit request"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

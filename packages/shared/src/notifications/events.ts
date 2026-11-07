@@ -9,7 +9,11 @@ import type { LocalizedText } from "../i18n/localized-text.ts";
  * `providers/types.ts`, since `@clothing/shared` must stay free of a
  * `@clothing/db` dependency (the dependency runs the other way).
  */
-export const NOTIFICATION_CHANNELS = ["sms", "email", "whatsapp"] as const;
+// Milestone 10 (§16 M10) adds `push` — Web Push against our own VAPID
+// identity (no vendor to swap, so it's outside `NotificationDriversService`'s
+// provider-instance resolution; see `PushService` and docs/DECISIONS.md) but
+// still a real channel in the event catalog/channel matrix/logs below.
+export const NOTIFICATION_CHANNELS = ["sms", "email", "whatsapp", "push"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
 export interface NotificationEventDefinition {
@@ -38,7 +42,7 @@ export const NOTIFICATION_EVENTS: NotificationEventDefinition[] = [
     key: "order_placed",
     label: { bn: "অর্ডার প্লেস হয়েছে", en: "Order placed" },
     help: { bn: "অর্ডার তৈরি হওয়ার সাথে সাথে পাঠানো হয়", en: "Sent as soon as an order is created" },
-    variables: [...ORDER_VARS, "order_total", "cod_amount"],
+    variables: [...ORDER_VARS, "order_total", "cod_amount", "preorder_release_date"],
     defaultChannelOrder: ["whatsapp", "sms"],
   },
   {
@@ -89,6 +93,38 @@ export const NOTIFICATION_EVENTS: NotificationEventDefinition[] = [
     help: { bn: "অর্ডার বাতিল হলে পাঠানো হয়", en: "Sent when an order is cancelled" },
     variables: ORDER_VARS,
     defaultChannelOrder: ["sms"],
+  },
+  // Milestone 10 (§16 M10) — abandoned-cart recovery sequence and the
+  // back-in-stock notify-me fulfillment (M4's `NotifyMeRequest`, never
+  // wired to an actual send before now). `push` leads every default order
+  // here since a PWA-installed guest can be reached with no phone/email.
+  {
+    key: "abandoned_cart_1",
+    label: { bn: "পরিত্যক্ত কার্ট — রিমাইন্ডার ১", en: "Abandoned cart — reminder 1" },
+    help: { bn: "কার্ট নিষ্ক্রিয় হওয়ার প্রথম রিমাইন্ডার", en: "The first reminder after a cart goes idle" },
+    variables: [...COMMON_VARS, "customer_name", "cart_total", "cart_url"],
+    defaultChannelOrder: ["push", "whatsapp", "sms"],
+  },
+  {
+    key: "abandoned_cart_2",
+    label: { bn: "পরিত্যক্ত কার্ট — রিমাইন্ডার ২", en: "Abandoned cart — reminder 2" },
+    help: { bn: "দ্বিতীয় রিমাইন্ডার", en: "The second reminder" },
+    variables: [...COMMON_VARS, "customer_name", "cart_total", "cart_url"],
+    defaultChannelOrder: ["push", "whatsapp", "sms", "email"],
+  },
+  {
+    key: "abandoned_cart_3",
+    label: { bn: "পরিত্যক্ত কার্ট — রিমাইন্ডার ৩ (কুপন)", en: "Abandoned cart — reminder 3 (coupon)" },
+    help: { bn: "শেষ রিমাইন্ডার, সাধারণত একটি কুপন কোডসহ", en: "The last reminder, usually carries a coupon code" },
+    variables: [...COMMON_VARS, "customer_name", "cart_total", "cart_url", "coupon_code", "coupon_percent_off"],
+    defaultChannelOrder: ["push", "whatsapp", "sms", "email"],
+  },
+  {
+    key: "back_in_stock",
+    label: { bn: "স্টকে ফিরে এসেছে", en: "Back in stock" },
+    help: { bn: "যে ভ্যারিয়েন্টের জন্য \"নোটিফাই মি\" রিকোয়েস্ট করা হয়েছিল তা স্টকে এলে পাঠানো হয়", en: "Sent when a variant someone requested \"notify me\" for is back in stock" },
+    variables: [...COMMON_VARS, "product_title", "product_url"],
+    defaultChannelOrder: ["push", "whatsapp", "sms", "email"],
   },
 ];
 

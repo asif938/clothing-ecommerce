@@ -1,5 +1,6 @@
 import { Module, type OnModuleInit } from "@nestjs/common";
 import { ProvidersModule } from "../providers/providers.module";
+import { PushModule } from "../push/push.module";
 import { SchedulerService } from "../queue/scheduler.service";
 import { NotificationDriversService } from "./notification-drivers.service";
 import { NotificationsService } from "./notifications.service";
@@ -20,7 +21,7 @@ import { StaffNotificationsController } from "./staff-notifications.controller";
  * `SchedulerService` the same way M2/M3's recurring sweeps did.
  */
 @Module({
-  imports: [ProvidersModule],
+  imports: [ProvidersModule, PushModule],
   controllers: [NotificationTemplatesController, NotificationChannelRulesController, NotificationLogsController, StaffNotificationsController],
   providers: [
     NotificationDriversService,

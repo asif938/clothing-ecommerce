@@ -47,3 +47,16 @@ export interface Address {
 }
 export const myAddresses = () => callApi<Address[]>("/store/account/addresses");
 export const deleteAddress = (id: string) => callApi<{ ok: true }>(`/store/account/addresses/${id}`, { method: "DELETE" });
+
+export interface CustomerMeasurements {
+  unit: "cm" | "inch";
+  heightCm: number | null;
+  weightKg: number | null;
+  chestCm: number | null;
+  waistCm: number | null;
+  hipCm: number | null;
+  inseamCm: number | null;
+  preferredFit: "snug" | "regular" | "loose";
+}
+export const myMeasurements = () => callApi<CustomerMeasurements | null>("/store/account/measurements");
+export const saveMeasurements = (dto: CustomerMeasurements) => callApi<CustomerMeasurements>("/store/account/measurements", { method: "PUT", body: JSON.stringify(dto) });

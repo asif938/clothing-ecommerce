@@ -39,6 +39,9 @@ import { SpacerBlock } from "./blocks/spacer/Component.tsx";
 import { customHtmlSchema } from "./blocks/custom-html/schema.ts";
 import { customHtmlDefaults } from "./blocks/custom-html/defaults.ts";
 import { CustomHtmlBlock } from "./blocks/custom-html/Component.tsx";
+import { lookbookSchema } from "./blocks/lookbook/schema.ts";
+import { lookbookDefaults } from "./blocks/lookbook/defaults.ts";
+import { LookbookBlock } from "./blocks/lookbook/Component.tsx";
 
 registerBlock({ type: "hero", label: { bn: "হিরো", en: "Hero" }, schema: heroSchema, defaults: heroDefaults, component: HeroBlock });
 registerBlock({ type: "rich_text", label: { bn: "টেক্সট", en: "Rich text" }, schema: richTextSchema, defaults: richTextDefaults, component: RichTextBlock });
@@ -57,3 +60,4 @@ registerBlock({
   component: CustomHtmlBlock,
   superAdminOnly: true,
 });
+registerBlock({ type: "lookbook", label: { bn: "লুকবুক হটস্পট", en: "Lookbook hotspots" }, schema: lookbookSchema, defaults: lookbookDefaults, component: LookbookBlock });

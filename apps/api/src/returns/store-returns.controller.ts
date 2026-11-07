@@ -6,14 +6,14 @@ import { RequireCustomerAuthGuard } from "../customer-auth/require-customer-auth
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { ReturnsService } from "./returns.service";
 import { ReturnReasonsService } from "./return-reasons.service";
-import { createReturnRequestSchema, type CreateReturnRequestDto } from "./dto";
+import { createReturnRequestByTrackingSchema, createReturnRequestSchema, type CreateReturnRequestByTrackingDto, type CreateReturnRequestDto } from "./dto";
 
 /**
- * §6.10 "customer requests from account or order-tracking page" — the
- * request itself needs a logged-in customer (consistent with M5's account
- * area being login-gated); the anonymous order-tracking page links out to
- * login to start one, rather than this also supporting phone+order-number
- * verification the way `OrdersController`'s track/cancel do.
+ * §6.10 "customer requests from account or order-tracking page". `create`
+ * needs a logged-in customer; `createByTracking` (§16 M10) is the guest
+ * path the order-tracking page itself uses instead, verified the same
+ * phone+order-number way `OrdersController`'s track/cancel already are —
+ * closing the gap M6 flagged and left for later.
  */
 @ApiTags("store")
 @Controller("store/returns")
@@ -30,6 +30,13 @@ export class StoreReturnsController {
   @UseGuards(CustomerContextGuard, RequireCustomerAuthGuard)
   create(@Body(new ZodValidationPipe(createReturnRequestSchema)) body: CreateReturnRequestDto, @Req() req: Request) {
     return this.returns.createRequest(body, req.customerContext!.customer!.id);
+  }
+
+  /** §16 M10 — no login required; the phone+orderNumber pair is re-verified against the order itself on every call, the same trust model `/store/orders/track` already uses. */
+  @Post("track")
+  createByTracking(@Body(new ZodValidationPipe(createReturnRequestByTrackingSchema)) body: CreateReturnRequestByTrackingDto) {
+    const { phone, orderNumber, ...rest } = body;
+    return this.returns.createByTracking(phone, orderNumber, rest);
   }
 }
 

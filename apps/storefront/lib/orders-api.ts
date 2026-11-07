@@ -15,6 +15,14 @@ export interface TrackedShipment {
   courierDriver: string;
 }
 
+export interface TrackedOrderItem {
+  id: string;
+  title: { en?: string; bn?: string };
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface TrackedOrder {
   id: string;
   orderNumber: string;
@@ -23,6 +31,7 @@ export interface TrackedOrder {
   codAmount: number;
   events: { type: string; data: unknown; createdAt: string }[];
   shipments: TrackedShipment[];
+  items: TrackedOrderItem[];
 }
 
 export const trackOrder = (phone: string, orderNumber: string) => callApi<TrackedOrder>(`/store/orders/track?phone=${encodeURIComponent(phone)}&orderNumber=${encodeURIComponent(orderNumber)}`);

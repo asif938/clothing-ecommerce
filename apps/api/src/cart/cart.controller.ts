@@ -66,6 +66,13 @@ export class CartController {
     return await this.respond(req, cart);
   }
 
+  /** §16 M10 — adds every one of a shop-the-look bundle's component variants in one call. */
+  @Post("bundles/:bundleProductId")
+  async addBundle(@Param("bundleProductId") bundleProductId: string, @Req() req: Request) {
+    const cart = await this.cart.addBundle(this.identity(req), bundleProductId);
+    return await this.respond(req, cart);
+  }
+
   @Patch("items/:id")
   async updateItem(@Param("id") id: string, @Body(new ZodValidationPipe(updateItemSchema)) body: UpdateItemDto, @Req() req: Request) {
     const cart = await this.cart.updateItemQuantity(this.identity(req), id, body.quantity);

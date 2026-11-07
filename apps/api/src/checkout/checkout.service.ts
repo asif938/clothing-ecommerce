@@ -143,7 +143,7 @@ export class CheckoutService {
     const holdHighRisk = await this.settings.getValue<boolean>("risk.holdHighRisk");
     const finalStatus = !needsOnlinePayment && risk.level === "high" && holdHighRisk ? "on_hold" : initialStatus;
 
-    const stockLines = priceableLines.map((l) => ({ variantId: l.variantId, quantity: l.quantity }));
+    const stockLines = priceableLines.map((l) => ({ variantId: l.variantId, quantity: l.quantity, allowNegative: l.isPreorder }));
     const location = await this.stock.defaultLocation();
     const orderNumber = await this.orderNumbers.generate();
     // §6.6 duplicate detection — checked against orders that already exist, before this one is created.
@@ -230,13 +230,17 @@ export class CheckoutService {
         recipientType: requestContext.identity.customerId ? "customer" : "guest",
         recipientId: requestContext.identity.customerId ?? null,
         locale: cartRow.locale,
-        contacts: { sms: cartRow.contactPhone, whatsapp: cartRow.contactPhone, email: cartRow.contactEmail ?? null },
+        contacts: { sms: cartRow.contactPhone, whatsapp: cartRow.contactPhone, email: cartRow.contactEmail ?? null, push: requestContext.identity.customerId },
         variables: {
           ...notificationCommonVariables,
           customer_name: cartRow.contactName,
           order_number: created.orderNumber,
           order_total: formatTakaFromPoisha(created.total),
           cod_amount: formatTakaFromPoisha(created.codAmount),
+          // §16 M10 — present only when the order has a preorder line; the
+          // template is free to ignore it, same optional-variable pattern
+          // every other event already uses (e.g. `cod_amount` on COD-only orders).
+          preorder_release_date: priceableLines.find((l) => l.isPreorder)?.preorderReleaseDate?.toISOString().slice(0, 10) ?? "",
         },
         related: { type: "order", id: created.id },
       });

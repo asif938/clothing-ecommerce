@@ -59,6 +59,12 @@ interface ProductVersion {
   id: string;
   createdAt: string;
 }
+interface BundleItemEntry {
+  id: string;
+  quantity: number;
+  componentProduct: { title: LocalizedText; slug: string };
+  componentVariant: { sku: string; price: number; optionValueIds: string[]; isActive: boolean };
+}
 interface Product {
   id: string;
   title: LocalizedText;
@@ -66,6 +72,11 @@ interface Product {
   status: string;
   categoryId: string | null;
   tags: string[];
+  productType: "standard" | "bundle" | "gift_card" | "preorder";
+  preorderReleaseDate: string | null;
+  preorderLimit: number | null;
+  bundleDiscountType: "none" | "percent" | "fixed_price";
+  bundleDiscountValue: number | null;
   options: ProductOption[];
   variants: Variant[];
   media: ProductMediaEntry[];
@@ -80,6 +91,8 @@ interface MediaLibraryItem {
 const STATUSES = ["draft", "active", "archived", "scheduled"] as const;
 const OPTION_TYPES = ["size", "color", "generic"] as const;
 const BULK_FIELDS = ["price", "compareAtPrice", "costPrice", "weightGrams", "isActive"] as const;
+const PRODUCT_TYPES = ["standard", "bundle", "gift_card", "preorder"] as const;
+const BUNDLE_DISCOUNT_TYPES = ["none", "percent", "fixed_price"] as const;
 
 export default function ProductEditorPage() {
   const t = useTranslations("products");
@@ -92,6 +105,7 @@ export default function ProductEditorPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [mediaLibrary, setMediaLibrary] = useState<MediaLibraryItem[]>([]);
   const [versions, setVersions] = useState<ProductVersion[]>([]);
+  const [bundleItems, setBundleItems] = useState<BundleItemEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -100,6 +114,15 @@ export default function ProductEditorPage() {
   const [status, setStatus] = useState("draft");
   const [categoryId, setCategoryId] = useState("");
   const [tags, setTags] = useState("");
+  const [productType, setProductType] = useState<(typeof PRODUCT_TYPES)[number]>("standard");
+  const [preorderReleaseDate, setPreorderReleaseDate] = useState("");
+  const [preorderLimit, setPreorderLimit] = useState("");
+  const [bundleDiscountType, setBundleDiscountType] = useState<(typeof BUNDLE_DISCOUNT_TYPES)[number]>("none");
+  const [bundleDiscountValue, setBundleDiscountValue] = useState("");
+
+  const [newBundleProductId, setNewBundleProductId] = useState("");
+  const [newBundleVariantId, setNewBundleVariantId] = useState("");
+  const [newBundleQuantity, setNewBundleQuantity] = useState("1");
 
   const [newOptionName, setNewOptionName] = useState("");
   const [newOptionType, setNewOptionType] = useState<(typeof OPTION_TYPES)[number]>("size");
@@ -128,8 +151,16 @@ export default function ProductEditorPage() {
       setStatus(p.status);
       setCategoryId(p.categoryId ?? "");
       setTags(p.tags.join(", "));
+      setProductType(p.productType);
+      setPreorderReleaseDate(p.preorderReleaseDate ? p.preorderReleaseDate.slice(0, 10) : "");
+      setPreorderLimit(p.preorderLimit === null ? "" : String(p.preorderLimit));
+      setBundleDiscountType(p.bundleDiscountType);
+      setBundleDiscountValue(p.bundleDiscountValue === null ? "" : String(p.bundleDiscountValue));
       const media = await api.get<MediaLibraryItem[]>("/admin/media");
       setMediaLibrary(media);
+      if (p.productType === "bundle") {
+        setBundleItems(await api.get<BundleItemEntry[]>(`/admin/products/${productId}/bundle-items`));
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load product");
     }
@@ -150,6 +181,11 @@ export default function ProductEditorPage() {
         status,
         categoryId: categoryId || null,
         tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+        productType,
+        preorderReleaseDate: productType === "preorder" && preorderReleaseDate ? preorderReleaseDate : null,
+        preorderLimit: productType === "preorder" && preorderLimit !== "" ? Number(preorderLimit) : null,
+        bundleDiscountType: productType === "bundle" ? bundleDiscountType : "none",
+        bundleDiscountValue: productType === "bundle" && bundleDiscountValue !== "" ? Number(bundleDiscountValue) : null,
       });
       setSaved(true);
       await load();
@@ -285,6 +321,28 @@ export default function ProductEditorPage() {
     }
   }
 
+  async function handleAddBundleItem() {
+    if (!newBundleProductId || !newBundleVariantId) return;
+    try {
+      await api.post(`/admin/products/${productId}/bundle-items`, { componentProductId: newBundleProductId, componentVariantId: newBundleVariantId, quantity: Number(newBundleQuantity) || 1 });
+      setNewBundleProductId("");
+      setNewBundleVariantId("");
+      setNewBundleQuantity("1");
+      setBundleItems(await api.get<BundleItemEntry[]>(`/admin/products/${productId}/bundle-items`));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to add bundle item");
+    }
+  }
+
+  async function handleRemoveBundleItem(itemId: string) {
+    try {
+      await api.delete(`/admin/products/${productId}/bundle-items/${itemId}`);
+      setBundleItems(await api.get<BundleItemEntry[]>(`/admin/products/${productId}/bundle-items`));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to remove bundle item");
+    }
+  }
+
   async function handleRestoreVersion(versionId: string) {
     try {
       await api.post(`/admin/products/${productId}/versions/${versionId}/restore`, {});
@@ -343,6 +401,46 @@ export default function ProductEditorPage() {
           </label>
         </div>
         <TextField label={t("tags")} value={tags} onChange={(e) => setTags(e.target.value)} />
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-surface-foreground">{t("productType")}</span>
+          <select className="rounded-theme border border-border bg-surface px-3 py-2 text-sm" value={productType} onChange={(e) => setProductType(e.target.value as (typeof PRODUCT_TYPES)[number])}>
+            {PRODUCT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(`productType${type.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/^./, (c) => c.toUpperCase())}` as never)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {productType === "preorder" && (
+          <div className="grid grid-cols-2 gap-3 rounded-theme border border-border p-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-surface-foreground">{t("preorderReleaseDate")}</span>
+              <input type="date" className="rounded-theme border border-border bg-surface px-3 py-2 text-sm" value={preorderReleaseDate} onChange={(e) => setPreorderReleaseDate(e.target.value)} />
+            </label>
+            <TextField label={t("preorderLimit")} type="number" value={preorderLimit} onChange={(e) => setPreorderLimit(e.target.value)} />
+          </div>
+        )}
+
+        {productType === "bundle" && (
+          <div className="grid grid-cols-2 gap-3 rounded-theme border border-border p-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-surface-foreground">{t("bundleDiscountType")}</span>
+              <select
+                className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+                value={bundleDiscountType}
+                onChange={(e) => setBundleDiscountType(e.target.value as (typeof BUNDLE_DISCOUNT_TYPES)[number])}
+              >
+                {BUNDLE_DISCOUNT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(`bundleDiscountType${type.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()).replace(/^./, (c) => c.toUpperCase())}` as never)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <TextField label={t("bundleDiscountValue")} type="number" value={bundleDiscountValue} onChange={(e) => setBundleDiscountValue(e.target.value)} />
+          </div>
+        )}
         <Button onClick={() => void handleSave()}>{tCommon("save")}</Button>
       </Card>
 
@@ -559,6 +657,44 @@ export default function ProductEditorPage() {
           </Button>
         </div>
       </Card>
+
+      {productType === "bundle" && (
+        <Card className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold text-surface-foreground">{t("bundleItemsTitle")}</h2>
+          <p className="text-xs text-surface-foreground/60">{t("bundleItemsHint")}</p>
+          <ul className="flex flex-col gap-1">
+            {bundleItems.map((item) => (
+              <li key={item.id} className="flex items-center justify-between rounded-theme border border-border px-3 py-2 text-sm">
+                <span>
+                  {item.componentProduct.title.en ?? item.componentProduct.title.bn} <span className="text-surface-foreground/50">({item.componentVariant.sku} × {item.quantity})</span>
+                </span>
+                <button onClick={() => void handleRemoveBundleItem(item.id)} className="text-xs text-danger">
+                  {tCommon("delete")}
+                </button>
+              </li>
+            ))}
+            {bundleItems.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}
+          </ul>
+          <div className="flex flex-wrap items-end gap-2">
+            <input
+              className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+              placeholder={t("componentProductId")}
+              value={newBundleProductId}
+              onChange={(e) => setNewBundleProductId(e.target.value)}
+            />
+            <input
+              className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+              placeholder={t("componentVariantId")}
+              value={newBundleVariantId}
+              onChange={(e) => setNewBundleVariantId(e.target.value)}
+            />
+            <TextField label={t("quantity")} type="number" value={newBundleQuantity} onChange={(e) => setNewBundleQuantity(e.target.value)} />
+            <Button variant="secondary" onClick={() => void handleAddBundleItem()}>
+              {tCatalog("add")}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-surface-foreground">{t("relationsTitle")}</h2>

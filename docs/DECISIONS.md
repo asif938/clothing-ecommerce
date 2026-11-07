@@ -2010,3 +2010,169 @@ unit tests, `pnpm e2e` = end-to-end). Fixed by excluding `e2e` from the
 root script (`turbo run test --filter=!e2e`) rather than renaming its
 own `test` script, since `pnpm e2e` is itself defined as `pnpm --filter
 e2e test` and renaming would have broken that instead.
+
+## 2026-11-08 — Milestone 10: conversion features
+
+**Context.** §16 M10: size recommender + customer measurements,
+shop-the-look bundles and lookbook hotspots block, abandoned-cart
+recovery (SMS/WhatsApp/email sequence with optional coupon), preorders,
+self-service exchange portal, Q&A (already shipped M8), storefront PWA +
+web push, audience-targeted blocks, blog/lookbook. Acceptance (§16):
+"each feature has its toggle, admin UI, tests, and guide entry" (the
+Phase 2 umbrella acceptance line, since M10 itself names no single
+end-to-end scenario the way M1–M9 each did).
+
+**Decision — web push is deliberately outside the generic
+provider-instance framework (golden rule 2).** Every other integration
+(SMS/email/WhatsApp/payment/courier/tracking) is a *choice between real
+vendors* behind one interface, with a mock driver standing in for all of
+them. Web Push has no such choice: the browser's push service is
+addressed directly via the W3C standard, authenticated by *our own*
+VAPID keypair, not a vendor's API key. There is nothing to swap a
+"driver" for. So `PushService` lives next to the settings registry
+(`pwa.vapidPublicKey`/`vapidPrivateKey`, generated once via `POST
+/admin/push/generate-vapid-keys`, never typed by hand) rather than as a
+`provider_instances` row — the same reasoning already applied to the
+SSRF guard and the app's own JWT/encryption secrets, which also aren't
+"providers." It still plugs into the *existing* notification pipeline as
+a 4th `NotificationChannel` (`push`), because that part — queued,
+retried, logged, falling back to the next channel — has nothing to do
+with vendor choice and everything to do with delivery reliability, which
+push needs exactly as much as SMS does.
+
+**Decision — `web-push` pinned to 3.6.7, not the 4.0.0 major that was on
+npm the same day this was written.** Checked the registry directly
+(same practice as every prior milestone's dependency additions): 4.0.0
+had been published *the day before*, with no matching `@types/web-push`
+release (still at 3.6.4, a v3-API-shaped `.d.ts`). A same-day major with
+no matching types package is exactly the kind of "deviation from
+latest" M0's own dependency-version review already established a
+pattern for (TypeScript 7.0, Prisma 7/8) — pin to the last stable minor
+in the line the types package actually describes, re-evaluate next
+milestone that touches this dependency.
+
+**Decision — bundle discounts are computed live in `CartPricingService`,
+not as a new discount-engine value type.** M8 already deliberately
+scoped `buy_x_get_y`/`bundle_price`/`tiered` out of the pricing engine
+(see that milestone's own entry) because each is a genuinely new pricing
+algorithm. A shop-the-look bundle needs exactly one of those shapes
+("this exact set of components, together, at a different combined
+price") — but routing it through `Discount`/`discount-math.ts` would
+mean teaching that engine to recognize "is every required component
+variant present in at least the required quantity," which is catalog
+structure, not a discount condition vocabulary it already has a slot
+for. Simpler and just as correct: `packages/shared/src/catalog/
+bundle-pricing.ts`'s `matchBundles()` is pure cart-line-math (no Prisma,
+no settings), called once per `price()` from `CartPricingService.
+applyBundleDiscounts()`, mutating each matched line's `lineTotal`
+*before* the discount engine ever sees it. A coupon and a bundle match
+therefore just stack — the discount engine has no idea a bundle
+discount already happened, and doesn't need to.
+
+**Decision — a bundle `Product` is never itself a cart line; its
+`BundleItem` rows name *exact* component variants, not "any variant of
+this product."** A shop-the-look photo shows one specific outfit — the
+red top in size M, not "a top, any color, any size." Requiring an exact
+variant pick at bundle-authoring time (not at add-to-cart time) keeps
+`CartPricingService`'s matching logic a simple "is this exact variant id
+present in sufficient quantity" check, with no combinatorial "which of
+the bundle's size options did the customer mean" resolution needed
+anywhere. The trade-off: a bundle can't flex to "any size, matching
+across all three pieces" — each size needs its own bundle `Product` if
+that's wanted. Acceptable for a styled-look feature, which is inherently
+about one specific combination anyway.
+
+**Decision — preorders bypass the stock-sufficiency guard entirely
+rather than reserving against a fake "preorder location."** §6.7's own
+stock-reservation invariant ("`reserved += q` only commits when
+`available >= q`, in one conditional UPDATE") is specifically about real,
+finite on-hand stock racing under concurrent checkout — the exact thing
+M5's "two buyers race for the last unit" acceptance scenario tests.
+Preorder stock isn't finite in that sense; the only real limit (if any)
+is `Product.preorderLimit`, a *sales count* cap, not an inventory count.
+Modeling it as a second, infinite-capacity stock location would still
+need every other inventory-aware code path (low-stock lists, barcode
+labels, the storefront's "X in stock" copy) to specifically know to
+ignore it — more surface area than the chosen approach:
+`StockReservationService.reserve()` takes a per-line `allowNegative`
+flag that skips the `available >= q` clause in the same raw SQL (still
+one atomic UPDATE, still inside the order's own transaction — just
+unconditional), and `CartPricingService`'s per-item loop computes a
+preorder line's `available` from real non-cancelled order-item sales
+against `preorderLimit` instead of querying `inventory_levels` at all.
+A regular product's race-condition guarantee is completely untouched; a
+preorder line simply never enters that code path.
+
+**Decision — audience-targeted blocks gate client-side, not at the
+page-cache layer.** The storefront's whole caching story (§3, free-tier
+friendly — no mandatory Redis/CDN build step) depends on a page's HTML
+being the same for every visitor until a revalidation tag fires (M3's
+publishing pipeline). Personalizing a block's visibility by login state
+or segment membership at *render* time would mean either personalizing
+the entire page's cache key (defeating the point) or re-fetching the
+whole page per viewer. `AudienceGate` instead wraps the block's
+already-server-rendered output in a small client component that calls
+`GET /store/audience/me` on mount and shows/hides — the page itself
+stays one cached document; only blocks that actually declare a
+non-`"all"` audience (`needsAudienceGate()`) pay this cost at all, and a
+failed/slow check fails open (shows the block) rather than hiding
+content over a network hiccup.
+
+**Decision — `BlogService` deliberately has no edit-lock, autosave, or
+version history, unlike `PagesService`.** All three exist in M3's pages
+editor because CMS pages are the single highest-traffic admin surface
+(every brand edits its homepage/policies constantly, often by more than
+one staff member) — that's what justified building them. A blog/lookbook
+post is lower-frequency, typically single-author content; duplicating
+three more features' worth of machinery for it now would be the kind of
+premature generalization the project's own working norms warn against.
+If post volume or multi-author contention ever becomes real, the fix is
+additive (the exact same mechanisms `PagesService` already has, pointed
+at `BlogPost` instead of `Page`), not a redesign.
+
+**Decision — the self-service exchange portal's M10 scope is "close the
+guest-access gap M6 flagged," not "build the missing exchange-variant
+picker."** M6's own progress notes named one specific, narrow gap: the
+order-tracking page links out to login instead of also supporting
+phone+order-number verification for a return/exchange request, the way
+`OrdersController`'s track/cancel endpoints already do. That's exactly
+what `ReturnsService.createByTracking()` + `POST /store/returns/track`
+close — verified the identical way (`order.billingContact.phone ===`
+the phone supplied). While building it, a *second*, deeper gap surfaced:
+neither this new guest form nor the M6 account-area form actually lets a
+customer pick a replacement variant, so `type: "exchange"` always fails
+server-side validation (`EXCHANGE_VARIANT_REQUIRED`) on both paths. That
+one needs a real product/variant search-and-pick UI — out of scope for
+"close the flagged gap," recorded honestly in docs/PROGRESS.md rather
+than silently left for someone to discover as a support ticket.
+
+**Decision — `NotifyMeService.fulfillForVariant()` triggers off
+`InventoryService.adjust()`'s own 0→positive `available` crossing, not a
+scheduled sweep.** There's no cheap way to ask "which variants changed
+stock status since the last tick" without either a sweep that scans
+every variant's inventory level every run (wasteful at any real catalog
+size) or a dedicated change-log table (real complexity for a
+notification that's inherently tied to one specific mutation already
+happening in one specific place). `adjust()` already knows the exact
+before/after `available` for the exact row it just changed — checking
+`level.available <= 0 && updated.available > 0` right there is free.
+The trade-off: a stock import/bulk operation that doesn't go through
+`InventoryService.adjust()` per row wouldn't fire this — not a path that
+exists anywhere in the codebase today, so not a real gap yet.
+
+**Decision — push notification "address" in the generic notification
+pipeline is a customerId, not a device token.** Every other channel's
+`contacts.<channel>` is literally what gets dialed/emailed; push doesn't
+work that way — a customer can have several subscriptions (phone +
+desktop), and the actual delivery targets live in `push_subscriptions`,
+keyed by `customerId`. Rather than inventing a different shape for one
+channel, `contacts.push` carries the customerId (set by whichever caller
+already knows it, same as `recipientId`), and `PushService.sendRaw()`
+looks up every subscription for that customer and sends to all of them,
+treating "zero subscriptions" as a send failure like any other
+unreachable channel — so the existing retry/fallback-to-next-channel
+machinery (§6.11, M7) just works for push with no new branch. The
+accepted gap: an anonymous (never-logged-in) PWA install has no
+customerId to attach a subscription to, so it can subscribe but will
+never receive anything through this generic pipeline — only a logged-in
+customer's push actually fires today.

@@ -293,6 +293,32 @@ const NOTIFICATION_TEMPLATE_CONTENT: Record<string, { subjectBn: string; subject
     bodyBn: "{customer_name}, আপনার অর্ডার {order_number} বাতিল করা হয়েছে। — {brand_name}",
     bodyEn: "{customer_name}, your order {order_number} has been cancelled. — {brand_name}",
   },
+  // Milestone 10 (§16 M10) — abandoned-cart recovery sequence and the
+  // back-in-stock notify-me fulfillment.
+  abandoned_cart_1: {
+    subjectBn: "আপনার কার্টে কিছু অপেক্ষা করছে",
+    subjectEn: "You left something in your cart",
+    bodyBn: "{customer_name}, আপনার কার্টে {cart_total} মূল্যের পণ্য রয়ে গেছে। এখনই অর্ডার সম্পন্ন করুন: {cart_url} — {brand_name}",
+    bodyEn: "{customer_name}, you left {cart_total} worth of items in your cart. Finish your order: {cart_url} — {brand_name}",
+  },
+  abandoned_cart_2: {
+    subjectBn: "আপনার কার্ট এখনও অপেক্ষা করছে",
+    subjectEn: "Still thinking it over?",
+    bodyBn: "{customer_name}, আপনার কার্টের পণ্যগুলো এখনও অপেক্ষা করছে ({cart_total})। এখনই অর্ডার করুন: {cart_url} — {brand_name}",
+    bodyEn: "{customer_name}, the items in your cart ({cart_total}) are still waiting. Order now: {cart_url} — {brand_name}",
+  },
+  abandoned_cart_3: {
+    subjectBn: "আপনার জন্য একটি বিশেষ ছাড়",
+    subjectEn: "A special discount, just for you",
+    bodyBn: "{customer_name}, আপনার কার্টের পণ্য ({cart_total}) এখনও আছে। কোড {coupon_code} দিয়ে {coupon_percent_off}% ছাড় নিন: {cart_url} — {brand_name}",
+    bodyEn: "{customer_name}, your cart ({cart_total}) is still here. Use code {coupon_code} for {coupon_percent_off}% off: {cart_url} — {brand_name}",
+  },
+  back_in_stock: {
+    subjectBn: "{product_title} এখন স্টকে আছে",
+    subjectEn: "{product_title} is back in stock",
+    bodyBn: "আপনি যে পণ্যটির জন্য অপেক্ষা করছিলেন তা স্টকে এসেছে: {product_title}। দেখুন: {product_url} — {brand_name}",
+    bodyEn: "The item you were waiting for is back: {product_title}. Check it out: {product_url} — {brand_name}",
+  },
 };
 
 async function seedNotificationTemplates() {

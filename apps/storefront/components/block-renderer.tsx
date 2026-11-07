@@ -1,5 +1,6 @@
-import { deviceVisibilityClassName, getBlockDefinition, isBlockScheduledNow, isBlockVisibleForLocale } from "@clothing/blocks";
+import { deviceVisibilityClassName, getBlockDefinition, isBlockScheduledNow, isBlockVisibleForLocale, needsAudienceGate } from "@clothing/blocks";
 import type { BlockInstance } from "../lib/store-api";
+import { AudienceGate } from "./audience-gate";
 
 /**
  * Renders a page's `blocksPublished` list (docs/PROJECT_SPEC.md §9.1). An
@@ -21,11 +22,23 @@ export function BlockRenderer({ blocks, locale }: { blocks: BlockInstance[]; loc
 
         const Component = definition.component;
         const className = deviceVisibilityClassName(block.visibility);
-        return (
+        const rendered = (
           <div key={block.id} className={className || undefined}>
             <Component props={parsed.data} locale={locale} />
           </div>
         );
+        // §16 M10 — audience-targeted blocks. Gating wraps the already
+        // server-rendered output in a client component rather than
+        // skipping render server-side, so the page itself stays static/
+        // cacheable (see `AudienceGate`'s own doc comment).
+        if (needsAudienceGate(block.visibility)) {
+          return (
+            <AudienceGate key={block.id} audience={block.visibility!.audience!}>
+              {rendered}
+            </AudienceGate>
+          );
+        }
+        return rendered;
       })}
     </>
   );

@@ -12,13 +12,15 @@ import { ProductVariantsController } from "./product-variants.controller";
 import { ProductVariantsService } from "./product-variants.service";
 import { ProductsController } from "./products.controller";
 import { ProductsService } from "./products.service";
+import { BundleItemsController } from "./bundle-items.controller";
+import { BundleItemsService } from "./bundle-items.service";
 
-/** Products, options & variants, product media/relations/versions (docs/PROJECT_SPEC.md §16 M2). */
+/** Products, options & variants, product media/relations/versions (docs/PROJECT_SPEC.md §16 M2); bundle items (§16 M10) is a product-editor tab, same shape as relations. */
 @Module({
   imports: [MediaModule, InventoryModule],
-  controllers: [ProductsController, ProductOptionsController, ProductVariantsController, ProductMediaController, ProductRelationsController],
-  providers: [ProductsService, ProductOptionsService, ProductVariantsService, ProductMediaService, ProductRelationsService],
-  exports: [ProductsService, ProductVariantsService],
+  controllers: [ProductsController, ProductOptionsController, ProductVariantsController, ProductMediaController, ProductRelationsController, BundleItemsController],
+  providers: [ProductsService, ProductOptionsService, ProductVariantsService, ProductMediaService, ProductRelationsService, BundleItemsService],
+  exports: [ProductsService, ProductVariantsService, BundleItemsService],
 })
 export class ProductsModule implements OnModuleInit {
   constructor(

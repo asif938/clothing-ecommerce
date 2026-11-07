@@ -3,6 +3,7 @@ import { localizedTextSchema } from "@clothing/shared/i18n";
 
 export const productStatusSchema = z.enum(["draft", "active", "archived", "scheduled"]);
 export const productTypeSchema = z.enum(["standard", "bundle", "gift_card", "preorder"]);
+export const bundleDiscountTypeSchema = z.enum(["none", "percent", "fixed_price"]);
 export const productOptionTypeSchema = z.enum(["size", "color", "generic"]);
 export const productRelationTypeSchema = z.enum(["similar", "complete_the_look", "upsell", "cross_sell"]);
 
@@ -40,6 +41,12 @@ export const createProductSchema = z.object({
   weightGramsDefault: z.number().int().nullable().optional(),
   hsCode: z.string().nullable().optional(),
   attributeValues: z.array(productAttributeValueInputSchema).optional(),
+  // Milestone 10 (§16 M10) — only meaningful when `productType` is
+  // `preorder`/`bundle` respectively; harmless on any other product.
+  preorderReleaseDate: z.coerce.date().nullable().optional(),
+  preorderLimit: z.number().int().min(1).nullable().optional(),
+  bundleDiscountType: bundleDiscountTypeSchema.optional(),
+  bundleDiscountValue: z.number().int().min(0).nullable().optional(),
 });
 export type CreateProductDto = z.infer<typeof createProductSchema>;
 
@@ -127,3 +134,18 @@ export const addProductRelationSchema = z.object({
   position: z.number().int().optional(),
 });
 export type AddProductRelationDto = z.infer<typeof addProductRelationSchema>;
+
+// ---------------------------------------------------------------------------
+// Bundle items (§16 M10 "shop-the-look bundles")
+// ---------------------------------------------------------------------------
+
+export const addBundleItemSchema = z.object({
+  componentProductId: z.string().min(1),
+  componentVariantId: z.string().min(1),
+  quantity: z.number().int().min(1).default(1),
+  position: z.number().int().optional(),
+});
+export type AddBundleItemDto = z.infer<typeof addBundleItemSchema>;
+
+export const updateBundleItemSchema = addBundleItemSchema.omit({ componentProductId: true, componentVariantId: true }).partial();
+export type UpdateBundleItemDto = z.infer<typeof updateBundleItemSchema>;

@@ -5,6 +5,8 @@ import { PrismaService } from "../prisma/prisma.service";
 export interface ReservationLine {
   variantId: string;
   quantity: number;
+  /** §16 M10 preorders — skips the `available >= q` guard entirely. The preorder-limit itself was already enforced, authoritatively, by `CartPricingService.price()`'s own clamp, freshly re-run by `CheckoutService` right before this call (golden rule 6). */
+  allowNegative?: boolean;
 }
 
 /**
@@ -36,11 +38,17 @@ export class StockReservationService {
   async reserve(tx: Prisma.TransactionClient, locationId: string, lines: ReservationLine[]): Promise<void> {
     for (const line of lines) {
       if (line.quantity <= 0) continue;
-      const updatedRows: number = await tx.$executeRaw`
-        UPDATE inventory_levels
-        SET reserved = reserved + ${line.quantity}
-        WHERE variant_id = ${line.variantId} AND location_id = ${locationId} AND available >= ${line.quantity}
-      `;
+      const updatedRows: number = line.allowNegative
+        ? await tx.$executeRaw`
+            UPDATE inventory_levels
+            SET reserved = reserved + ${line.quantity}
+            WHERE variant_id = ${line.variantId} AND location_id = ${locationId}
+          `
+        : await tx.$executeRaw`
+            UPDATE inventory_levels
+            SET reserved = reserved + ${line.quantity}
+            WHERE variant_id = ${line.variantId} AND location_id = ${locationId} AND available >= ${line.quantity}
+          `;
       if (updatedRows === 0) {
         throw new ConflictException({ code: "OUT_OF_STOCK", message: "One or more items in your order just went out of stock." });
       }

@@ -4,22 +4,26 @@ import type { AuthenticatedStaff } from "../common/types";
 
 const actor: AuthenticatedStaff = { id: "staff-1", name: "A", email: "a@test.dev", locale: "en", permissions: new Set(), isSuperAdmin: false, totpEnabled: true };
 
-function makeService(level: { id: string; onHand: number; locationId: string; variantId: string }) {
+function makeService(level: { id: string; onHand: number; locationId: string; variantId: string; reserved?: number }) {
+  const reserved = level.reserved ?? 0;
+  const withAvailable = { ...level, reserved, available: level.onHand - reserved };
   const prisma = {
     stockLocation: { findMany: vi.fn(() => Promise.resolve([{ id: "loc-1" }])) },
     inventoryLevel: {
       upsert: vi.fn(),
-      findUnique: vi.fn(() => Promise.resolve(level)),
-      update: vi.fn(({ data }: { data: { onHand: { increment: number } } }) =>
-        Promise.resolve({ ...level, onHand: level.onHand + data.onHand.increment }),
-      ),
+      findUnique: vi.fn(() => Promise.resolve(withAvailable)),
+      update: vi.fn(({ data }: { data: { onHand: { increment: number } } }) => {
+        const onHand = withAvailable.onHand + data.onHand.increment;
+        return Promise.resolve({ ...withAvailable, onHand, available: onHand - reserved });
+      }),
     },
     stockMovement: { create: vi.fn((args: { data: unknown }) => Promise.resolve({ id: "mv-1", ...args.data as object })) },
     $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
   const audit = { record: vi.fn() };
-  const service = new InventoryService(prisma as never, audit as never);
-  return { service, prisma, audit };
+  const notifyMe = { fulfillForVariant: vi.fn(() => Promise.resolve()) };
+  const service = new InventoryService(prisma as never, audit as never, notifyMe as never);
+  return { service, prisma, audit, notifyMe };
 }
 
 describe("InventoryService.ensureLevelsForVariant", () => {
@@ -51,5 +55,30 @@ describe("InventoryService.adjust", () => {
     const { service } = makeService({ id: "lvl-1", onHand: 5, locationId: "loc-1", variantId: "v-1" });
     const result = await service.adjust({ variantId: "v-1", locationId: "loc-1", quantityDelta: -5, reason: "sale" }, actor);
     expect(result.level.onHand).toBe(0);
+  });
+
+  // §16 M10 — "back in stock" notify-me fulfillment.
+  it("fulfills pending notify-me requests when available crosses from 0 to positive", async () => {
+    const { service, notifyMe } = makeService({ id: "lvl-1", onHand: 0, locationId: "loc-1", variantId: "v-1" });
+    await service.adjust({ variantId: "v-1", locationId: "loc-1", quantityDelta: 5, reason: "purchase_receive" }, actor);
+    expect(notifyMe.fulfillForVariant).toHaveBeenCalledWith("v-1");
+  });
+
+  it("doesn't fire notify-me when stock was already available", async () => {
+    const { service, notifyMe } = makeService({ id: "lvl-1", onHand: 10, locationId: "loc-1", variantId: "v-1" });
+    await service.adjust({ variantId: "v-1", locationId: "loc-1", quantityDelta: 5, reason: "purchase_receive" }, actor);
+    expect(notifyMe.fulfillForVariant).not.toHaveBeenCalled();
+  });
+
+  it("doesn't fire notify-me on a decrease, even one that stays positive", async () => {
+    const { service, notifyMe } = makeService({ id: "lvl-1", onHand: 10, locationId: "loc-1", variantId: "v-1" });
+    await service.adjust({ variantId: "v-1", locationId: "loc-1", quantityDelta: -3, reason: "damage" }, actor);
+    expect(notifyMe.fulfillForVariant).not.toHaveBeenCalled();
+  });
+
+  it("doesn't fire notify-me when stock is still reserved past zero on-hand", async () => {
+    const { service, notifyMe } = makeService({ id: "lvl-1", onHand: 0, locationId: "loc-1", variantId: "v-1", reserved: 5 });
+    await service.adjust({ variantId: "v-1", locationId: "loc-1", quantityDelta: 2, reason: "purchase_receive" }, actor);
+    expect(notifyMe.fulfillForVariant).not.toHaveBeenCalled();
   });
 });

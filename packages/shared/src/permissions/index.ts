@@ -115,6 +115,16 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "customers.privacy", group: "customers", label: { bn: "গ্রাহকের তথ্য এক্সপোর্ট/অ্যানোনিমাইজ করুন", en: "Export or anonymize customer data" } },
   { key: "settings.ops.write", group: "settings", label: { bn: "অপারেশন সেটিংস পরিবর্তন করুন", en: "Edit operations settings" } },
   { key: "launch_checklist.read", group: "launch_checklist", label: { bn: "লঞ্চ চেকলিস্ট দেখুন", en: "View launch checklist" } },
+
+  // Milestone 10 (§16 M10) — conversion features. Bundle items live under
+  // the existing `catalog.manage` (they're a `Product` editor tab, same
+  // granularity as relations/media); preorder fields are plain product
+  // fields, same reasoning. Abandoned-cart recovery and the blog/lookbook
+  // get their own permissions since neither maps to an existing module.
+  { key: "marketing.abandoned_carts.manage", group: "marketing", label: { bn: "পরিত্যক্ত কার্ট পুনরুদ্ধার পরিচালনা করুন", en: "Manage abandoned-cart recovery" } },
+  { key: "settings.marketing.write", group: "settings", label: { bn: "মার্কেটিং সেটিংস পরিবর্তন করুন", en: "Edit marketing settings" } },
+  { key: "blog.manage", group: "blog", label: { bn: "ব্লগ ও লুকবুক পরিচালনা করুন", en: "Manage blog & lookbook" } },
+  { key: "settings.pwa.write", group: "settings", label: { bn: "PWA ও পুশ সেটিংস পরিবর্তন করুন", en: "Edit PWA & push settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

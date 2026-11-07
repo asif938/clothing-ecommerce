@@ -13,6 +13,8 @@ import { RecentlyViewedTracker } from "./recently-viewed-tracker";
 import { RecentlyViewedSection } from "./recently-viewed-section";
 import { ProductReviews } from "./product-reviews";
 import { ProductQnA } from "./product-qna";
+import { SizeRecommenderWidget } from "./size-recommender-widget";
+import { BundleSection } from "./bundle-section";
 import { trackEvent } from "../lib/analytics";
 import type { ProductDetail } from "../lib/store-api";
 
@@ -57,6 +59,15 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
     () => product.variants.find((v) => sameCombination(v.optionValueIds, selectedValueIds)) ?? null,
     [product.variants, selectedValueIds],
   );
+
+  const isPreorder = product.productType === "preorder";
+  const isBundle = product.productType === "bundle";
+
+  function applyRecommendedSize(size: string) {
+    if (!sizeOption) return;
+    const match = sizeOption.values.find((v) => t(v.value, "en").toLowerCase() === size.toLowerCase() || t(v.value, "bn") === size);
+    if (match) selectValue(sizeOption.id, match.id);
+  }
 
   const prices = product.variants.map((v) => v.price);
   const priceLabel = matchedVariant ? formatBdt(matchedVariant.price) : prices.length > 0 ? `${formatBdt(Math.min(...prices))} – ${formatBdt(Math.max(...prices))}` : "";
@@ -189,11 +200,16 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-surface-foreground">{t(sizeOption.name, locale as "bn" | "en")}</span>
-                {product.sizeChart && (
-                  <button onClick={() => setShowSizeChart(true)} className="text-xs text-brand underline">
-                    {locale === "bn" ? "সাইজ চার্ট" : "Size chart"}
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {product.sizeChart && (
+                    <SizeRecommenderWidget slug={product.slug} locale={locale} onRecommend={applyRecommendedSize} />
+                  )}
+                  {product.sizeChart && (
+                    <button onClick={() => setShowSizeChart(true)} className="text-xs text-brand underline">
+                      {locale === "bn" ? "সাইজ চার্ট" : "Size chart"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {sizeOption.values.map((value) => {
@@ -231,7 +247,17 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
             </div>
           ))}
 
-          {matchedVariant && !matchedVariant.available ? (
+          {isPreorder && (
+            <p className="w-fit rounded-theme bg-warning/15 px-3 py-1.5 text-xs font-medium text-warning">
+              {locale === "bn"
+                ? `প্রি-অর্ডার${product.preorderReleaseDate ? ` — আনুমানিক ${new Date(product.preorderReleaseDate).toLocaleDateString("bn-BD")}` : ""}`
+                : `Preorder${product.preorderReleaseDate ? ` — ships around ${new Date(product.preorderReleaseDate).toLocaleDateString()}` : ""}`}
+            </p>
+          )}
+
+          {isBundle ? (
+            <p className="text-sm text-surface-foreground/70">{locale === "bn" ? "নিচে এই লুকের প্রতিটি আইটেম দেখুন।" : "See every item in this look below."}</p>
+          ) : matchedVariant && !matchedVariant.available && !isPreorder ? (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-danger">{locale === "bn" ? "স্টক শেষ" : "Out of stock"}</p>
               {showNotifyMe ? (
@@ -245,7 +271,7 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
           ) : (
             <div className="flex gap-2">
               <button disabled={adding} onClick={() => handleAddToCart(false)} className="flex-1 rounded-theme bg-brand px-6 py-3 text-sm font-medium text-brand-foreground disabled:opacity-60">
-                {locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
+                {isPreorder ? (locale === "bn" ? "প্রি-অর্ডার করুন" : "Preorder") : locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
               </button>
               <button disabled={adding} onClick={() => handleAddToCart(true)} className="flex-1 rounded-theme border border-brand px-6 py-3 text-sm font-medium text-brand disabled:opacity-60">
                 {locale === "bn" ? "এখনই কিনুন" : "Buy now"}
@@ -306,18 +332,22 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
         ) : null,
       )}
 
+      {isBundle && <BundleSection product={product} locale={locale} />}
+
       <ProductReviews productId={product.id} locale={locale} />
       <ProductQnA productId={product.id} locale={locale} />
 
       <RecentlyViewedSection excludeId={product.id} locale={locale} />
 
       {/* Sticky add-to-cart bar on mobile (§7.4) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3 shadow-lg sm:hidden">
-        <span className="text-sm font-semibold text-surface-foreground">{priceLabel}</span>
-        <button disabled={adding} onClick={() => handleAddToCart(false)} className="rounded-theme bg-brand px-5 py-2 text-sm font-medium text-brand-foreground disabled:opacity-60">
-          {locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
-        </button>
-      </div>
+      {!isBundle && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3 shadow-lg sm:hidden">
+          <span className="text-sm font-semibold text-surface-foreground">{priceLabel}</span>
+          <button disabled={adding} onClick={() => handleAddToCart(false)} className="rounded-theme bg-brand px-5 py-2 text-sm font-medium text-brand-foreground disabled:opacity-60">
+            {isPreorder ? (locale === "bn" ? "প্রি-অর্ডার করুন" : "Preorder") : locale === "bn" ? "কার্টে যুক্ত করুন" : "Add to cart"}
+          </button>
+        </div>
+      )}
 
       {showSizeChart && product.sizeChart && <SizeChartModal sizeChart={product.sizeChart} locale={locale} onClose={() => setShowSizeChart(false)} />}
     </div>

@@ -11,7 +11,7 @@ export interface EnqueueInput {
   recipientType: RecipientType;
   recipientId?: string | null;
   locale: string;
-  contacts: { sms?: string | null; whatsapp?: string | null; email?: string | null };
+  contacts: { sms?: string | null; whatsapp?: string | null; email?: string | null; push?: string | null };
   variables: Record<string, string | number | null | undefined>;
   related?: { type: string; id: string };
 }
@@ -78,6 +78,9 @@ export class NotificationsService {
   private contactFor(channel: NotificationChannel, contacts: EnqueueInput["contacts"]): string | null {
     if (channel === "email") return contacts.email ?? null;
     if (channel === "whatsapp") return contacts.whatsapp ?? null;
+    // `push`'s "address" is a customerId, not a phone/email — `PushService`
+    // looks up that customer's actual subscription(s) at send time (§16 M10).
+    if (channel === "push") return contacts.push ?? null;
     return contacts.sms ?? null;
   }
 

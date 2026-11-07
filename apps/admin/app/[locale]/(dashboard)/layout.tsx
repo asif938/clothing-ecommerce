@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/refunds", labelKey: "navRefunds" },
   { href: "/cms/pages", labelKey: "navCmsPages" },
   { href: "/cms/announcements", labelKey: "navCmsAnnouncements" },
+  { href: "/blog", labelKey: "navBlog" },
   { href: "/products", labelKey: "navProducts" },
   { href: "/catalog", labelKey: "navCatalog" },
   { href: "/collections", labelKey: "navCollections" },
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/notifications", labelKey: "navNotifications" },
   { href: "/discounts", labelKey: "navDiscounts" },
   { href: "/flash-sales", labelKey: "navFlashSales" },
+  { href: "/abandoned-carts", labelKey: "navAbandonedCarts" },
   { href: "/customers", labelKey: "navCustomers" },
   { href: "/segments", labelKey: "navSegments" },
   { href: "/reviews", labelKey: "navReviews" },
@@ -40,6 +42,7 @@ const NAV_ITEMS = [
   { href: "/media", labelKey: "navMedia" },
   { href: "/integrations", labelKey: "navIntegrations" },
   { href: "/system-health", labelKey: "navSystemHealth" },
+  { href: "/push", labelKey: "navPush" },
   { href: "/launch-checklist", labelKey: "navLaunchChecklist" },
   { href: "/audit", labelKey: "navAudit" },
 ] as const;
