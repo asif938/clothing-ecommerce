@@ -2176,3 +2176,74 @@ accepted gap: an anonymous (never-logged-in) PWA install has no
 customerId to attach a subscription to, so it can subscribe but will
 never receive anything through this generic pipeline — only a logged-in
 customer's push actually fires today.
+
+## 2026-11-11 — `inventory_levels.available` must not be written by Prisma
+
+**Context.** The first run against a real Postgres (Neon) failed in `pnpm db:seed:demo` with
+`428C9 cannot insert a non-DEFAULT value into column "available"`. The column is a
+`GENERATED ALWAYS AS (on_hand - reserved) STORED` column (see the M2 migration), but
+`schema.prisma` declared it as `Int @default(0)`, so Prisma's `create`/`upsert` sent an explicit `0`.
+Every `inventoryLevel.create/upsert` (seed, `InventoryService.ensureLevelsForVariant`, catalog import)
+was affected; earlier milestones had no live database, so it was never exercised.
+
+**Decision.** Declare it `Int @default(dbgenerated())` so Prisma omits the column on insert and
+Postgres computes it. No migration is needed (the DB column was already generated, with no default).
+
+**Alternatives.** Making the field optional/removing it from the model and reading via raw SQL
+(rejected: loses typed reads of `available` everywhere); using `Unsupported` (rejected: not readable).
+
+## 2026-11-11 — M11: automation triggers go through a transactional outbox on `scheduled_tasks`
+
+**Context.** Automation rules (and the placement built-ins: queue auto-assignment, self-confirmation request) must react to order state changes. Those changes happen inside caller-owned transactions (`OrdersLifecycleService.transition(…, tx)`, checkout placement), so running rules inline could read rows that later roll back, and a rule's own `set_status` action would re-enter the lifecycle service mid-transaction.
+
+**Decision.** `AutomationOutboxService.enqueue(tx, trigger, orderId)` writes a `scheduled_tasks` row (`type: "automation.trigger"`) in the same transaction as the state change; the existing scheduler tick runs `AutomationEngineService.handle()` after commit. It lives in its own tiny module (`AutomationOutboxModule`) so lifecycle/checkout depend on it without depending on the engine (which depends on lifecycle). Cost: a rule fires up to one scheduler tick (60 s embedded, or the external-cron cadence) after the event — acceptable for confirmations/tags/assignment, and it keeps the free-tier "no Redis, no extra worker" rule. A per-rule/per-order loop guard (3 runs/hour, recorded as a `skipped` run) stops two rules from flipping an order back and forth. `order.placed` for an online-payment order fires from `onPaymentSucceeded`, not at placement, because until then it isn't a workable order.
+
+**Alternatives.** In-process event emitter after commit (rejected: events lost on a crash between commit and emit, and the `tx`-passing callers have no "after commit" hook); a separate queue/worker (rejected by the free-tier rule).
+
+## 2026-11-11 — M11: merge and split semantics
+
+**Context.** §8.2 asks for merge/split orders but defines nothing. Orders carry stock reservations, coupon usages and money.
+
+**Decision.** Only `pending`/`confirmed`/`on_hold` orders (nothing physical has happened). **Merge**: same customer account or same billing phone; absorbed orders must have `paidTotal = 0`; items, order discounts and coupon usages move to the survivor; the survivor keeps *its own* shipping fee (one parcel, one delivery charge); the absorbed orders are set to `cancelled` *directly* (not via `transition()`), with `mergedIntoOrderId` and `reservationReleasedAt` set, because the lifecycle's cancellation would release the stock that just moved and message the customer "your order was cancelled". **Split**: order must have no payment; chosen units move to a new `admin`-channel order in the same status (`splitFromOrderId`); the order-level discount is divided by subtotal share with the remainder staying, so both halves always sum to the original; the new order's delivery charge is staff-entered (default 0, since shipping was already charged). Stock reservations don't change (same variants/quantities). All arithmetic is in `merge-split-math.ts`, unit-tested. `Customer.ordersCount/totalSpent` are adjusted.
+
+**Alternatives.** Splitting into several shipments of one order (`ShipmentItem` supports it, but it changes fulfillment, packing and COD reconciliation — left for a later fulfillment milestone; the new-order approach gets the same physical result today). Re-running the pricing pipeline on merge (rejected, same reasoning as `OrderEditService`: existing discounts are kept as-is).
+
+## 2026-11-11 — M11: customer self-confirmation is a link, not a vendor-specific button
+
+**Context.** §6.8 lists "SMS link / WhatsApp button". A WhatsApp interactive button needs a template pre-approved by Meta and a driver that supports interactive messages; golden rule 2 forbids depending on one vendor.
+
+**Decision.** One new notification event, `order_confirmation_request`, carrying `{confirm_link}` (`/{locale}/confirm-order/{token}` on the storefront). It goes through the normal channel matrix (WhatsApp first, SMS fallback), so it works on every driver including mock. The token is 24 random bytes (192 bits), stored on the order, scoped to that one order, and can only move a `pending` order to `confirmed` (or `cancelled` when `orders.selfConfirm.allowCancel`). It expires after `orders.selfConfirm.expiryHours`; responding twice is idempotent. A WhatsApp driver that wants a real button can post the same `{action}` to the same endpoint. Off by default (`orders.selfConfirm.enabled`).
+
+**Alternatives.** Short numeric reply codes ("reply 1 to confirm") — needs inbound-message plumbing no driver has yet.
+
+## 2026-11-11 — M11: courier assignment rules reuse the automation condition model
+
+**Decision.** `CourierAssignmentRule` stores the same `{match, rules[]}` JSON the automation builder edits, evaluated by the same pure `evaluateConditions` over the same `OrderContextService` field map, so "order.codAmount ≥ 10,000 ৳" means the same thing in both places and there is one builder component. Booking with `auto: true` picks the first active rule by priority and then goes through the normal driver path; no match is a clear `NO_COURIER_RULE_MATCH` error (no silent fallback to a random courier). Manual selection is unchanged.
+
+## 2026-11-11 — M11: approvals replay the gated action; gating is setting-driven
+
+**Context.** §5.10 defines `approval_requests` (type, entity, payload, requested_by, status, decided_by); §8.2 wants an inbox.
+
+**Decision.** A gated action is **not executed**; its request payload is stored and the caller gets `{approvalRequired: true, approvalRequestId}`. An approver (`approvals.decide`, never the requester — four-eyes) approves → the stored payload is replayed through the same service method with `approved: true` as the requester; reject just records the note. Feature modules register an executor per `type` in `onModuleInit`, so `ApprovalsModule` depends on nothing. The decision is claimed with a guarded `updateMany` before replay so two approvers can't both run it; a replay that throws marks the request `failed` with the error. Two gates ship: order edits that override a unit price or the shipping fee (`approvals.priceOverride.required`, default off) and completing a refund above `approvals.refund.thresholdAmount` poisha (default 0 = off). `approvals.bypass` skips both. The order-edit page now only sends `shippingFeeOverride` when the fee actually changed (it used to send it every time, which would have triggered the gate on every edit).
+
+**Alternatives.** Gating every mutation generically via an interceptor (rejected: replaying arbitrary HTTP bodies is unsafe; explicit per-feature executors are reviewable).
+
+## 2026-11-11 — M11: field-level permissions are enforced behind a setting, default off
+
+**Context.** §4/§11: "field-level permissions exist for sensitive fields (cost price, profit, customer full phone number)". Turning masking on by default would blank every phone number for the existing non-super-admin roles (e.g. call-centre) the moment this deploys.
+
+**Decision.** New permissions `fields.customer_phone.read` and `fields.order_cost.read` (cost price also honours the existing `catalog.cost.read`). `security.fieldMasking.enabled` (default **false**) switches enforcement on; the "Field access" screen is a focused role × field-permission matrix over the normal role editor. When enforced, the order list/detail and the Kanban/queue cards mask phones (`01712•••678`) and null `costPrice`; super-admin/system roles are not special-cased (the seeded Super Admin holds every permission). Scope is deliberately the order endpoints plus queue/Kanban — customers list/profile/export, returns and reports still show full phone numbers and are tracked as a known gap.
+
+## 2026-11-11 — M11: admin PWA service worker caches nothing
+
+**Decision.** `apps/admin/public/sw.js` handles `push` and `notificationclick` only — no fetch handler, no caches. The admin app shows customer phone numbers, order data and staff sessions; an offline shell cache could serve stale or another user's authenticated pages. Installability only needs the manifest + a registered worker. The manifest and icons are generated from the brand settings (`lib/brand.ts` → public store config), like the storefront's. The admin CSP header's `Permissions-Policy` changed from `camera=()` to `camera=(self)` so the barcode scanner can open the camera (same-origin only). The camera scanner uses the browser's built-in `BarcodeDetector` (Chromium/Android) — no scanning library; elsewhere it explains itself and the text input / USB scanner (keyboard wedge) path is unchanged.
+
+## 2026-11-11 — M11: admin push events and staff push subscriptions
+
+**Decision.** `PushSubscription` gained a nullable `staffUserId` (a subscription belongs to a customer *or* a staff member; re-subscribing an endpoint as staff clears its `customerId`). Any signed-in staff member may register their own devices (`/admin/staff-push/*`, authentication only — it only ever delivers notifications they'd already see in the bell). `StaffNotificationsService` now fans every in-app notification out to push as well (best effort, never throws), gated by `pwa.adminPushEnabled`. New alert sources: new order (existing), high-risk order at placement, a payment failure, an approval request, and a low-stock *crossing* (available stock falling to/below the variant's threshold because of an order — a variant already below it does not re-alert on every order).
+
+## 2026-11-11 — M11: confirm page copy is inline bilingual, following the track page
+
+**Context.** Golden rule 1 says storefront copy comes from the database. The existing storefront order-tracking view (M5/M6/M10) already uses inline `bn`/`en` strings for the same kind of tokenised, account-less page.
+
+**Decision.** `ConfirmOrderView` follows that precedent rather than inventing a second mechanism for one page; it is listed as a known gap to move to `ui_strings` together with the tracking view when those pages are next touched.

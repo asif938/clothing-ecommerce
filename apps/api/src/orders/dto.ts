@@ -102,3 +102,18 @@ export const bulkActionSchema = z.object({
   staffId: z.string().nullable().default(null),
 });
 export type BulkActionDto = z.infer<typeof bulkActionSchema>;
+
+export const mergeOrdersSchema = z.object({
+  targetOrderId: z.string().min(1),
+  sourceOrderIds: z.array(z.string().min(1)).min(1).max(10),
+  reason: z.string().max(500).nullable().default(null),
+});
+export type MergeOrdersDto = z.infer<typeof mergeOrdersSchema>;
+
+export const splitOrderSchema = z.object({
+  items: z.array(z.object({ orderItemId: z.string().min(1), quantity: z.number().int().min(1) })).min(1),
+  // Delivery charge for the new (split-off) order, in poisha. Defaults to free: the customer already paid shipping on the original.
+  shippingFee: z.number().int().min(0).default(0),
+  reason: z.string().max(500).nullable().default(null),
+});
+export type SplitOrderDto = z.infer<typeof splitOrderSchema>;

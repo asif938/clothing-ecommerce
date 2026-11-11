@@ -125,6 +125,21 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "settings.marketing.write", group: "settings", label: { bn: "মার্কেটিং সেটিংস পরিবর্তন করুন", en: "Edit marketing settings" } },
   { key: "blog.manage", group: "blog", label: { bn: "ব্লগ ও লুকবুক পরিচালনা করুন", en: "Manage blog & lookbook" } },
   { key: "settings.pwa.write", group: "settings", label: { bn: "PWA ও পুশ সেটিংস পরিবর্তন করুন", en: "Edit PWA & push settings" } },
+
+  // Milestone 11 (§16 M11) — order operations automation.
+  { key: "automation.manage", group: "automation", label: { bn: "অটোমেশন রুল পরিচালনা করুন", en: "Manage automation rules" } },
+  { key: "orders.queue.manage", group: "orders", label: { bn: "অর্ডার কিউ ও অ্যাসাইনমেন্ট পরিচালনা করুন", en: "Manage the order queue & assignment" } },
+  { key: "orders.merge_split", group: "orders", label: { bn: "অর্ডার মার্জ/স্প্লিট করুন", en: "Merge & split orders" } },
+  { key: "couriers.rules.manage", group: "shipping", label: { bn: "কুরিয়ার অ্যাসাইনমেন্ট রুল পরিচালনা করুন", en: "Manage courier assignment rules" } },
+  { key: "approvals.decide", group: "approvals", label: { bn: "অনুমোদন অনুরোধ সিদ্ধান্ত দিন", en: "Approve or reject requests" } },
+  { key: "approvals.bypass", group: "approvals", label: { bn: "অনুমোদন ছাড়াই কার্যকর করুন", en: "Bypass approval workflows" } },
+  { key: "settings.approvals.write", group: "settings", label: { bn: "অনুমোদন সেটিংস পরিবর্তন করুন", en: "Edit approval settings" } },
+  // Field-level permissions (§4.1/§8.2): a field is hidden/masked in API
+  // responses unless the staff member's role holds the matching `fields.*`
+  // permission (or, for cost price, `catalog.cost.read`). The "Field access"
+  // admin screen is just a filtered view of the role matrix over these.
+  { key: "fields.customer_phone.read", group: "fields", label: { bn: "গ্রাহকের পূর্ণ ফোন নম্বর দেখুন", en: "See customers' full phone numbers" } },
+  { key: "fields.order_cost.read", group: "fields", label: { bn: "অর্ডারের ক্রয়মূল্য ও মুনাফা দেখুন", en: "See order cost price & profit" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

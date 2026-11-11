@@ -14,7 +14,8 @@
     "./crypto": "./src/crypto/index.ts",
     "./providers": "./src/providers/index.ts",
     "./media": "./src/media/url.ts",
-    "./notifications": "./src/notifications/index.ts"
+    "./notifications": "./src/notifications/index.ts",
+    "./automation": "./src/automation/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

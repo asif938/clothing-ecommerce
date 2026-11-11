@@ -24,6 +24,7 @@ export default function RefundsPage() {
   const t = useTranslations("refunds");
   const [refunds, setRefunds] = useState<Refund[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [trxRef, setTrxRef] = useState<Record<string, string>>({});
 
   async function load() {
@@ -42,7 +43,8 @@ export default function RefundsPage() {
   async function complete(id: string) {
     setError(null);
     try {
-      await api.post(`/admin/refunds/${id}/complete`, { externalRef: trxRef[id] || null });
+      const result = await api.post<{ approvalRequired?: boolean }>(`/admin/refunds/${id}/complete`, { externalRef: trxRef[id] || null });
+      if (result?.approvalRequired) setNotice(t("approvalRequested"));
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to complete");
@@ -65,6 +67,7 @@ export default function RefundsPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
       {error && <Banner kind="error">{error}</Banner>}
+      {notice && <Banner kind="info">{notice}</Banner>}
 
       <Card className="p-0">
         <table className="w-full text-sm">

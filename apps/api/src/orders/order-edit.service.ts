@@ -7,7 +7,13 @@ import { SettingsService } from "../settings/settings.service";
 import { LocationsService } from "../locations/locations.service";
 import { ShippingService } from "../shipping/shipping.service";
 import { StockReservationService } from "../checkout/stock-reservation.service";
+import { ApprovalsService } from "../approvals/approvals.service";
 import type { EditOrderDto } from "./dto";
+
+export interface ApprovalPending {
+  approvalRequired: true;
+  approvalRequestId: string;
+}
 
 function toJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
@@ -34,9 +40,26 @@ export class OrderEditService {
     private readonly locations: LocationsService,
     private readonly shipping: ShippingService,
     private readonly stock: StockReservationService,
+    private readonly approvals: ApprovalsService,
   ) {}
 
-  async edit(orderId: string, dto: EditOrderDto, actor: AuthenticatedStaff) {
+  /** True when the edit overrides a price or the shipping fee and the brand requires a second pair of eyes for that (`approvals.priceOverride.required`). */
+  private async needsApproval(dto: EditOrderDto, actor: AuthenticatedStaff): Promise<boolean> {
+    if (actor.permissions.has("approvals.bypass")) return false;
+    const overrides = dto.shippingFeeOverride != null || (dto.items ?? []).some((line) => line.unitPriceOverride != null);
+    return overrides && (await this.settings.getValue<boolean>("approvals.priceOverride.required"));
+  }
+
+  async edit(orderId: string, dto: EditOrderDto, actor: AuthenticatedStaff, opts: { approved?: boolean } = {}) {
+    if (!opts.approved && (await this.needsApproval(dto, actor))) {
+      const found = await this.prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+      if (!found) throw new NotFoundException("Order not found");
+      const request = await this.approvals.request(
+        { type: "order_edit", entityType: "order", entityId: orderId, summary: `Order ${found.orderNumber}: price/shipping override - ${dto.reason}`, payload: { orderId, dto } },
+        actor,
+      );
+      return { approvalRequired: true, approvalRequestId: request.id } satisfies ApprovalPending;
+    }
     const order = await this.prisma.order.findUnique({ where: { id: orderId }, include: { items: true, discounts: true } });
     if (!order) throw new NotFoundException("Order not found");
     if (!EDITABLE_STATUSES.includes(order.status)) {

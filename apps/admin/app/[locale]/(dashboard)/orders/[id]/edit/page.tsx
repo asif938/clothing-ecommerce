@@ -39,6 +39,7 @@ export default function OrderEditPage() {
   const router = useRouter();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [shippingFeeOverride, setShippingFeeOverride] = useState("");
   const [reason, setReason] = useState("");
@@ -58,11 +59,17 @@ export default function OrderEditPage() {
     if (!order || !reason.trim()) return;
     setError(null);
     try {
-      await api.patch(`/admin/orders/${order.id}`, {
+      // Only send the shipping override when it actually changed: an unchanged fee is not an override, and overrides can need approval (M11).
+      const newFee = Math.round(Number.parseFloat(shippingFeeOverride || "0") * 100);
+      const result = await api.patch<{ approvalRequired?: boolean }>(`/admin/orders/${order.id}`, {
         items: order.items.map((item) => ({ orderItemId: item.id, quantity: quantities[item.id] ?? item.quantity })),
-        shippingFeeOverride: Math.round(Number.parseFloat(shippingFeeOverride || "0") * 100),
+        ...(newFee !== order.shippingFee ? { shippingFeeOverride: newFee } : {}),
         reason,
       });
+      if (result?.approvalRequired) {
+        setNotice(t("approvalRequested"));
+        return;
+      }
       router.push(`/orders/${order.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to save");
@@ -82,6 +89,7 @@ export default function OrderEditPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("actions.edit")}: {order.orderNumber}</h1>
       {error && <Banner kind="error">{error}</Banner>}
+      {notice && <Banner kind="info">{notice}</Banner>}
 
       <Card className="flex flex-col gap-3">
         {order.items.map((item) => (

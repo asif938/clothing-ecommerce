@@ -3,6 +3,8 @@ import { z } from "zod";
 export const bookShipmentSchema = z.object({
   // null = the built-in "manual" option (§10.2) — staff enters the courier name/tracking code directly.
   courierProviderInstanceId: z.string().nullable(),
+  // §16 M11 - when true the courier is chosen by the auto-assignment rules and `courierProviderInstanceId` is ignored.
+  auto: z.boolean().default(false),
   manualCourierName: z.string().min(1).max(120).nullable().default(null),
   manualTrackingCode: z.string().min(1).max(120).nullable().default(null),
 });

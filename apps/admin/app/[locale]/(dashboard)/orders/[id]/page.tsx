@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { Link } from "../../../../../i18n/navigation";
+import { Link, useRouter } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
-import { Banner, Button, Card } from "../../../../../components/ui";
+import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { useCurrentStaff } from "../../../../../lib/use-current-staff";
 
 interface OrderItem {
   id: string;
@@ -91,6 +92,11 @@ const CALL_OUTCOMES = ["no_answer", "confirmed", "call_later", "wrong_number", "
 export default function OrderDetailPage() {
   const t = useTranslations("orders");
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { hasPermission } = useCurrentStaff();
+  const [splitQty, setSplitQty] = useState<Record<string, number>>({});
+  const [splitShipping, setSplitShipping] = useState("0");
+  const [mergeWith, setMergeWith] = useState("");
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -142,7 +148,30 @@ export default function OrderDetailPage() {
   }
 
   async function bookShipment() {
-    await act(`/admin/orders/${params.id}/shipments`, { courierProviderInstanceId: selectedCourier || null, manualTrackingCode: selectedCourier ? null : manualTrackingCode, manualCourierName: selectedCourier ? null : "Manual" });
+    const auto = selectedCourier === "__auto__";
+    const instanceId = selectedCourier && !auto ? selectedCourier : null;
+    await act(`/admin/orders/${params.id}/shipments`, { auto, courierProviderInstanceId: instanceId, manualTrackingCode: instanceId || auto ? null : manualTrackingCode, manualCourierName: instanceId || auto ? null : "Manual" });
+  }
+
+  async function mergeInto(sourceOrderId: string) {
+    if (!order || !sourceOrderId.trim()) return;
+    await act("/admin/orders/merge", { targetOrderId: order.id, sourceOrderIds: [sourceOrderId.trim()], reason: null });
+    setMergeWith("");
+  }
+
+  async function splitOff() {
+    const items = Object.entries(splitQty)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([orderItemId, quantity]) => ({ orderItemId, quantity }));
+    if (items.length === 0) return;
+    setError(null);
+    try {
+      const result = await api.post<{ created: { id: string } }>(`/admin/orders/${params.id}/split`, { items, shippingFee: Math.round((Number(splitShipping) || 0) * 100), reason: null });
+      setSplitQty({});
+      router.push(`/orders/${result.created.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Split failed");
+    }
   }
 
   if (!order) {
@@ -159,6 +188,8 @@ export default function OrderDetailPage() {
   const canCancel = ["pending_payment", "pending", "confirmed", "on_hold", "processing", "packed"].includes(order.status);
   const canBookShipment = order.status === "packed";
   const canEdit = ["pending_payment", "pending", "confirmed", "on_hold", "processing", "packed"].includes(order.status);
+  const canMergeSplit = hasPermission("orders.merge_split") && ["pending", "confirmed", "on_hold"].includes(order.status);
+  const canSplit = canMergeSplit && order.paidTotal === 0 && order.items.reduce((sum, i) => sum + i.quantity, 0) > 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -192,6 +223,11 @@ export default function OrderDetailPage() {
           <Link href={`/orders/${order.id}/edit`}>
             <Button variant="secondary">{t("actions.edit")}</Button>
           </Link>
+        )}
+        {!order.assignedTo && hasPermission("orders.queue.manage") && (
+          <Button variant="secondary" onClick={() => void act(`/admin/order-queue/${order.id}/auto-assign`)}>
+            {t("actions.autoAssign")}
+          </Button>
         )}
       </div>
 
@@ -236,6 +272,60 @@ export default function OrderDetailPage() {
           </div>
         </Card>
       </div>
+
+      {canMergeSplit && (
+        <Card className="flex flex-col gap-4">
+          <h2 className="text-sm font-semibold text-surface-foreground">{t("mergeSplit.title")}</h2>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold uppercase text-surface-foreground/60">{t("mergeSplit.mergeTitle")}</h3>
+            <p className="text-xs text-surface-foreground/60">{t("mergeSplit.mergeHelp")}</p>
+            {order.possibleDuplicateOrderIds.map((id) => (
+              <div key={id} className="flex items-center justify-between text-sm text-surface-foreground">
+                <Link href={`/orders/${id}`} className="underline">
+                  {id}
+                </Link>
+                <Button variant="secondary" onClick={() => void mergeInto(id)}>
+                  {t("mergeSplit.mergeInto")}
+                </Button>
+              </div>
+            ))}
+            <div className="flex items-end gap-2">
+              <TextField label={t("mergeSplit.otherOrderId")} value={mergeWith} onChange={(e) => setMergeWith(e.target.value)} />
+              <Button variant="secondary" disabled={!mergeWith.trim()} onClick={() => void mergeInto(mergeWith)}>
+                {t("mergeSplit.merge")}
+              </Button>
+            </div>
+          </div>
+          {canSplit && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase text-surface-foreground/60">{t("mergeSplit.splitTitle")}</h3>
+              <p className="text-xs text-surface-foreground/60">{t("mergeSplit.splitHelp")}</p>
+              {order.items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm text-surface-foreground">
+                  <span>
+                    {item.title.en ?? item.title.bn ?? item.sku} ×{item.quantity}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={item.quantity}
+                    value={splitQty[item.id] ?? 0}
+                    onChange={(e) => setSplitQty({ ...splitQty, [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)) })}
+                    className="w-20 rounded-theme border border-border bg-surface px-2 py-1 text-right text-sm"
+                    aria-label={t("mergeSplit.moveQty")}
+                  />
+                </div>
+              ))}
+              <div className="flex items-end gap-2">
+                <TextField label={t("mergeSplit.newShipping")} type="number" min={0} value={splitShipping} onChange={(e) => setSplitShipping(e.target.value)} />
+                <Button onClick={() => void splitOff()} disabled={Object.values(splitQty).every((q) => !q)}>
+                  {t("mergeSplit.split")}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-surface-foreground">{t("payments")}</h2>
@@ -284,6 +374,7 @@ export default function OrderDetailPage() {
           <div className="flex flex-wrap items-end gap-2">
             <select value={selectedCourier} onChange={(e) => setSelectedCourier(e.target.value)} className="rounded-theme border border-border bg-surface px-3 py-2 text-sm">
               <option value="">{t("manual")}</option>
+              <option value="__auto__">{t("autoCourier")}</option>
               {courier.filter((c) => c.instanceId).map((c) => (
                 <option key={c.instanceId} value={c.instanceId!}>{c.driver}</option>
               ))}

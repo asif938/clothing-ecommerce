@@ -360,3 +360,143 @@ Nothing here can be edited or deleted by anyone, including a Super Admin.
 **BN** — প্রতিটি অ্যাডমিন পরিবর্তন এবং সংবেদনশীল রিড (রিপোর্ট এক্সপোর্ট,
 গ্রাহকের তথ্য এক্সপোর্ট) এখানে আছে: কে, কী, কখন, আগে/পরের মান। এখানে
 কিছু এডিট বা ডিলিট করা যায় না, সুপার অ্যাডমিনও পারবেন না।
+
+## Order board, my queue and auto-assignment (`orders.manage`, `orders.queue.manage`)
+
+**EN** — *Order board* shows orders as columns by status; drag a card to
+confirm it, put it on hold (a reason is asked) or move it to processing —
+the same rules as the order page, so an illegal move just shows an error.
+*My order queue* lists the orders assigned to you that still need a call,
+oldest first. To share new orders automatically, switch a person on under
+*My order queue → Order queue team* and turn on *Auto-assign new orders*
+in Settings → orders (round-robin, or whoever has the fewest open orders).
+On an order page, *Assign from queue* assigns that one order now.
+
+**BN** — *অর্ডার বোর্ড* অর্ডারগুলোকে স্ট্যাটাস অনুযায়ী কলামে দেখায়; কার্ড
+টেনে কনফার্ম করুন, হোল্ডে রাখুন (কারণ জিজ্ঞেস করা হবে) বা প্রসেসিংয়ে নিন
+— অর্ডার পেজের মতোই নিয়ম, তাই ভুল সরানোয় শুধু এরর দেখাবে। *আমার অর্ডার
+কিউ*-তে আপনাকে দেওয়া যেসব অর্ডারে এখনও কল বাকি তা পুরনো আগে দেখায়।
+নতুন অর্ডার নিজে থেকে ভাগ করতে *আমার অর্ডার কিউ → অর্ডার কিউ টিম*-এ
+স্টাফকে চালু করুন এবং সেটিংস → orders-এ *নতুন অর্ডার স্বয়ংক্রিয়ভাবে
+অ্যাসাইন* চালু করুন (রাউন্ড-রবিন, বা যার খোলা অর্ডার সবচেয়ে কম)।
+
+## Customer self-confirmation (Settings → orders)
+
+**EN** — Turn on *Customer self-confirmation* and every new pending order
+sends the customer a link (WhatsApp first, SMS if that fails). Opening it
+shows the order and a Confirm button (and Cancel, if you allow it). The
+link expires after the number of hours you set. Edit the wording under
+Notifications → *Order confirmation request*.
+
+**BN** — *গ্রাহক নিজে অর্ডার কনফার্ম* চালু করলে প্রতিটি নতুন অপেক্ষমাণ
+অর্ডারে গ্রাহক একটি লিংক পান (আগে WhatsApp, না গেলে SMS)। লিংক খুললে অর্ডার ও
+কনফার্ম বোতাম দেখা যায় (অনুমতি দিলে বাতিলও)। লিংকের মেয়াদ আপনার ঠিক করা
+ঘণ্টা পর শেষ হয়। বার্তার ভাষা নোটিফিকেশন → *অর্ডার নিশ্চিতকরণ অনুরোধ*-এ
+বদলান।
+
+## Merge & split orders (`orders.merge_split`)
+
+**EN** — On a pending, confirmed or on-hold order: *Merge* folds another
+order from the same customer into this one (items and discounts move here,
+one delivery charge applies, the other order is closed as "merged"; the
+other order must have no payment). *Split* moves chosen units to a new
+order — handy for two parcels; at least one unit must stay, the order must
+have no payment, and you enter the new order's delivery charge.
+
+**BN** — অপেক্ষমাণ, কনফার্মড বা হোল্ডে থাকা অর্ডারে: *মার্জ* একই গ্রাহকের
+আরেকটি অর্ডার এতে মিশিয়ে দেয় (পণ্য ও ডিসকাউন্ট এখানে আসে, একটি ডেলিভারি
+চার্জ থাকে, অন্য অর্ডার "মার্জড" হিসেবে বন্ধ হয়; অন্য অর্ডারে কোনো পেমেন্ট
+থাকা চলবে না)। *স্প্লিট* বাছাই করা ইউনিট নতুন অর্ডারে সরায় — দুই পার্সেলের
+জন্য সুবিধাজনক; অন্তত একটি ইউনিট থাকতে হবে, অর্ডারে পেমেন্ট থাকা চলবে না,
+আর নতুন অর্ডারের ডেলিভারি চার্জ আপনি দেবেন।
+
+## Automation (`automation.manage`)
+
+**EN** — A rule is *when* (an order is placed, confirmed, put on hold,
+cancelled, shipped, delivered, rejected at the door) + *conditions* (all/any
+of: total, risk, tags, district, customer history…) + *actions* (tag, change
+status, assign, notify staff, message the customer, call a webhook, add a
+note). Start from a template — it is added switched **off** so you can check
+the numbers (money is in poisha: 100 = ৳1). Use *Test with a sample event*
+with a real order ID to see which conditions pass; nothing is executed.
+Rules run within about a minute of the event; *Run history* shows what each
+one did or why it failed.
+
+**BN** — একটি রুল হলো *কখন* (অর্ডার প্লেস, কনফার্ম, হোল্ড, বাতিল, শিপ,
+ডেলিভার, দরজায় প্রত্যাখ্যান) + *শর্ত* (সব/যেকোনো: মোট, রিস্ক, ট্যাগ, জেলা,
+গ্রাহকের ইতিহাস…) + *কাজ* (ট্যাগ, স্ট্যাটাস বদল, অ্যাসাইন, স্টাফকে জানানো,
+গ্রাহককে বার্তা, ওয়েবহুক, নোট)। টেমপ্লেট থেকে শুরু করুন — এটি **বন্ধ**
+অবস্থায় যোগ হয় যাতে সংখ্যাগুলো যাচাই করতে পারেন (টাকা পয়সায়: ১০০ = ৳১)।
+একটি আসল অর্ডার আইডি দিয়ে *নমুনা ইভেন্ট দিয়ে পরীক্ষা* করলে কোন শর্ত মিলছে
+দেখা যায়; কিছু কার্যকর হয় না। ঘটনার প্রায় এক মিনিটের মধ্যে রুল চলে;
+*রানের ইতিহাস*-এ দেখা যায় কী হয়েছে বা কেন ব্যর্থ হয়েছে।
+
+## Courier rules (`couriers.rules.manage`)
+
+**EN** — Rules like "Chattogram → Pathao", "COD over ৳10,000 → RedX",
+"everything else → Steadfast". When booking a packed order choose *Auto
+(by courier rules)*: the first active rule (lowest priority number) that
+matches picks the courier; if none matches you get a clear error. Use
+*Preview for an order* to check a rule set. Keep one condition-less rule
+last as the catch-all.
+
+**BN** — "চট্টগ্রাম → Pathao", "১০,০০০ টাকার বেশি COD → RedX", "বাকি সব →
+Steadfast"-এর মতো রুল। প্যাক করা অর্ডার বুক করার সময় *অটো (কুরিয়ার রুল
+অনুযায়ী)* বেছে নিন: প্রথম মিলে যাওয়া সক্রিয় রুল (সবচেয়ে কম অগ্রাধিকার
+সংখ্যা) কুরিয়ার ঠিক করে; কোনোটি না মিললে স্পষ্ট এরর আসে। রুলসেট যাচাই
+করতে *একটি অর্ডারের প্রিভিউ* ব্যবহার করুন। শর্তহীন একটি রুল সবার শেষে
+ক্যাচ-অল হিসেবে রাখুন।
+
+## Approvals (`approvals.decide`, `approvals.bypass`)
+
+**EN** — Turn on *Require approval for price / shipping overrides* and set
+a refund limit in Settings → approvals. A staff member without *bypass*
+who tries one of these gets "approval requested" instead of the change;
+approvers see it under *Approvals* and approve (the change is applied as
+if the requester had done it) or reject with a note. You cannot approve
+your own request. A request that was approved but could not be applied
+(e.g. the order shipped meanwhile) shows as *Failed to apply* with the
+reason.
+
+**BN** — সেটিংস → approvals-এ *দাম / শিপিং ওভাররাইডে অনুমোদন লাগবে* চালু
+করুন এবং রিফান্ডের সীমা দিন। *বাইপাস* অনুমতি ছাড়া কেউ এগুলো করতে গেলে
+পরিবর্তনের বদলে "অনুমোদনের অনুরোধ" যায়; অনুমোদনকারী *অনুমোদন* পেজে দেখে
+অনুমোদন (পরিবর্তনটি অনুরোধকারীর হয়ে কার্যকর হয়) বা নোটসহ প্রত্যাখ্যান করেন।
+নিজের অনুরোধ নিজে অনুমোদন করা যায় না। অনুমোদিত কিন্তু কার্যকর করা যায়নি
+(যেমন ইতিমধ্যে অর্ডার শিপ হয়ে গেছে) এমন অনুরোধ কারণসহ *কার্যকর হয়নি*
+দেখায়।
+
+## Field access (`rbac.manage`)
+
+**EN** — Choose which roles may see customers' full phone numbers and
+order cost/profit. Nothing changes until you switch on *Enforce
+field-level permissions* in Settings → security — then everyone without the
+permission sees masked numbers (01712•••678) and no cost prices on orders,
+the order board and the queue. Built-in roles keep full access. Customers
+list/export, returns and reports are not covered yet.
+
+**BN** — কোন রোল গ্রাহকের পূর্ণ ফোন নম্বর ও অর্ডারের ক্রয়মূল্য/মুনাফা দেখবে তা
+বেছে নিন। সেটিংস → security-তে *ফিল্ড-লেভেল অনুমতি কার্যকর করুন* চালু না
+করা পর্যন্ত কিছু বদলায় না — চালুর পর অনুমতি ছাড়া সবাই অর্ডার, বোর্ড ও কিউতে
+মাস্ক করা নম্বর (01712•••678) দেখবে এবং ক্রয়মূল্য দেখবে না। বিল্ট-ইন রোল
+পূর্ণ অ্যাক্সেস পায়। গ্রাহক তালিকা/এক্সপোর্ট, রিটার্ন ও রিপোর্ট এখনও এর
+আওতায় নেই।
+
+## Admin app on your phone & camera scanner
+
+**EN** — Open the admin in Chrome/Edge on your phone and use *Add to home
+screen / Install*. Tap *Turn on alerts on this device* (bottom of the menu)
+to get push for new orders, high-risk orders, failed payments, low stock
+and approval requests — this needs the push keys generated once under
+*Push notifications*. The installed app still needs internet (it
+deliberately stores nothing offline). On the packing screen, *Scan with
+camera* reads order and item barcodes in Chrome/Edge on Android; on other
+browsers type the code or use a USB/Bluetooth scanner.
+
+**BN** — ফোনে Chrome/Edge-এ অ্যাডমিন খুলে *Add to home screen / Install*
+করুন। নতুন অর্ডার, হাই-রিস্ক অর্ডার, ব্যর্থ পেমেন্ট, কম স্টক ও অনুমোদনের
+অনুরোধের পুশ পেতে মেনুর নিচে *এই ডিভাইসে অ্যালার্ট চালু করুন* চাপুন — এর জন্য
+*পুশ নোটিফিকেশন* পেজে একবার পুশ কী তৈরি করা থাকতে হবে। ইনস্টল করা অ্যাপেও
+ইন্টারনেট লাগে (ইচ্ছে করেই অফলাইনে কিছু রাখা হয় না)। প্যাকিং স্ক্রিনে
+*ক্যামেরা দিয়ে স্ক্যান* Android-এর Chrome/Edge-এ অর্ডার ও পণ্যের বারকোড পড়ে;
+অন্য ব্রাউজারে কোড টাইপ করুন বা USB/ব্লুটুথ স্ক্যানার ব্যবহার করুন।

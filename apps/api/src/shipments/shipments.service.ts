@@ -10,6 +10,7 @@ import { LocationsService } from "../locations/locations.service";
 import { StockReservationService } from "../checkout/stock-reservation.service";
 import { OrdersLifecycleService } from "../checkout/orders-lifecycle.service";
 import { CourierProvidersService } from "../couriers/courier-providers.service";
+import { CourierRulesService } from "../courier-rules/courier-rules.service";
 import { CourierAreaMappingService } from "../courier-area-mapping/courier-area-mapping.service";
 import { computeDoorCharge, computeDoorstepRefundableAmount, type DoorstepCustomerPaysPolicy } from "./doorstep-rejection";
 import type { BookShipmentDto, ReceiveAtWarehouseDto, ReconcilePartialDeliveryDto, UpdateShipmentStatusDto } from "./dto";
@@ -64,6 +65,7 @@ export class ShipmentsService {
     private readonly lifecycle: OrdersLifecycleService,
     private readonly couriers: CourierProvidersService,
     private readonly areaMapping: CourierAreaMappingService,
+    private readonly courierRules: CourierRulesService,
   ) {}
 
   async forOrder(orderId: string) {
@@ -96,7 +98,13 @@ export class ShipmentsService {
     let trackingCode: string | null = null;
     let trackingUrl: string | null = null;
     let courierDriverName = "manual";
-    const manual = dto.courierProviderInstanceId === null;
+    let providerInstanceId = dto.courierProviderInstanceId;
+    if (dto.auto) {
+      const match = await this.courierRules.resolve(orderId);
+      if (!match) throw new BadRequestException({ code: "NO_COURIER_RULE_MATCH", message: "No courier assignment rule matches this order - pick a courier manually." });
+      providerInstanceId = match.providerInstanceId;
+    }
+    const manual = providerInstanceId === null;
 
     if (manual) {
       if (!dto.manualTrackingCode) throw new BadRequestException({ code: "TRACKING_CODE_REQUIRED", message: "Enter the courier's tracking code." });
@@ -104,8 +112,8 @@ export class ShipmentsService {
       consignmentId = dto.manualTrackingCode;
       courierDriverName = dto.manualCourierName ?? "manual";
     } else {
-      const { driver, driverName } = await this.couriers.resolveDriver(dto.courierProviderInstanceId!);
-      const mapping = await this.areaMapping.findFor(dto.courierProviderInstanceId!, address.divisionId, address.districtId, address.areaId);
+      const { driver, driverName } = await this.couriers.resolveDriver(providerInstanceId!);
+      const mapping = await this.areaMapping.findFor(providerInstanceId!, address.divisionId, address.districtId, address.areaId);
       const result = await driver.createParcel({
         reference: order.orderNumber,
         recipientName: address.recipientName,
@@ -131,7 +139,7 @@ export class ShipmentsService {
         data: {
           orderId,
           locationId,
-          courierProviderInstanceId: dto.courierProviderInstanceId,
+          courierProviderInstanceId: providerInstanceId,
           courierDriver: courierDriverName,
           manual,
           consignmentId,

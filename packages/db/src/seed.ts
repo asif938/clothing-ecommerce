@@ -313,6 +313,12 @@ const NOTIFICATION_TEMPLATE_CONTENT: Record<string, { subjectBn: string; subject
     bodyBn: "{customer_name}, আপনার কার্টের পণ্য ({cart_total}) এখনও আছে। কোড {coupon_code} দিয়ে {coupon_percent_off}% ছাড় নিন: {cart_url} — {brand_name}",
     bodyEn: "{customer_name}, your cart ({cart_total}) is still here. Use code {coupon_code} for {coupon_percent_off}% off: {cart_url} — {brand_name}",
   },
+  order_confirmation_request: {
+    subjectBn: "অর্ডার {order_number} কনফার্ম করুন",
+    subjectEn: "Please confirm order {order_number}",
+    bodyBn: "{customer_name}, আপনার অর্ডার {order_number} ({order_total}) কনফার্ম করতে এই লিংকে যান: {confirm_link} — {brand_name}",
+    bodyEn: "{customer_name}, please confirm your order {order_number} ({order_total}) here: {confirm_link} — {brand_name}",
+  },
   back_in_stock: {
     subjectBn: "{product_title} এখন স্টকে আছে",
     subjectEn: "{product_title} is back in stock",

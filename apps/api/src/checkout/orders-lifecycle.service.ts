@@ -6,7 +6,10 @@ import { SettingsService } from "../settings/settings.service";
 import { AuditService } from "../audit/audit.service";
 import { StockReservationService } from "./stock-reservation.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { StaffNotificationsService } from "../notifications/staff-notifications.service";
 import { TrackingService } from "../tracking/tracking.service";
+import { STATUS_TO_TRIGGER } from "@clothing/shared/automation";
+import { AutomationOutboxService } from "../automation/automation-outbox.service";
 
 export type TransitionActor = { type: "staff"; id: string } | { type: "customer"; id: string } | { type: "system" };
 
@@ -92,6 +95,8 @@ export class OrdersLifecycleService {
     private readonly stock: StockReservationService,
     private readonly notifications: NotificationsService,
     private readonly tracking: TrackingService,
+    private readonly automationOutbox: AutomationOutboxService,
+    private readonly staffNotifications: StaffNotificationsService,
   ) {}
 
   async transition(input: TransitionInput, tx?: Prisma.TransactionClient): Promise<void> {
@@ -165,6 +170,10 @@ export class OrdersLifecycleService {
       });
     }
     this.logger.log(`Order ${order.orderNumber} ${order.status} → ${input.to}`);
+
+    // §16 M11 - automation rules react to the new status once this transaction commits (transactional outbox).
+    const automationTrigger = STATUS_TO_TRIGGER[input.to];
+    if (automationTrigger) await this.automationOutbox.enqueue(tx, automationTrigger, order.id);
 
     const notificationEvent = ORDER_STATUS_TO_NOTIFICATION_EVENT[input.to];
     if (notificationEvent) {
@@ -244,12 +253,16 @@ export class OrdersLifecycleService {
       this.prisma.orderEvent.create({ data: { orderId, type: "payment", data: { purpose, amount, result: "succeeded" } } }),
       this.prisma.orderEvent.create({ data: { orderId, type: "status_change", data: { from: "pending_payment", to: nextStatus } } }),
     ]);
+    // The order is only now a real, workable order (§16 M11): fire the placement trigger that checkout deferred.
+    await this.automationOutbox.enqueue(this.prisma, "order.placed", orderId);
     this.logger.log(`Order ${order.orderNumber} → ${nextStatus} after ${purpose} payment of ${amount}`);
   }
 
   /** §7.5: "Failure/cancel → back to checkout with message and a retry button; order remains pending_payment until timeout." No status change — just a record. */
   async onPaymentFailed(orderId: string): Promise<void> {
     await this.prisma.orderEvent.create({ data: { orderId, type: "payment", data: { result: "failed" } } });
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { id: true, orderNumber: true } });
+    if (order) await this.staffNotifications.notifyPaymentFailed(order).catch((error: unknown) => this.logger.warn(`Payment-failed alert failed: ${error instanceof Error ? error.message : "Unknown error"}`));
   }
 }
 

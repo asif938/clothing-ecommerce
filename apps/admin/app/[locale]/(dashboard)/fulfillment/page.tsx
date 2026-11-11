@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card } from "../../../../components/ui";
+import { BarcodeScanner } from "../../../../components/barcode-scanner";
 
 interface PickListLine {
   variantId: string;
@@ -57,10 +58,10 @@ export default function FulfillmentPage() {
     void api.get<{ totalCod: number; shipments: Shipment[] }>("/admin/fulfillment/handover-manifest").then(setManifest).catch((err) => reportError(err, "Failed to load manifest"));
   }, [tab]);
 
-  async function loadOrder() {
+  async function loadOrder(code: string = barcode) {
     setError(null);
     try {
-      const found = await api.get<OrderSummary>(`/admin/fulfillment/orders/by-barcode/${encodeURIComponent(barcode)}`);
+      const found = await api.get<OrderSummary>(`/admin/fulfillment/orders/by-barcode/${encodeURIComponent(code)}`);
       if (found.status === "confirmed") {
         await api.post(`/admin/fulfillment/orders/${found.id}/start-processing`);
         found.status = "processing";
@@ -72,9 +73,9 @@ export default function FulfillmentPage() {
     }
   }
 
-  function scanItem() {
+  function scanItem(code: string = itemScan) {
     if (!order) return;
-    const item = order.items.find((i) => i.sku === itemScan);
+    const item = order.items.find((i) => i.sku === code);
     if (!item) {
       setError(t("itemNotOnOrder"));
       return;
@@ -172,6 +173,12 @@ export default function FulfillmentPage() {
                 onKeyDown={(e) => e.key === "Enter" && void loadOrder()}
               />
               <Button onClick={() => void loadOrder()}>{t("load")}</Button>
+              <BarcodeScanner
+                onScan={(value) => {
+                  setBarcode(value);
+                  void loadOrder(value);
+                }}
+              />
             </Card>
           ) : (
             <Card className="flex flex-col gap-4">
@@ -184,6 +191,7 @@ export default function FulfillmentPage() {
                 onChange={(e) => setItemScan(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && scanItem()}
               />
+              <BarcodeScanner onScan={(value) => scanItem(value)} />
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase text-surface-foreground/50">

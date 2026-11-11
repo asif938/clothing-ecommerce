@@ -8,6 +8,7 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { OrdersAdminService } from "./orders-admin.service";
 import { ManualOrderService } from "./manual-order.service";
 import { OrderEditService } from "./order-edit.service";
+import { OrderMergeSplitService } from "./order-merge-split.service";
 import {
   addCallOutcomeSchema,
   addManualPaymentSchema,
@@ -17,6 +18,8 @@ import {
   createManualOrderSchema,
   editOrderSchema,
   listOrdersQuerySchema,
+  mergeOrdersSchema,
+  splitOrderSchema,
   setTagsSchema,
   transitionOrderSchema,
   type AddCallOutcomeDto,
@@ -27,6 +30,8 @@ import {
   type CreateManualOrderDto,
   type EditOrderDto,
   type ListOrdersQueryDto,
+  type MergeOrdersDto,
+  type SplitOrderDto,
   type SetTagsDto,
   type TransitionOrderDto,
 } from "./dto";
@@ -40,11 +45,12 @@ export class OrdersAdminController {
     private readonly orders: OrdersAdminService,
     private readonly manualOrders: ManualOrderService,
     private readonly orderEdit: OrderEditService,
+    private readonly mergeSplit: OrderMergeSplitService,
   ) {}
 
   @Get()
-  list(@Query(new ZodValidationPipe(listOrdersQuerySchema)) query: ListOrdersQueryDto) {
-    return this.orders.list(query);
+  list(@Query(new ZodValidationPipe(listOrdersQuerySchema)) query: ListOrdersQueryDto, @Req() req: Request) {
+    return this.orders.list(query, req.staff);
   }
 
   @Post("bulk")
@@ -57,9 +63,21 @@ export class OrdersAdminController {
     return this.manualOrders.create(body, req.staff!);
   }
 
+  @Post("merge")
+  @RequirePermissions("orders.manage", "orders.merge_split")
+  merge(@Body(new ZodValidationPipe(mergeOrdersSchema)) body: MergeOrdersDto, @Req() req: Request) {
+    return this.mergeSplit.merge(body, req.staff!);
+  }
+
+  @Post(":id/split")
+  @RequirePermissions("orders.manage", "orders.merge_split")
+  split(@Param("id") id: string, @Body(new ZodValidationPipe(splitOrderSchema)) body: SplitOrderDto, @Req() req: Request) {
+    return this.mergeSplit.split(id, body, req.staff!);
+  }
+
   @Get(":id")
-  detail(@Param("id") id: string) {
-    return this.orders.detail(id);
+  detail(@Param("id") id: string, @Req() req: Request) {
+    return this.orders.detail(id, req.staff);
   }
 
   @Get(":id/duplicates")

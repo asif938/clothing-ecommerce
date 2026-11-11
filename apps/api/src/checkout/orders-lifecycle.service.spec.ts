@@ -37,8 +37,10 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const stock = { release: vi.fn(() => Promise.resolve()) };
   const notifications = { commonVariables: vi.fn(() => Promise.resolve({ brand_name: "Demo Fashion", support_phone: "01700-000000" })), enqueue: vi.fn(() => Promise.resolve()) };
   const tracking = { recordPurchase: vi.fn(() => Promise.resolve()) };
-  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never);
-  return { service, tx, prisma, audit, stock, notifications, tracking };
+  const automationOutbox = { enqueue: vi.fn(() => Promise.resolve()) };
+  const staffNotifications = { notifyPaymentFailed: vi.fn(() => Promise.resolve()) };
+  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never, automationOutbox as never, staffNotifications as never);
+  return { service, tx, prisma, audit, stock, notifications, tracking, automationOutbox };
 }
 
 function order(overrides: Partial<FakeOrder> = {}): FakeOrder {

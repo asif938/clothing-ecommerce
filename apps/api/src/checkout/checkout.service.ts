@@ -1,5 +1,6 @@
+import { AutomationOutboxService } from "../automation/automation-outbox.service";
 import { randomUUID } from "node:crypto";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@clothing/db";
 import { formatTakaFromPoisha } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
@@ -45,6 +46,8 @@ export interface PlaceOrderRequestContext {
  */
 @Injectable()
 export class CheckoutService {
+  private readonly logger = new Logger(CheckoutService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
@@ -63,6 +66,7 @@ export class CheckoutService {
     private readonly notifications: NotificationsService,
     private readonly staffNotifications: StaffNotificationsService,
     private readonly tracking: TrackingService,
+    private readonly automationOutbox: AutomationOutboxService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -245,10 +249,20 @@ export class CheckoutService {
         related: { type: "order", id: created.id },
       });
 
+      // §16 M11 - rules/queue assignment/self-confirm react after commit. An order still awaiting online payment fires this later, from onPaymentSucceeded.
+      if (finalStatus !== "pending_payment") await this.automationOutbox.enqueue(tx, "order.placed", created.id);
+
       return created;
     });
 
     await this.staffNotifications.notifyNewOrder(order);
+    // M11 admin PWA push events. Best effort: an alert failing must never fail an order that was already placed.
+    try {
+      if (order.riskLevel === "high") await this.staffNotifications.notifyHighRiskOrder(order);
+      await this.staffNotifications.notifyLowStockCrossings(order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })));
+    } catch (error) {
+      this.logger.warn(`Staff alert after order ${order.orderNumber} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
 
     const purchaseEventTiming = await this.settings.getValue<"placement" | "confirmation">("tracking.purchaseEventTiming");
     if (purchaseEventTiming === "placement" && order.trackingEventId) {

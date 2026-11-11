@@ -6,10 +6,16 @@ import { usePathname, useRouter, Link } from "../../../i18n/navigation";
 import { useCurrentStaff } from "../../../lib/use-current-staff";
 import { api } from "../../../lib/api";
 import { NotificationBell } from "../../../components/notification-bell";
+import { AdminPwa } from "../../../components/admin-pwa";
 
 const NAV_ITEMS = [
   { href: "/", labelKey: "navDashboard" },
   { href: "/orders", labelKey: "navOrders" },
+  { href: "/orders/kanban", labelKey: "navKanban" },
+  { href: "/orders/queue", labelKey: "navMyQueue" },
+  { href: "/approvals", labelKey: "navApprovals" },
+  { href: "/automation", labelKey: "navAutomation" },
+  { href: "/courier-rules", labelKey: "navCourierRules" },
   { href: "/fulfillment", labelKey: "navFulfillment" },
   { href: "/returns", labelKey: "navReturns" },
   { href: "/refunds", labelKey: "navRefunds" },
@@ -39,6 +45,7 @@ const NAV_ITEMS = [
   { href: "/search", labelKey: "navSearch" },
   { href: "/settings", labelKey: "navSettings" },
   { href: "/staff", labelKey: "navStaff" },
+  { href: "/staff/field-access", labelKey: "navFieldAccess" },
   { href: "/media", labelKey: "navMedia" },
   { href: "/integrations", labelKey: "navIntegrations" },
   { href: "/system-health", labelKey: "navSystemHealth" },
@@ -97,6 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex flex-col gap-2 text-sm">
           <NotificationBell />
+          <AdminPwa />
           <div className="flex flex-col gap-2 px-2">
             <span className="truncate text-surface-foreground/70">{staff.email}</span>
             <button onClick={handleLogout} className="text-left text-surface-foreground/70 hover:text-surface-foreground">

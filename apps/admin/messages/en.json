@@ -325,7 +325,13 @@
     "notificationsBell": "Notifications",
     "notificationsMarkAllRead": "Mark all read",
     "notificationsEmpty": "No notifications yet",
-    "notificationsUnread": "unread"
+    "notificationsUnread": "unread",
+    "navKanban": "Order board",
+    "navMyQueue": "My order queue",
+    "navApprovals": "Approvals",
+    "navAutomation": "Automation",
+    "navCourierRules": "Courier rules",
+    "navFieldAccess": "Field access"
   },
   "orders": {
     "title": "Orders",
@@ -370,7 +376,8 @@
       "hold": "Put on hold",
       "releaseHold": "Release hold",
       "cancel": "Cancel order",
-      "edit": "Edit order"
+      "edit": "Edit order",
+      "autoAssign": "Assign from queue"
     },
     "items": "Items",
     "subtotal": "Subtotal",
@@ -420,11 +427,30 @@
     "shippingFeeOverride": "Shipping fee (BDT)",
     "editReason": "Reason for this edit",
     "saveAndReprice": "Save & re-price",
-    "cancelEdit": "Cancel"
+    "cancelEdit": "Cancel",
+    "autoCourier": "Auto (by courier rules)",
+    "approvalRequested": "This change needs approval. A request was sent to the approvers; it will be applied once approved.",
+    "mergeSplit": {
+      "title": "Merge & split",
+      "mergeTitle": "Merge orders",
+      "mergeHelp": "Folds another order from the same customer into this one. Items and discounts move here; the other order is closed as merged and one delivery charge applies.",
+      "mergeInto": "Merge into this order",
+      "otherOrderId": "Other order ID",
+      "merge": "Merge",
+      "splitTitle": "Split this order",
+      "splitHelp": "Choose how many units of each item move to a new order (e.g. to ship in two parcels). At least one unit must stay.",
+      "moveQty": "Units to move",
+      "newShipping": "Delivery charge for the new order (BDT)",
+      "split": "Split into a new order"
+    }
   },
   "fulfillment": {
     "title": "Fulfillment",
-    "tabs": { "pick": "Pick list", "pack": "Packing", "handover": "Handover manifest" },
+    "tabs": {
+      "pick": "Pick list",
+      "pack": "Packing",
+      "handover": "Handover manifest"
+    },
     "groupedBy": "Grouped by",
     "print": "Print",
     "sku": "SKU",
@@ -454,7 +480,11 @@
     "type": "Type",
     "status": "Status",
     "reason": "Reason",
-    "types": { "refund": "Refund", "exchange": "Exchange", "store_credit": "Store credit" },
+    "types": {
+      "refund": "Refund",
+      "exchange": "Exchange",
+      "store_credit": "Store credit"
+    },
     "statuses": {
       "requested": "Requested",
       "approved": "Approved",
@@ -493,7 +523,8 @@
     "complete": "Complete",
     "reject": "Reject",
     "rejectReasonPrompt": "Reason for rejecting this refund:",
-    "empty": "No pending refunds"
+    "empty": "No pending refunds",
+    "approvalRequested": "This refund is above the approval limit. A request was sent to the approvers."
   },
   "blocklist": {
     "title": "Blocklist",
@@ -771,5 +802,158 @@
     "testBody": "Body",
     "send": "Send",
     "sent": "Sent"
+  },
+  "kanban": {
+    "title": "Order board",
+    "subtitle": "Drag a card to move an order between steps. The same rules as the order page apply.",
+    "listView": "List view",
+    "myQueue": "My queue",
+    "holdReason": "Reason for putting on hold",
+    "putOnHold": "Put on hold",
+    "cancel": "Cancel",
+    "items": "items",
+    "showAll": "Show all {count}"
+  },
+  "queue": {
+    "title": "My order queue",
+    "subtitle": "Orders assigned to you that still need a call or a decision, oldest first.",
+    "kanban": "Order board",
+    "waiting": "Waiting",
+    "call": "Call",
+    "empty": "Nothing in your queue.",
+    "teamTitle": "Order queue team",
+    "teamHelp": "Staff switched on here receive new orders automatically. The method (round-robin or fewest open orders) and the on/off switch are in Settings → orders.",
+    "open": "{count} open"
+  },
+  "automation": {
+    "title": "Automation rules",
+    "subtitle": "When something happens to an order and the conditions match, do these actions automatically.",
+    "newRule": "New rule",
+    "editRule": "Edit rule",
+    "name": "Name",
+    "trigger": "When",
+    "priority": "Priority (lower runs first)",
+    "stopProcessing": "Stop after this rule matches",
+    "conditions": "Conditions",
+    "actions": "Actions",
+    "addAction": "Add action",
+    "action": "Action",
+    "actionTypes": {
+      "add_tag": "Add tag",
+      "remove_tag": "Remove tag",
+      "set_status": "Change order status",
+      "assign_queue": "Assign from order queue",
+      "assign_staff": "Assign to a staff member",
+      "notify_staff": "Notify staff",
+      "send_notification": "Send customer message",
+      "call_webhook": "Call a webhook",
+      "add_note": "Add internal note"
+    },
+    "tag": "Tag",
+    "target": "On",
+    "targetOrder": "The order",
+    "targetCustomer": "The customer",
+    "status": "Status",
+    "reason": "Reason",
+    "staffId": "Staff ID",
+    "permission": "Staff with permission",
+    "notifyTitle": "Title",
+    "notifyBody": "Message",
+    "event": "Message event key",
+    "url": "HTTPS URL",
+    "note": "Note",
+    "matchPrefix": "Run when",
+    "matchAll": "all",
+    "matchAny": "any",
+    "matchSuffix": "of these are true:",
+    "noConditions": "No conditions: the rule applies to every order that triggers it.",
+    "op": {
+      "eq": "is",
+      "neq": "is not",
+      "gt": "is greater than",
+      "gte": "is at least",
+      "lt": "is less than",
+      "lte": "is at most",
+      "in": "is one of",
+      "not_in": "is none of",
+      "contains": "contains",
+      "not_contains": "does not contain"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "commaSeparated": "comma separated",
+    "remove": "Remove",
+    "addCondition": "Add condition",
+    "testTitle": "Test with a sample event",
+    "testHelp": "Checks the conditions against a real order. Nothing is executed.",
+    "orderId": "Order ID",
+    "runTest": "Run test",
+    "wouldMatch": "This order would match.",
+    "wouldNotMatch": "This order would not match.",
+    "actual": "actual",
+    "save": "Save",
+    "cancel": "Cancel",
+    "runs": "Runs",
+    "active": "Active",
+    "edit": "Edit",
+    "delete": "Delete",
+    "noRules": "No rules yet. Start from a template below.",
+    "templates": "Templates",
+    "templatesHelp": "Added switched off so you can review the numbers first.",
+    "addTemplate": "Add template",
+    "history": "Run history",
+    "when": "When",
+    "result": "Result",
+    "noRuns": "No runs yet."
+  },
+  "courierRules": {
+    "title": "Courier assignment rules",
+    "subtitle": "When you book a parcel with 'Auto', the first matching rule (lowest priority number) picks the courier.",
+    "newRule": "New rule",
+    "courier": "Courier",
+    "emptyConditionsHelp": "A rule with no conditions matches every order - use it as the last, catch-all rule.",
+    "noRules": "No rules yet. Booking with 'Auto' will fail until one exists.",
+    "noMatch": "No rule matches this order.",
+    "previewTitle": "Preview for an order",
+    "preview": "Preview"
+  },
+  "approvals": {
+    "title": "Approval requests",
+    "subtitle": "Actions that need a second person. Approving applies the change; you can't approve your own request.",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "failed": "Failed to apply"
+    },
+    "types": {
+      "order_edit": "Order price / shipping override",
+      "refund_complete": "Large refund"
+    },
+    "requestedBy": "Requested by",
+    "decidedBy": "Decided by",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectNotePrompt": "Reason for rejecting:",
+    "empty": "Nothing here."
+  },
+  "fieldAccess": {
+    "title": "Field-level access",
+    "subtitle": "Choose which roles may see sensitive fields. Everyone else sees phone numbers masked and cost prices hidden.",
+    "notEnforced": "Field-level permissions are switched off, so everyone currently sees every field. Turn on 'Enforce field-level permissions' in Settings → security.",
+    "role": "Role",
+    "system": "built-in",
+    "hint": "Built-in roles always keep full access. Changes apply the next time the person signs in or refreshes."
+  },
+  "scanner": {
+    "start": "Scan with camera",
+    "stop": "Stop camera",
+    "unsupported": "This browser can't read barcodes with the camera. Use a barcode scanner or type the code.",
+    "cameraDenied": "Camera access was blocked. Allow it in the browser to scan."
+  },
+  "adminPwa": {
+    "enable": "Turn on alerts on this device",
+    "on": "Alerts on for this device",
+    "unconfigured": "Push isn't set up yet (see Push notifications)"
   }
 }

@@ -1890,10 +1890,155 @@ Postgres, no browser here):
 
 ---
 
-### Next up
+## Milestone 11 — Order operations automation
 
-Phase 2 (§16) continues: **M11 — Order operations automation** (customer
-self-confirmation, order queue auto-assignment, Kanban view, merge/split,
+Status: complete (§16 M11) at the code/test level, with the same
+no-Docker/no-live-Postgres/no-browser caveat as every prior milestone —
+see "Not verified in this environment" below. Scope per §16: customer
+self-confirmation, order-queue auto-assignment, Kanban view, merge/split,
 automation rule builder with templates, auto courier assignment rules,
 approval workflows, field-level permissions UI, admin PWA with push and
-camera scanner).
+camera scanner.
+
+### Built
+
+- **`packages/db`**: one hand-written migration
+  (`20261111090000_order_operations_automation`, produced with `prisma
+  migrate diff` between the previous and current schema — no live/shadow
+  DB here). New tables `automation_rules`, `automation_runs`,
+  `courier_assignment_rules`, `approval_requests`; `orders` gained
+  `confirmation_token` (unique), `confirmation_requested_at`,
+  `merged_into_order_id`, `split_from_order_id` and an
+  `[assigned_to, status]` index; `staff_users` gained
+  `takes_order_queue`/`last_queue_assigned_at`; `push_subscriptions` gained
+  `staff_user_id`. Enums: `OrderEventType` +`merge`/`split`/`automation`,
+  `NotificationEvent` +`order_confirmation_request`. The seed adds bn/en
+  template copy for the new event.
+- **`packages/shared`**: `automation/` — the condition model and pure
+  evaluator (`evaluateConditions`/`explainConditions`, ten operators,
+  all/any), the order field catalog, the trigger list, the action zod
+  schemas and six one-click rule templates (high-value → notify manager,
+  3rd doorstep rejection → tag Risky, delivered → thank-you message,
+  auto-confirm paid low-risk, high-risk → hold, first-order tag). New
+  permissions (`automation.manage`, `orders.queue.manage`,
+  `orders.merge_split`, `couriers.rules.manage`, `approvals.decide`,
+  `approvals.bypass`, `settings.approvals.write`, `fields.customer_phone.read`,
+  `fields.order_cost.read`) and settings (`orders.selfConfirm.*`,
+  `orders.queue.*`, `security.fieldMasking.enabled`, `approvals.*`,
+  `pwa.adminPushEnabled`).
+- **`apps/api`** (new modules, all registered in `AppModule`):
+  - `automation` — outbox (`AutomationOutboxService`, transactional, on
+    `scheduled_tasks`), engine (rules by priority, per-run log, loop guard,
+    `stopProcessing`, nine action types incl. a no-private-address HTTPS
+    `call_webhook`), rule CRUD/templates/run history/dry-run
+    (`POST /admin/automation/test`), and a shared `OrderContextService`.
+    `OrdersLifecycleService.transition()` and checkout placement enqueue
+    triggers; online-payment orders fire `order.placed` from
+    `onPaymentSucceeded`.
+  - `order-confirmation` — token + `order_confirmation_request` message,
+    `GET/POST /store/order-confirmation/:token` (confirm / cancel,
+    expiry, idempotent).
+  - `order-queue` — `pickAssignee` (round-robin / least-open), guarded
+    `autoAssign`, `GET /admin/order-queue/{mine,kanban,staff}`, per-staff
+    participation switch.
+  - `orders` — `OrderMergeSplitService` + `merge-split-math.ts`;
+    `POST /admin/orders/merge`, `POST /admin/orders/:id/split`; order list/
+    detail now apply field-level masking.
+  - `courier-rules` — CRUD + preview; `POST /admin/orders/:id/shipments`
+    accepts `auto: true`.
+  - `approvals` — request/list/mine/approve/reject with replay executors;
+    order-edit price/shipping overrides and large refunds are gated.
+  - `push` — staff subscriptions and `sendToStaff`; staff notifications now
+    push too; new alerts for high-risk order, payment failure, approval
+    request, low-stock crossing.
+- **`apps/admin`**: Order board (drag-and-drop Kanban), My order queue +
+  team switches, Automation (builder, templates, run history, test panel),
+  Courier rules (+ preview), Approvals inbox, Field access matrix, order
+  page Merge & split panel / "Assign from queue" / "Auto (by courier rules)"
+  booking, approval-pending notices on order edit and refunds; PWA
+  (`/manifest.webmanifest`, generated icons, push-only `sw.js`, "turn on
+  alerts" per device) and the camera barcode scanner on the packing screen.
+  All strings in both `en.json` and `bn.json`.
+- **`apps/storefront`**: `/{locale}/confirm-order/[token]` (noindex,
+  no-referrer).
+- Decisions recorded in `docs/DECISIONS.md` (nine entries dated
+  2026-11-11) and bilingual guide entries in `docs/ADMIN_GUIDE.md`.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `apps/api`, `apps/admin`,
+  `apps/storefront`; `eslint` clean (0 errors) for those four.
+- Unit tests, all green: `packages/shared` 137 (new: condition evaluator
+  and template validity), `apps/api` 363 (was 342; new: merge/split math
+  incl. rounding balance, automation engine, approvals, order queue,
+  assignee picking, order confirmation, courier rule selection, field
+  masking, webhook SSRF guard).
+- `pnpm test` run all-at-once exhausts memory on this machine
+  (`FATAL ERROR: Zone Allocation failed`) — a machine limit, not a test
+  failure; each package passes when run on its own.
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database** and the Prisma
+  client's native engine could not be regenerated (the query-engine DLL was
+  locked by a running process), so only the generated *types* are current.
+  Before running: stop the dev servers, then `pnpm db:generate`,
+  `pnpm db:migrate:deploy`, `pnpm db:seed` (the seed grants the new
+  permissions to Super Admin and adds the new message template).
+- Nothing was exercised in a browser: Kanban drag-and-drop, the condition/
+  action builders, the PWA install flow, real web-push delivery to a staff
+  device, and the camera scanner (needs a Chromium browser over HTTPS or
+  localhost) are all untested end to end.
+- No integration/E2E test covers the outbox → scheduler → engine path
+  against real Postgres; the engine, queue, approvals and confirmation
+  services are unit-tested with mocked Prisma only.
+
+### Known issues / explicitly deferred
+
+- Automation latency: rules run on the next scheduler tick (≤ 60 s with
+  `WORKER_MODE=embedded`, or the external cron cadence).
+- Queue auto-assignment happens at placement only; orders created before
+  the setting was turned on are not back-filled.
+- Merge/split do not re-evaluate discount eligibility, and split creates a
+  *new order* rather than multiple shipments of one order (see
+  DECISIONS.md).
+- Field masking covers the order list/detail, the Kanban board and the
+  queue; the customers list/profile/export, returns and reports still show
+  full phone numbers and cost data. The seeded roles other than Super Admin
+  do not yet hold the new `fields.*` permissions, which is why enforcement
+  ships switched off.
+- Approval gating covers two actions (price/shipping overrides on order
+  edit; large refunds). Other candidates in §16 (discounts over a limit,
+  cancelling after packing) are not gated yet — adding one is an executor
+  plus a gate in that service.
+- WhatsApp interactive buttons are not vendor-specific; the link works on
+  every driver (DECISIONS.md).
+- The Kanban only allows dropping on pending / on-hold / confirmed /
+  processing; later steps belong to the fulfillment screens.
+- The `call_webhook` action is fire-and-forget (no signing, no retry).
+- Low-stock push fires on an order-driven crossing only, not on manual
+  stock adjustments or imports.
+- `BarcodeDetector` is Chromium/Android only; Safari/Firefox fall back to
+  typing or a USB/Bluetooth scanner.
+- The admin PWA is installable and receives push but is intentionally not
+  usable offline (the service worker caches nothing).
+- The storefront confirm page and the tracking view use inline bn/en copy
+  rather than `ui_strings` (DECISIONS.md).
+- This commit also carries the previously uncommitted
+  `inventory_levels.available` fix (`@default(dbgenerated())` in
+  `schema.prisma` + its DECISIONS.md entry) because it lives in the same
+  files; `docs/TESTING_GUIDE.md` was pre-existing and untracked and is
+  deliberately not part of it.
+- Everything M1–M10 already listed as a known gap and untouched here
+  remains unchanged, including `pnpm build`'s pre-existing static-export
+  crash.
+
+---
+
+### Next up
+
+Phase 2 (§16) continues: **M12 — Inventory and finance** (size-curve
+analysis, purchase/production orders and receiving, suppliers, stock
+transfers, stock takes, dead stock & markdown suggestions, COD
+reconciliation, gateway settlements, true profit report, scheduled email
+reports, anomaly alerts, custom dashboards).

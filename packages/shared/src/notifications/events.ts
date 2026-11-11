@@ -120,6 +120,13 @@ export const NOTIFICATION_EVENTS: NotificationEventDefinition[] = [
     defaultChannelOrder: ["push", "whatsapp", "sms", "email"],
   },
   {
+    key: "order_confirmation_request",
+    label: { bn: "অর্ডার নিশ্চিতকরণ অনুরোধ", en: "Order confirmation request" },
+    help: { bn: "গ্রাহককে লিংকে ক্লিক করে অর্ডার নিজে কনফার্ম করতে বলা হয়", en: "Asks the customer to confirm their order themselves via a link" },
+    variables: [...ORDER_VARS, "order_total", "confirm_link"],
+    defaultChannelOrder: ["whatsapp", "sms"],
+  },
+  {
     key: "back_in_stock",
     label: { bn: "স্টকে ফিরে এসেছে", en: "Back in stock" },
     help: { bn: "যে ভ্যারিয়েন্টের জন্য \"নোটিফাই মি\" রিকোয়েস্ট করা হয়েছিল তা স্টকে এলে পাঠানো হয়", en: "Sent when a variant someone requested \"notify me\" for is back in stock" },

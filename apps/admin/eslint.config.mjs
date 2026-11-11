@@ -7,6 +7,6 @@ export default [
   ...reactConfig,
   nextPlugin.configs["core-web-vitals"],
   {
-    ignores: [".next/**"],
+    ignores: [".next/**", "public/**"],
   },
 ];

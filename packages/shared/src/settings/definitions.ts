@@ -1479,3 +1479,123 @@ export const BLOG_POSTS_PER_PAGE = defineSetting({
   permission: "settings.marketing.write",
   ui: { widget: "text" },
 });
+
+// ---------------------------------------------------------------------------
+// Milestone 11 (§16 M11) — order operations automation.
+// ---------------------------------------------------------------------------
+
+export const ORDERS_SELF_CONFIRM_ENABLED = defineSetting({
+  key: "orders.selfConfirm.enabled",
+  group: "orders",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "গ্রাহক নিজে অর্ডার কনফার্ম করতে পারবেন", en: "Customer self-confirmation" },
+  help: { bn: "অর্ডার প্লেসের পর এসএমএস/হোয়াটসঅ্যাপে একটি কনফার্ম লিংক পাঠানো হয়", en: "Sends a confirm link by SMS/WhatsApp when an order is placed" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "toggle" },
+});
+
+export const ORDERS_SELF_CONFIRM_ALLOW_CANCEL = defineSetting({
+  key: "orders.selfConfirm.allowCancel",
+  group: "orders",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "কনফার্ম পেজ থেকে বাতিল করার অনুমতি", en: "Allow cancelling from the confirm page" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "toggle" },
+});
+
+export const ORDERS_SELF_CONFIRM_EXPIRY_HOURS = defineSetting({
+  key: "orders.selfConfirm.expiryHours",
+  group: "orders",
+  type: z.number().int().min(1).max(720),
+  default: 48,
+  label: { bn: "কনফার্ম লিংকের মেয়াদ (ঘণ্টা)", en: "Confirm link validity (hours)" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "text" },
+});
+
+export const ORDERS_QUEUE_AUTO_ASSIGN = defineSetting({
+  key: "orders.queue.autoAssign",
+  group: "orders",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "নতুন অর্ডার স্বয়ংক্রিয়ভাবে কল এক্সিকিউটিভকে অ্যাসাইন করুন", en: "Auto-assign new orders to call executives" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: { widget: "toggle" },
+});
+
+export const ORDERS_QUEUE_STRATEGY = defineSetting({
+  key: "orders.queue.strategy",
+  group: "orders",
+  type: z.enum(["round_robin", "load_based"]),
+  default: "round_robin",
+  label: { bn: "অ্যাসাইনমেন্ট পদ্ধতি", en: "Assignment strategy" },
+  secret: false,
+  public: false,
+  permission: "settings.orders.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "round_robin", label: { bn: "রাউন্ড-রবিন", en: "Round-robin" } },
+      { value: "load_based", label: { bn: "কম লোড আগে", en: "Least open orders first" } },
+    ],
+  },
+});
+
+export const SECURITY_FIELD_MASKING_ENABLED = defineSetting({
+  key: "security.fieldMasking.enabled",
+  group: "security",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "ফিল্ড-লেভেল অনুমতি কার্যকর করুন", en: "Enforce field-level permissions" },
+  help: { bn: "চালু করলে যাদের অনুমতি নেই তাদের কাছে ফোন নম্বর মাস্ক ও ক্রয়মূল্য লুকানো থাকবে", en: "When on, phone numbers are masked and cost prices hidden for staff without the matching field permission" },
+  secret: false,
+  public: false,
+  permission: "settings.security.write",
+  ui: { widget: "toggle" },
+});
+
+export const APPROVALS_PRICE_OVERRIDE_REQUIRED = defineSetting({
+  key: "approvals.priceOverride.required",
+  group: "approvals",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "অর্ডারে দাম/শিপিং ওভাররাইডে অনুমোদন লাগবে", en: "Require approval for order price / shipping overrides" },
+  secret: false,
+  public: false,
+  permission: "settings.approvals.write",
+  ui: { widget: "toggle" },
+});
+
+export const APPROVALS_REFUND_THRESHOLD = defineSetting({
+  key: "approvals.refund.thresholdAmount",
+  group: "approvals",
+  type: z.number().int().min(0),
+  default: 0,
+  label: { bn: "এই পরিমাণের বেশি রিফান্ডে অনুমোদন লাগবে (পয়সা, ০ = বন্ধ)", en: "Refunds above this amount need approval (poisha, 0 = off)" },
+  secret: false,
+  public: false,
+  permission: "settings.approvals.write",
+  ui: { widget: "money" },
+});
+
+export const PWA_ADMIN_PUSH_ENABLED = defineSetting({
+  key: "pwa.adminPushEnabled",
+  group: "pwa",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "অ্যাডমিন স্টাফকে পুশ নোটিফিকেশন", en: "Push notifications to admin staff" },
+  secret: false,
+  public: false,
+  permission: "settings.pwa.write",
+  ui: { widget: "toggle" },
+});

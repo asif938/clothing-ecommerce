@@ -63,6 +63,12 @@ import { SizeRecommenderModule } from "./size-recommender/size-recommender.modul
 import { AudienceModule } from "./audience/audience.module";
 import { AbandonedCartModule } from "./abandoned-cart/abandoned-cart.module";
 import { BlogModule } from "./blog/blog.module";
+import { AutomationModule } from "./automation/automation.module";
+import { AutomationOutboxModule } from "./automation/automation-outbox.module";
+import { OrderQueueModule } from "./order-queue/order-queue.module";
+import { OrderConfirmationModule } from "./order-confirmation/order-confirmation.module";
+import { CourierRulesModule } from "./courier-rules/courier-rules.module";
+import { ApprovalsModule } from "./approvals/approvals.module";
 
 @Module({
   imports: [
@@ -158,6 +164,12 @@ import { BlogModule } from "./blog/blog.module";
     AudienceModule,
     AbandonedCartModule,
     BlogModule,
+    AutomationOutboxModule,
+    OrderQueueModule,
+    OrderConfirmationModule,
+    CourierRulesModule,
+    ApprovalsModule,
+    AutomationModule,
   ],
 })
 export class AppModule {}

@@ -11,6 +11,7 @@ import { CustomerContextModule } from "../customer-auth/customer-context.module"
 import { ProvidersModule } from "../providers/providers.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { TrackingModule } from "../tracking/tracking.module";
+import { AutomationOutboxModule } from "../automation/automation-outbox.module";
 import { CheckoutService } from "./checkout.service";
 import { CheckoutController } from "./checkout.controller";
 import { CaptchaProvidersService } from "./captcha-providers.service";
@@ -34,6 +35,7 @@ import { OrdersController } from "./orders.controller";
     ProvidersModule,
     StockReservationModule,
     OrdersLifecycleModule,
+    AutomationOutboxModule,
     OrderNumberModule,
     NotificationsModule,
     TrackingModule,

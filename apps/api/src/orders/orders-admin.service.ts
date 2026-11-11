@@ -4,6 +4,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import type { AuthenticatedStaff } from "../common/types";
 import { OrdersLifecycleService } from "../checkout/orders-lifecycle.service";
+import { applyOrderFieldAccess, fieldAccessFor } from "../common/field-masking";
+import { SettingsService } from "../settings/settings.service";
 import type { AddCallOutcomeDto, AddManualPaymentDto, AddNoteDto, AssignOrderDto, BulkActionDto, ListOrdersQueryDto, SetTagsDto, TransitionOrderDto } from "./dto";
 
 const DETAIL_INCLUDE = {
@@ -23,9 +25,15 @@ export class OrdersAdminService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly lifecycle: OrdersLifecycleService,
+    private readonly settings: SettingsService,
   ) {}
 
-  async list(query: ListOrdersQueryDto) {
+  /** Field-level permissions (§16 M11): resolves what this staff member may see of an order. */
+  private async accessFor(staff: AuthenticatedStaff | undefined) {
+    return fieldAccessFor(staff, await this.settings.getValue<boolean>("security.fieldMasking.enabled"));
+  }
+
+  async list(query: ListOrdersQueryDto, staff?: AuthenticatedStaff) {
     const where: Prisma.OrderWhereInput = {
       ...(query.status ? { status: query.status as never } : {}),
       ...(query.paymentStatus ? { paymentStatus: query.paymentStatus as never } : {}),
@@ -43,13 +51,14 @@ export class OrdersAdminService {
       this.prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, skip: (query.page - 1) * query.pageSize, take: query.pageSize, include: { items: { select: { id: true } } } }),
       this.prisma.order.count({ where }),
     ]);
-    return { data, meta: { page: query.page, pageSize: query.pageSize, total } };
+    const access = await this.accessFor(staff);
+    return { data: data.map((o) => applyOrderFieldAccess(o, access)), meta: { page: query.page, pageSize: query.pageSize, total } };
   }
 
-  async detail(id: string) {
+  async detail(id: string, staff?: AuthenticatedStaff) {
     const order = await this.prisma.order.findUnique({ where: { id }, include: DETAIL_INCLUDE });
     if (!order) throw new NotFoundException("Order not found");
-    return order;
+    return applyOrderFieldAccess(order, await this.accessFor(staff));
   }
 
   /** §6.6 duplicate detection, surfaced for staff to review side by side. */
@@ -101,7 +110,7 @@ export class OrdersAdminService {
   async transition(id: string, dto: TransitionOrderDto, actor: AuthenticatedStaff) {
     await this.ensureExists(id);
     await this.lifecycle.transition({ orderId: id, to: dto.to, actor: { type: "staff", id: actor.id }, reason: dto.reason ?? undefined });
-    return await this.detail(id);
+    return await this.detail(id, actor);
   }
 
   /** §8.2 "payments (add manual payment, record trx id)" — a payment the gateway never saw (cash handed over, bKash sent to a personal number, …), recorded directly as `succeeded`. */
