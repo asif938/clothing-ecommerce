@@ -13,6 +13,7 @@ export * from "./i18n/defaults.ts";
 export * from "./permissions/index.ts";
 export * from "./catalog/slug.ts";
 export * from "./catalog/size-recommender.ts";
+export * from "./dashboard/widgets.ts";
 export * from "./catalog/bundle-pricing.ts";
 export * from "./phone/bd-phone.ts";
 export type { ProviderCapability, ProviderTestResult } from "./providers/types.ts";

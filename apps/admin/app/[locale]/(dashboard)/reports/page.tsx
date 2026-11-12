@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Card, TextField } from "../../../../components/ui";
+import { Link } from "../../../../i18n/navigation";
 
 const REPORTS = ["sales", "products", "courier", "staff", "discounts", "searchTerms"] as const;
 const REPORT_PATH: Record<(typeof REPORTS)[number], string> = {
@@ -43,7 +44,17 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
+        <div className="flex gap-2">
+          <Link href="/finance/profit" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
+            {t("profitLink")}
+          </Link>
+          <Link href="/reports/scheduled" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
+            {t("scheduledLink")}
+          </Link>
+        </div>
+      </div>
       {error && <Banner kind="error">{error}</Banner>}
       <div className="flex flex-wrap gap-2">
         {REPORTS.map((r) => (

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { InventoryTabs } from "../../../../components/inventory-tabs";
 
 interface StockLocation {
   id: string;
@@ -125,6 +126,7 @@ export default function InventoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <InventoryTabs />
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
       {error && <Banner kind="error">{error}</Banner>}
 

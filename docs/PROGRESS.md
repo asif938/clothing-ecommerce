@@ -2035,10 +2035,156 @@ camera scanner.
 
 ---
 
-### Next up
+## Milestone 12 — Inventory and finance
 
-Phase 2 (§16) continues: **M12 — Inventory and finance** (size-curve
+Status: complete (§16 M12) at the code/test level, with the same
+no-Docker/no-live-Postgres/no-browser caveat as every prior milestone —
+see "Not verified in this environment" below. Scope per §16: size-curve
 analysis, purchase/production orders and receiving, suppliers, stock
 transfers, stock takes, dead stock & markdown suggestions, COD
-reconciliation, gateway settlements, true profit report, scheduled email
-reports, anomaly alerts, custom dashboards).
+reconciliation (file import + API where available), gateway settlements,
+true profit report, scheduled email reports, anomaly alerts, custom
+dashboards.
+
+### Built
+
+- **`packages/db`**: one migration (`20261112090000_inventory_finance`,
+  produced with `prisma migrate diff` against the previous schema — purely
+  additive). New tables `suppliers`, `purchase_orders`,
+  `purchase_order_items`, `stock_transfers`, `stock_transfer_items`,
+  `stock_takes`, `stock_take_lines`, `cod_settlements`,
+  `cod_settlement_lines`, `gateway_settlements`, `scheduled_reports`,
+  `anomaly_alerts`, `dashboard_layouts`; `shipments` gained
+  `cod_settled_at` / `cod_settled_amount`. New enums exported from
+  `@clothing/db`.
+- **`packages/shared`**: 9 permissions (`procurement.manage`,
+  `inventory.stock_takes.apply`, `finance.manage`, `finance.profit.read`,
+  `reports.schedule.manage`, `dashboard.layouts.manage`,
+  `settings.{inventory,finance,reports}.write`); 12 settings (dead-stock
+  days, markdown tiers, size-curve window, cost method on receiving, COD
+  variance tolerance, estimated gateway fee bps, scheduled-report toggle +
+  send hour, anomaly toggle/threshold/baseline/minimum orders); the
+  dashboard widget catalog + `sanitizeDashboardLayout`; the courier driver
+  interface gained optional `getCodSettlement?()` (§10.2), implemented by
+  the mock courier.
+- **`apps/api`**
+  - `InventoryService.applyMovementTx()` — the single transactional write
+    path for multi-line stock documents (conditional `updateMany` so
+    concurrent operations can't drive on-hand — or *available*, for
+    transfers — negative), plus `afterMovementsCommitted()` to fire M10
+    back-in-stock alerts after commit.
+  - **Procurement** (`procurement/`): suppliers CRUD; purchase/production
+    orders (`PO-`/`PRD-YYMMDD-NNNN` numbers) draft → sent →
+    partially_received → received / cancelled; receiving books
+    `purchase_receive` movements and updates variant cost by
+    `procurement.costMethod` (weighted average by default, blended against
+    total on-hand across locations).
+  - **Stock operations** (`inventory/`): transfers (dispatch =
+    `transfer_out` guarded on *available*, receive = `transfer_in`,
+    shortfalls recorded, cancelling in transit returns stock); stock takes
+    (snapshot `expectedQty` at start, typed counts + barcode/SKU scan
+    endpoint, variance summary with value, apply = counted − snapshot so
+    sales during the count survive, optional zero-uncounted, separate
+    apply permission).
+  - **Analysis**: size curve per product or category (sales share vs stock
+    share per size, buy split by largest-remainder toward demand); dead
+    stock (days since last `sale` movement, else last receipt/creation)
+    with tiered markdown suggestions floored at cost + margin-guard
+    minimum; accepted markdowns become ordinary M2 price schedules. CSV
+    export (audited).
+  - **Finance** (`finance/`): COD settlements from CSV/XLSX with staff
+    column mapping (inspect → import) or from the courier API where the
+    driver supports it; auto-match by consignment id (tracking code
+    fallback), flags (unmatched / variance beyond tolerance / duplicate /
+    already settled / not delivered), manual match, re-match, confirm
+    (posts `codSettledAt`/`codSettledAmount` and the courier's charge as
+    `deliveryChargeActual`, guarded against double posting), outstanding
+    COD by courier. Gateway settlements with `expectedGross` from our own
+    succeeded payments and variance. True profit report (by day / by
+    order, CSV): revenue − COGS − courier − gateway fees on orders with a
+    final delivery outcome; recorded settlement fees replace estimates.
+  - **Reports**: scheduled email reports (catalog of 8 reports, each
+    gated by the permission needed to view it; daily / weekly-Saturday /
+    monthly-1st in Dhaka time; CAS-claimed runs; HTML email with escaped
+    values via the configured email provider; send-now). Anomaly alerts:
+    once-a-day sweep comparing yesterday with the trailing baseline for
+    orders, revenue, cancellation rate and rejection rate; deduped per
+    metric/day; in-app + push + email to `reports.read`; acknowledge /
+    check-now.
+  - **Dashboard**: layouts per staff → role → store default → built-in,
+    filtered by the viewer's permissions; KPIs gained COD outstanding and
+    open anomalies.
+  - Small read-only lookups (`/admin/lookups/variants|categories|
+    stock-locations`) for the new pickers.
+- **`apps/admin`**: Suppliers; Purchase orders (list/create/detail with
+  receiving); Inventory sub-tabs with Transfers (list/create/detail),
+  Stock takes (list/start/count sheet with camera + keyboard scanner,
+  variance cards, apply), Analysis (size curve chart-table, dead stock
+  with select-and-schedule markdowns); Finance (COD list + outstanding +
+  import wizard with header auto-guessing, settlement detail with flags
+  and manual match, Gateway settlements, True profit); Scheduled reports;
+  Alerts; Dashboard rebuilt around the widget layout with a "Customize"
+  editor (own / role / store default). All strings bn + en.
+- Docs: decisions in `docs/DECISIONS.md` (2026-11-12 entries), guide
+  entries in `docs/ADMIN_GUIDE.md`.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `packages/db`, `apps/api`,
+  and `apps/admin` source (the admin's stale `.next/types/validator.ts`
+  still references the `app/[locale]/page.tsx` that the pending, separately
+  documented login-loop fix deletes — regenerated on the next `next dev`).
+  ESLint clean on every touched file.
+- Unit tests: `packages/shared` 142 (was 137), `apps/api` 469 (was 363).
+  New: weighted-average cost, PO status, stock-take adjustment & variance
+  summary, largest-remainder + size curve, markdown tiers & margin floor,
+  taka parsing without floats, settlement row mapping, COD matching flags,
+  true profit (sold / partial / refunds / rejected / estimates /
+  settlements), schedule cadence & periods in Dhaka time, anomaly
+  detection, document numbers; service specs for receiving, transfers,
+  stock-take apply, the movement helper, COD import/confirm, scheduled-run
+  claiming, dashboard layout resolution. In the full `apps/api` run one
+  pre-existing test (`health.controller.spec.ts`, untouched) timed out at
+  12 s under load; it passes when run on its own.
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database.** Before running:
+  `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` (the seed
+  grants the new permissions to Super Admin).
+- Nothing was exercised in a browser or against real Postgres: the new
+  admin screens, the scanner on the count sheet, real courier settlement
+  files (column auto-guessing is heuristic), email delivery of scheduled
+  reports, and the Prisma JSON-path title search in `/admin/lookups/
+  variants` are untested end to end.
+
+### Known issues / explicitly deferred
+
+- No real courier driver implements `getCodSettlement` — Steadfast,
+  Pathao and RedX have no settlement endpoint in our drivers, so they use
+  file import; only the mock courier supports API fetch (DECISIONS.md).
+- Confirming a COD settlement does not change order payment status; it
+  records settlement on the shipment only.
+- Dead stock uses the stock-movement ledger: a sale that was later
+  cancelled still counts as the "last sale".
+- Anomaly rejection rate is bucketed by the shipment's last update time
+  (there is no rejected-at timestamp).
+- True profit: ad spend is 0 until M13's ad-spend import; returned units
+  are assumed restocked (no write-off for failed inspection).
+- Transfers have no partial dispatch; a transfer is received once (no
+  second receipt for late-arriving units).
+- Scheduled reports send an HTML table only (no CSV attachment — the email
+  driver interface has no attachments).
+- Everything M1–M11 already listed as a known gap and untouched here
+  remains unchanged.
+
+---
+
+### Next up
+
+Phase 2 (§16) continues: **M13 — CRM, marketing automation and AI
+content** (loyalty program and tiers, RFM segments, automated journeys,
+broadcasts with cost estimate, audience sync, ad spend import + ROAS,
+promo calendar, unique-code campaigns, AI providers with per-feature
+config, budgets and usage report, AI content drafts, product quality
+checker, SEO score and broken link checker).

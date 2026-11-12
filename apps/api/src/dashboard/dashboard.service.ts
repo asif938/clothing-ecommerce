@@ -42,7 +42,7 @@ export class DashboardService {
     const { from, to } = resolveRange(query);
     const dateFilter = { gte: from, lte: to };
 
-    const [orders, byStatus, topProductsRaw, lowStock, liveVisitors, activeCarts, pendingCod, failedProviderLogs] = await Promise.all([
+    const [orders, byStatus, topProductsRaw, lowStock, liveVisitors, activeCarts, pendingCod, failedProviderLogs, codOutstanding, anomalies] = await Promise.all([
       this.prisma.order.findMany({ where: { createdAt: dateFilter }, select: { id: true, total: true, status: true, customerId: true } }),
       this.prisma.order.groupBy({ by: ["status"], where: { createdAt: dateFilter }, _count: { _all: true } }),
       this.prisma.orderItem.groupBy({
@@ -65,6 +65,10 @@ export class DashboardService {
         where: { status: "error", createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
         _count: { _all: true },
       }),
+      // §16 M12: COD the courier collected (delivered) but hasn't paid out per
+      // a confirmed settlement; `pendingCod` above is COD still on the road.
+      this.prisma.shipment.aggregate({ where: { status: { in: ["delivered", "partially_delivered"] }, codSettledAt: null, codAmount: { gt: 0 } }, _sum: { codAmount: true }, _count: { _all: true } }),
+      this.prisma.anomalyAlert.findMany({ where: { acknowledgedAt: null }, orderBy: { createdAt: "desc" }, take: 10 }),
     ]);
 
     const nonCancelled = orders.filter((o) => !CANCELLED_LIKE.includes(o.status));
@@ -117,7 +121,9 @@ export class DashboardService {
       liveVisitors: uniqueVisitors,
       activeCarts,
       pendingCodAmount: pendingCod._sum.codAmount ?? 0,
+      codOutstanding: { amount: codOutstanding._sum.codAmount ?? 0, shipments: codOutstanding._count._all },
       alerts,
+      anomalies: anomalies.map((a) => ({ id: a.id, metric: a.metric, severity: a.severity, message: a.message, createdAt: a.createdAt })),
     };
   }
 }

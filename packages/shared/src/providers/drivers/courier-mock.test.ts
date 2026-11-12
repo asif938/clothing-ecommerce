@@ -67,3 +67,22 @@ describe("createMockCourierDriver", () => {
     expect(a.consignmentId).not.toBe(b.consignmentId);
   });
 });
+
+describe("createMockCourierDriver.getCodSettlement", () => {
+  it("pays out only parcels that reached their final status", async () => {
+    const driver = createMockCourierDriver(mockCourierConfigSchema.parse({ finalStatus: "delivered", stepMinutes: 1, settlementCharge: 7000 }));
+    const done = `mock_${Date.now() - 10 * 60_000}_abc`;
+    const fresh = `mock_${Date.now()}_def`;
+    const lines = await driver.getCodSettlement!([
+      { consignmentId: done, expectedCod: 150_000 },
+      { consignmentId: fresh, expectedCod: 99_000 },
+    ]);
+    expect(lines).toEqual([{ consignmentId: done, collected: 150_000, charge: 7000, settlementRef: "mock" }]);
+  });
+
+  it("reports the door fee for a rejection", async () => {
+    const driver = createMockCourierDriver(mockCourierConfigSchema.parse({ finalStatus: "rejected_at_door", stepMinutes: 1, deliveryFeeCollected: 6000 }));
+    const lines = await driver.getCodSettlement!([{ consignmentId: `mock_${Date.now() - 10 * 60_000}_x`, expectedCod: 150_000 }]);
+    expect(lines[0]).toMatchObject({ collected: 6000 });
+  });
+});

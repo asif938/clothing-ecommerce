@@ -2247,3 +2247,83 @@ Postgres computes it. No migration is needed (the DB column was already generate
 **Context.** Golden rule 1 says storefront copy comes from the database. The existing storefront order-tracking view (M5/M6/M10) already uses inline `bn`/`en` strings for the same kind of tokenised, account-less page.
 
 **Decision.** `ConfirmOrderView` follows that precedent rather than inventing a second mechanism for one page; it is listed as a known gap to move to `ui_strings` together with the tracking view when those pages are next touched.
+
+## 2026-11-12 — M12: one transactional stock-movement path for multi-line documents
+
+**Context.** Purchase receiving, transfers and stock takes each change many inventory levels at once, and M2's `InventoryService.adjust()` is single-line and not transaction-composable.
+
+**Decision.** `InventoryService.applyMovementTx(tx, …)` runs inside the caller's `$transaction`; decrements use a conditional `updateMany` (`onHand >= qty`, or `available >= qty` for transfer dispatch) so a race can't drive stock negative. Back-in-stock (M10) fires from `afterMovementsCommitted()` after commit, never inside the transaction.
+
+**Alternatives.** Row locks via raw `SELECT … FOR UPDATE` (rejected: a second raw-SQL path for no gain over the conditional update).
+
+## 2026-11-12 — M12: stock take applies counted − snapshot, not counted − live
+
+**Context.** Shops keep selling while a count is in progress.
+
+**Decision.** Starting a stock take snapshots on-hand as `expectedQty`; applying adds `(counted − expected)` to the *current* on-hand (clamped at zero). Uncounted lines are left alone unless staff choose "treat as zero". Applying has its own permission (`inventory.stock_takes.apply`) because it rewrites a whole location.
+
+**Alternatives.** Overwrite on-hand with the count (rejected: silently undoes sales made during counting).
+
+## 2026-11-12 — M12: cost price on receiving = weighted average across all locations (configurable)
+
+**Context.** Variants carry one `costPrice`, but stock sits in several locations.
+
+**Decision.** `procurement.costMethod` (default `weighted_average`; also `last_cost`, `none`), blended against the variant's total on-hand across every location before the receipt. Order lines keep their cost snapshot (M5), so history is unaffected.
+
+**Alternatives.** Per-location cost / FIFO layers (deferred: needs cost layers; revisit with M17 materials & BOM).
+
+## 2026-11-12 — M12: markdowns become ordinary price schedules
+
+**Context.** Dead-stock suggestions need to change prices.
+
+**Decision.** Accepting suggestions creates M2 variant price schedules (start now, revert on end), so they appear in and can be cancelled from the existing Price schedules screen. Suggestions are tiered by days unsold (`inventory.markdownTiers`) and floored at cost × (1 + `pricing.marginGuard.minMarginPercent`), rounded down to whole taka.
+
+**Alternatives.** A separate markdown mechanism (rejected: two ways to change a price).
+
+## 2026-11-12 — M12: COD reconciliation is file-first; API only where the driver supports it
+
+**Context.** §16 M12 asks for "file import + API where available". Our Steadfast/Pathao/RedX drivers have no documented payout/settlement endpoint.
+
+**Decision.** `CourierDriver.getCodSettlement?()` is optional; only the mock implements it. Settlement files (CSV/XLSX) are imported with staff-mapped columns (headers auto-guessed), amounts parsed to poisha without floats. Lines match by consignment id (tracking code fallback); flags: unmatched, variance > `finance.codVarianceTolerance`, duplicate (in the file or in another draft), already settled, not delivered. Confirming posts `codSettledAt`/`codSettledAmount` and the courier's charge as `deliveryChargeActual` (the true profit report's courier cost) with a `codSettledAt IS NULL` guard. Order payment status is not changed.
+
+**Alternatives.** Marking COD orders "paid" on confirm (deferred: the order payment model has no COD payment rows today; changing that is a wider M5 change).
+
+## 2026-11-12 — M12: true profit scope and estimates
+
+**Context.** §8.2 wants profit with courier charges, gateway fees, ad spend and returns.
+
+**Decision.** Orders placed in the range with a final delivery outcome only. Sold: total − rejected-line value − refunds (completed + outstanding); COGS on kept units. Failed delivery: retained advance + door fee; no COGS; courier cost is a loss. Courier cost falls back to the order's shipping fee (flagged) until a COD settlement records the actual charge. Gateway fees use `finance.gatewayFeeBps` estimates unless gateway settlements cover the range, in which case recorded fees replace the estimate per method. Ad spend is 0 until M13. Needs `finance.profit.read`.
+
+**Alternatives.** Include in-pipeline orders at expected values (rejected: not "true" profit; they're counted separately).
+
+## 2026-11-12 — M12: scheduled report cadence and safety
+
+**Context.** Scheduled emails send data to arbitrary addresses.
+
+**Decision.** Daily / weekly (Saturday, start of the BD work week) / monthly (1st) at `reports.scheduled.sendHour` Dhaka time, covering the previous day / 7 days / calendar month. Creating or editing a schedule requires the permission needed to view that report (e.g. profit needs `finance.profit.read`). Runs are claimed with a compare-and-set on `nextRunAt` so the embedded tick and an external cron never double-send. Email is an escaped HTML table (the email driver interface has no attachments).
+
+**Alternatives.** CSV attachments (deferred until the email driver interface supports attachments).
+
+## 2026-11-12 — M12: anomaly alerts are a simple, explainable baseline comparison
+
+**Context.** Staff need to trust and understand alerts.
+
+**Decision.** Once per Dhaka day: yesterday vs the mean of the previous `alerts.anomaly.baselineDays` days. Orders and revenue alert on ±`thresholdPercent`; cancellation and rejection rates alert only on increases, with a 5-point floor; critical at twice the threshold. Silent when average daily orders < `minBaselineOrders`. Deduped per metric/day; notifies `reports.read` staff (in-app, push, email).
+
+**Alternatives.** Z-scores / seasonality models (rejected for now: noisy on small stores, hard to explain).
+
+## 2026-11-12 — M12: dashboard layouts resolve staff → role → store default → built-in
+
+**Context.** §8.2 "customizable widgets per role".
+
+**Decision.** `dashboard_layouts` rows scoped `staff` / `role` / `default`; the most specific wins (a staff member with several roles gets the first role by name that has a layout). Anyone can save their own; role/default layouts need `dashboard.layouts.manage`. Widgets the viewer lacks permission for are filtered at read time, so a shared layout can include e.g. the profit widget safely.
+
+**Alternatives.** Free-form grid positions (deferred: an ordered list with automatic two-up pairing covers the need on mobile and desktop).
+
+## 2026-11-12 — M12: admin-only tools have no on/off toggle
+
+**Context.** Phase 2 acceptance says "each feature has its toggle".
+
+**Decision.** Features that run by themselves have settings toggles (`reports.scheduled.enabled`, `alerts.anomaly.enabled`). Staff-driven tools (suppliers, POs, transfers, stock takes, analysis, reconciliation, profit, layouts) do nothing unless used and are switched per role via their permissions.
+
+**Alternatives.** A feature flag per screen (rejected: duplicates the permission system).

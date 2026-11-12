@@ -248,9 +248,31 @@ export interface CourierStatusResult {
   raw?: unknown;
 }
 
+/** A parcel we're asking the courier about when fetching COD settlement data (§16 M12). */
+export interface CourierSettlementQuery {
+  consignmentId: string;
+  /** Our expected COD amount (poisha) — only some providers need it, e.g. the mock. */
+  expectedCod: number;
+}
+
+/** One parcel's money as the courier reports it (poisha). Only parcels the courier has actually paid out are returned. */
+export interface CourierSettlementLine {
+  consignmentId: string;
+  collected: number;
+  charge: number;
+  settlementRef?: string;
+  raw?: unknown;
+}
+
 export interface CourierDriver {
   createParcel(input: CourierParcelInput): Promise<CourierParcelResult>;
   getStatus(consignmentId: string): Promise<CourierStatusResult>;
   /** Not every provider supports cancelling a booked parcel through the API — optional. */
   cancelParcel?(consignmentId: string): Promise<void>;
+  /**
+   * §10.2 `getCodSettlement?` / §16 M12 "COD reconciliation (file import +
+   * API where available)". Optional: providers with no documented payout
+   * API leave it out and staff import the courier's settlement file instead.
+   */
+  getCodSettlement?(parcels: CourierSettlementQuery[]): Promise<CourierSettlementLine[]>;
 }

@@ -140,6 +140,21 @@ export const PERMISSIONS: PermissionDefinition[] = [
   // admin screen is just a filtered view of the role matrix over these.
   { key: "fields.customer_phone.read", group: "fields", label: { bn: "গ্রাহকের পূর্ণ ফোন নম্বর দেখুন", en: "See customers' full phone numbers" } },
   { key: "fields.order_cost.read", group: "fields", label: { bn: "অর্ডারের ক্রয়মূল্য ও মুনাফা দেখুন", en: "See order cost price & profit" } },
+
+  // Milestone 12 (§16 M12) — inventory and finance. Transfers and stock takes
+  // stay under `inventory.manage` (§8.2 lists them on the Inventory screen);
+  // *applying* a stock take rewrites on-hand for a whole location, so it gets
+  // its own permission. True profit is cost data, so it needs its own read
+  // permission separate from `reports.read`.
+  { key: "procurement.manage", group: "procurement", label: { bn: "সাপ্লায়ার ও পারচেজ অর্ডার পরিচালনা করুন", en: "Manage suppliers & purchase orders" } },
+  { key: "inventory.stock_takes.apply", group: "inventory", label: { bn: "স্টক গণনা প্রয়োগ করুন", en: "Apply stock takes" } },
+  { key: "finance.manage", group: "finance", label: { bn: "COD রিকনসিলিয়েশন ও সেটেলমেন্ট পরিচালনা করুন", en: "Manage COD reconciliation & settlements" } },
+  { key: "finance.profit.read", group: "finance", label: { bn: "প্রকৃত মুনাফা রিপোর্ট দেখুন", en: "View the true profit report" } },
+  { key: "reports.schedule.manage", group: "reports", label: { bn: "নির্ধারিত ইমেইল রিপোর্ট পরিচালনা করুন", en: "Manage scheduled email reports" } },
+  { key: "dashboard.layouts.manage", group: "reports", label: { bn: "রোল ও ডিফল্ট ড্যাশবোর্ড লেআউট পরিবর্তন করুন", en: "Edit role & default dashboard layouts" } },
+  { key: "settings.inventory.write", group: "settings", label: { bn: "ইনভেন্টরি সেটিংস পরিবর্তন করুন", en: "Edit inventory settings" } },
+  { key: "settings.finance.write", group: "settings", label: { bn: "ফাইন্যান্স সেটিংস পরিবর্তন করুন", en: "Edit finance settings" } },
+  { key: "settings.reports.write", group: "settings", label: { bn: "রিপোর্ট ও অ্যালার্ট সেটিংস পরিবর্তন করুন", en: "Edit report & alert settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

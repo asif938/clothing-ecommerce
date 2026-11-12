@@ -500,3 +500,137 @@ browsers type the code or use a USB/Bluetooth scanner.
 ইন্টারনেট লাগে (ইচ্ছে করেই অফলাইনে কিছু রাখা হয় না)। প্যাকিং স্ক্রিনে
 *ক্যামেরা দিয়ে স্ক্যান* Android-এর Chrome/Edge-এ অর্ডার ও পণ্যের বারকোড পড়ে;
 অন্য ব্রাউজারে কোড টাইপ করুন বা USB/ব্লুটুথ স্ক্যানার ব্যবহার করুন।
+
+## Suppliers & purchase orders (`procurement.manage`)
+
+**EN** — Add suppliers under *Suppliers*. In *Purchase orders* create a
+purchase (buying ready goods) or production (factory run) order: pick the
+supplier, the location the goods go into, and the variants with quantity
+and unit cost. *Mark as sent* once it's placed. When goods arrive, enter
+what actually came and press *Receive* (needs *inventory* permission too) —
+stock is added and the cost price is updated as set in Settings →
+inventory (weighted average by default). Receive in several goes if it
+arrives in parts; *Close* a part-received order if the rest won't come.
+
+**BN** — *সাপ্লায়ার* পেজে সাপ্লায়ার যোগ করুন। *পারচেজ অর্ডার*-এ ক্রয় (তৈরি
+মাল কেনা) বা প্রোডাকশন (ফ্যাক্টরিতে বানানো) অর্ডার তৈরি করুন: সাপ্লায়ার, কোন
+লোকেশনে মাল ঢুকবে, আর ভ্যারিয়েন্ট — পরিমাণ ও একক খরচসহ। অর্ডার দেওয়ার পর
+*পাঠানো হয়েছে* চাপুন। মাল এলে আসলে যা এসেছে তা লিখে *গ্রহণ করুন* চাপুন
+(ইনভেন্টরি অনুমতিও লাগবে) — স্টক যোগ হয় এবং সেটিংস → ইনভেন্টরি অনুযায়ী
+ক্রয়মূল্য আপডেট হয় (ডিফল্ট: ওজনযুক্ত গড়)। ভাগে ভাগে এলে কয়েকবারে গ্রহণ
+করুন; বাকিটা না এলে আংশিক অর্ডার *বন্ধ* করুন।
+
+## Stock transfers & stock takes (`inventory.manage`, `inventory.stock_takes.apply`)
+
+**EN** — *Inventory → Transfers*: create a transfer between two locations,
+*Dispatch* (units leave the source; they must be available, not reserved
+for orders), then *Receive at destination* entering what arrived —
+shortfalls are recorded. *Inventory → Stock takes*: start a count for a
+location, then type counts or scan barcodes (each scan adds 1). Use the
+*Variance* filter to review, then *Apply count* (needs the apply
+permission). Sales made while you were counting are kept — only the
+counted difference is applied. Uncounted lines stay as they are unless you
+choose to treat them as zero.
+
+**BN** — *ইনভেন্টরি → ট্রান্সফার*: দুই লোকেশনের মধ্যে ট্রান্সফার তৈরি করুন,
+*পাঠান* (ইউনিট উৎস থেকে বাদ যায়; অর্ডারের জন্য রিজার্ভ নয়, প্রাপ্য হতে হবে),
+তারপর পৌঁছালে যা এসেছে লিখে *গন্তব্যে গ্রহণ করুন* — ঘাটতি লেখা থাকে।
+*ইনভেন্টরি → স্টক গণনা*: একটি লোকেশনের গণনা শুরু করুন, তারপর সংখ্যা লিখুন বা
+বারকোড স্ক্যান করুন (প্রতি স্ক্যানে ১ যোগ হয়)। *পার্থক্য* ফিল্টার দিয়ে দেখে
+*গণনা প্রয়োগ* চাপুন (প্রয়োগের অনুমতি লাগবে)। গণনার সময়ের বিক্রি বহাল থাকে —
+শুধু গোনা পার্থক্য প্রয়োগ হয়। যেগুলো গোনা হয়নি সেগুলো অপরিবর্তিত থাকে, যদি
+না আপনি শূন্য ধরতে বলেন।
+
+## Inventory analysis: size curve & dead stock (`inventory.manage`)
+
+**EN** — *Inventory → Analysis → Size curve*: pick a product (or a whole
+category) to compare each size's share of sales with its share of stock; a
+negative gap means that size runs short. Enter a planned buy quantity to
+get a per-size split. *Dead stock* lists variants with no sale for the set
+number of days (Settings → inventory), their stock value and a suggested
+markdown from the markdown tiers — never below cost plus the minimum
+margin. Tick rows and *Schedule markdowns* to create price schedules
+(cancel them under *Price schedules*). Viewing dead stock needs the
+cost-price permission.
+
+**BN** — *ইনভেন্টরি → বিশ্লেষণ → সাইজ কার্ভ*: একটি পণ্য (বা পুরো ক্যাটাগরি)
+বেছে প্রতিটি সাইজের বিক্রির অংশ ও স্টকের অংশ তুলনা করুন; ঋণাত্মক পার্থক্য
+মানে সেই সাইজ কম পড়ছে। পরিকল্পিত ক্রয়ের পরিমাণ দিলে সাইজভিত্তিক ভাগ পাবেন।
+*ডেড স্টক* দেখায় কোন ভ্যারিয়েন্ট নির্দিষ্ট দিন (সেটিংস → ইনভেন্টরি) ধরে
+বিক্রি হয়নি, তার স্টকের মূল্য ও মার্কডাউন ধাপ থেকে প্রস্তাবিত ছাড় — কখনো
+ক্রয়মূল্য + ন্যূনতম মার্জিনের নিচে নয়। সারি টিক দিয়ে *মার্কডাউন শিডিউল
+করুন* চাপলে প্রাইস শিডিউল তৈরি হয় (*প্রাইস শিডিউল* থেকে বাতিল করা যায়)।
+ডেড স্টক দেখতে ক্রয়মূল্য দেখার অনুমতি লাগে।
+
+## COD reconciliation & gateway settlements (`finance.manage`)
+
+**EN** — *Finance → COD reconciliation* shows COD still with each courier.
+*Import settlement*: choose the courier, upload its payout file (CSV/Excel
+from the merchant panel), check the three columns (consignment ID,
+collected, charge) and *Import & match*. Review flagged lines (no such
+parcel, amount differs, duplicate, already settled, not delivered), match
+a line by hand if needed, enter what reached the bank and *Confirm*.
+Confirmed parcels are marked settled and their courier charge becomes the
+actual delivery cost used in True profit. *Gateway settlements*: record
+each bKash/Nagad/SSLCommerz payout; the variance column compares it with
+our own successful payments for the period.
+
+**BN** — *ফাইন্যান্স → COD রিকনসিলিয়েশন* দেখায় প্রতিটি কুরিয়ারের কাছে কত COD
+রয়ে গেছে। *সেটেলমেন্ট ইমপোর্ট*: কুরিয়ার বেছে মার্চেন্ট প্যানেলের পেমেন্ট ফাইল
+(CSV/Excel) আপলোড করুন, তিনটি কলাম (কনসাইনমেন্ট আইডি, সংগৃহীত, চার্জ) মিলিয়ে
+*ইমপোর্ট ও মিলান* চাপুন। চিহ্নিত লাইনগুলো দেখুন (এমন পার্সেল নেই, টাকা ভিন্ন,
+ডুপ্লিকেট, আগেই সেটেলড, এখনো ডেলিভারি হয়নি), দরকার হলে হাতে মিলান, ব্যাংকে
+কত এসেছে লিখে *নিশ্চিত করুন*। নিশ্চিত পার্সেল সেটেলড হয় এবং কুরিয়ারের চার্জ
+প্রকৃত মুনাফায় আসল ডেলিভারি খরচ হিসেবে ব্যবহৃত হয়। *গেটওয়ে সেটেলমেন্ট*:
+বিকাশ/নগদ/SSLCommerz-এর প্রতিটি পেমেন্ট লিখুন; পার্থক্য কলাম সেই সময়ের আমাদের
+সফল পেমেন্টের সাথে তুলনা করে।
+
+## True profit (`finance.profit.read`)
+
+**EN** — *Finance → True profit* shows revenue minus product cost, courier
+charges and gateway fees for orders that were delivered or failed delivery
+in the chosen range, by day or by order, with CSV export. Notes under the
+totals tell you when numbers are estimates: courier cost comes from the
+shipping fee until a COD settlement is confirmed; gateway fees use the
+estimates in Settings → finance until a gateway settlement is recorded;
+units with no cost price understate product cost.
+
+**BN** — *ফাইন্যান্স → প্রকৃত মুনাফা* নির্বাচিত সময়ে ডেলিভারড বা ব্যর্থ
+ডেলিভারির অর্ডারের আয় থেকে পণ্যের খরচ, কুরিয়ার চার্জ ও গেটওয়ে ফি বাদ দিয়ে
+দেখায় — দিন বা অর্ডার অনুযায়ী, CSV এক্সপোর্টসহ। মোটের নিচের নোট বলে কোন
+সংখ্যা অনুমান: COD সেটেলমেন্ট নিশ্চিত না হওয়া পর্যন্ত কুরিয়ার খরচ শিপিং ফি
+থেকে; গেটওয়ে সেটেলমেন্ট লেখা না হওয়া পর্যন্ত গেটওয়ে ফি সেটিংস → ফাইন্যান্সের
+অনুমান থেকে; ক্রয়মূল্যহীন ইউনিট থাকলে পণ্যের খরচ কম দেখায়।
+
+## Scheduled email reports & alerts (`reports.schedule.manage`, `reports.read`)
+
+**EN** — *Scheduled reports*: choose a report, daily / weekly (Saturday) /
+monthly (1st), the language and recipients. It's emailed at the hour set
+in Settings → reports (Dhaka time). You can only schedule reports you're
+allowed to see. *Send now* sends a test. *Alerts*: every morning the system
+compares yesterday's orders, revenue, cancellation and rejection rates with
+the previous days and raises an alert (bell, push and email) when something
+moves more than the threshold in Settings → reports. Acknowledge alerts
+once handled.
+
+**BN** — *নির্ধারিত রিপোর্ট*: রিপোর্ট, দৈনিক / সাপ্তাহিক (শনিবার) / মাসিক (১
+তারিখ), ভাষা ও প্রাপক বেছে নিন। সেটিংস → রিপোর্টে দেওয়া সময়ে (ঢাকা সময়) ইমেইল
+যায়। যে রিপোর্ট দেখার অনুমতি আছে শুধু সেটিই শিডিউল করা যায়। *এখন পাঠান* দিয়ে
+পরীক্ষা করুন। *অ্যালার্ট*: প্রতিদিন সকালে গতকালের অর্ডার, আয়, বাতিল ও
+রিজেকশন হার আগের দিনগুলোর সাথে তুলনা হয়; সেটিংস → রিপোর্টের সীমার বেশি
+পরিবর্তন হলে অ্যালার্ট (বেল, পুশ ও ইমেইল) আসে। সমাধানের পর *দেখেছি* চাপুন।
+
+## Custom dashboard (`reports.read`, `dashboard.layouts.manage`)
+
+**EN** — On the dashboard press *Customize* to choose and order widgets
+(key numbers, alerts, orders by status, top products, low stock, COD with
+couriers, true profit, live visitors) and *Save* for yourself. Staff with
+the layouts permission can also save a layout for a role or for everyone.
+Each person sees their own layout first, then their role's, then the store
+default; widgets they're not allowed to see are hidden automatically.
+
+**BN** — ড্যাশবোর্ডে *সাজান* চেপে উইজেট (মূল সূচক, অ্যালার্ট, স্ট্যাটাস অনুযায়ী
+অর্ডার, শীর্ষ পণ্য, কম স্টক, কুরিয়ারের কাছে COD, প্রকৃত মুনাফা, লাইভ ভিজিটর)
+বেছে সাজিয়ে নিজের জন্য *সেভ* করুন। লেআউট অনুমতি থাকলে কোনো রোল বা সবার জন্যও
+সেভ করা যায়। প্রত্যেকে আগে নিজের, তারপর রোলের, তারপর স্টোরের ডিফল্ট লেআউট
+দেখেন; যে উইজেট দেখার অনুমতি নেই তা আপনাআপনি লুকানো থাকে।

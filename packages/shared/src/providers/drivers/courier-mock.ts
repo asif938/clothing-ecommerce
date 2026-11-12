@@ -21,6 +21,8 @@ export const mockCourierConfigSchema = z.object({
     .default("delivered"),
   stepMinutes: z.number().min(0.01).max(1440).default(2),
   deliveryFeeCollected: z.number().int().min(0).default(6000), // poisha — only used when finalStatus collects one at the door
+  // §16 M12 — what the mock courier deducts per parcel in its COD settlement (delivery + COD charge), poisha.
+  settlementCharge: z.number().int().min(0).default(6000),
 });
 export type MockCourierConfig = z.infer<typeof mockCourierConfigSchema>;
 
@@ -61,6 +63,20 @@ export function createMockCourierDriver(config: MockCourierConfig): CourierDrive
     },
     async cancelParcel() {
       // Simulated — nothing to actually cancel.
+    },
+    // Pays out every parcel that has reached its final status: the full COD
+    // amount when delivered, the door fee on a rejection, nothing collected
+    // on a return/cancel/loss — each less `settlementCharge`.
+    async getCodSettlement(parcels) {
+      const lines = [];
+      for (const parcel of parcels) {
+        const elapsedSteps = Math.floor((Date.now() - decodeBookedAt(parcel.consignmentId)) / (config.stepMinutes * 60_000));
+        if (elapsedSteps < PROGRESSION.length) continue;
+        const status = config.finalStatus;
+        const collected = status === "delivered" || status === "partially_delivered" ? parcel.expectedCod : DOOR_OUTCOMES.has(status) ? config.deliveryFeeCollected : 0;
+        lines.push({ consignmentId: parcel.consignmentId, collected, charge: config.settlementCharge, settlementRef: "mock" });
+      }
+      return lines;
     },
   };
 }

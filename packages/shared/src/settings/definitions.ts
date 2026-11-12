@@ -1599,3 +1599,179 @@ export const PWA_ADMIN_PUSH_ENABLED = defineSetting({
   permission: "settings.pwa.write",
   ui: { widget: "toggle" },
 });
+
+// ---------------------------------------------------------------------------
+// Milestone 12 (§16 M12) — inventory and finance.
+// ---------------------------------------------------------------------------
+
+export const INVENTORY_DEAD_STOCK_DAYS = defineSetting({
+  key: "inventory.deadStockDays",
+  group: "inventory",
+  type: z.number().int().min(7).max(730),
+  default: 90,
+  label: { bn: "ডেড স্টক: এত দিন বিক্রি না হলে", en: "Dead stock: no sale for this many days" },
+  secret: false,
+  public: false,
+  permission: "settings.inventory.write",
+  ui: { widget: "text" },
+});
+
+export const markdownTierSchema = z.object({ minDays: z.number().int().min(1), percentOff: z.number().min(1).max(90) });
+export type MarkdownTier = z.infer<typeof markdownTierSchema>;
+
+export const INVENTORY_MARKDOWN_TIERS = defineSetting({
+  key: "inventory.markdownTiers",
+  group: "inventory",
+  type: z.array(markdownTierSchema).max(10),
+  default: [
+    { minDays: 60, percentOff: 10 },
+    { minDays: 90, percentOff: 20 },
+    { minDays: 180, percentOff: 30 },
+  ],
+  label: { bn: "মার্কডাউন ধাপ (দিন → % ছাড়)", en: "Markdown tiers (days unsold → % off)" },
+  help: {
+    bn: "সাজেশন কখনো ক্রয়মূল্য + ন্যূনতম মার্জিনের নিচে যাবে না (মূল্য নির্ধারণ সেটিংস)",
+    en: "Suggestions never go below cost + the minimum margin from the pricing settings",
+  },
+  secret: false,
+  public: false,
+  permission: "settings.inventory.write",
+  ui: { widget: "json" },
+});
+
+export const INVENTORY_SIZE_CURVE_LOOKBACK_DAYS = defineSetting({
+  key: "inventory.sizeCurveLookbackDays",
+  group: "inventory",
+  type: z.number().int().min(7).max(730),
+  default: 90,
+  label: { bn: "সাইজ-কার্ভ বিশ্লেষণের সময়কাল (দিন)", en: "Size-curve analysis window (days)" },
+  secret: false,
+  public: false,
+  permission: "settings.inventory.write",
+  ui: { widget: "text" },
+});
+
+export const PROCUREMENT_COST_METHOD = defineSetting({
+  key: "procurement.costMethod",
+  group: "inventory",
+  type: z.enum(["weighted_average", "last_cost", "none"]),
+  default: "weighted_average",
+  label: { bn: "মাল গ্রহণের পর ক্রয়মূল্য আপডেট", en: "Update cost price on receiving" },
+  secret: false,
+  public: false,
+  permission: "settings.inventory.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "weighted_average", label: { bn: "ওজনযুক্ত গড়", en: "Weighted average" } },
+      { value: "last_cost", label: { bn: "সর্বশেষ ক্রয়মূল্য", en: "Last purchase cost" } },
+      { value: "none", label: { bn: "আপডেট করবেন না", en: "Don't update" } },
+    ],
+  },
+});
+
+export const FINANCE_COD_VARIANCE_TOLERANCE = defineSetting({
+  key: "finance.codVarianceTolerance",
+  group: "finance",
+  type: z.number().int().min(0),
+  default: 100,
+  label: { bn: "COD পার্থক্যের সহনসীমা (পয়সা)", en: "COD variance tolerance (poisha)" },
+  help: { bn: "এর চেয়ে বেশি পার্থক্য হলে লাইনটি চিহ্নিত হবে", en: "Lines differing by more than this are flagged" },
+  secret: false,
+  public: false,
+  permission: "settings.finance.write",
+  ui: { widget: "money" },
+});
+
+export const FINANCE_GATEWAY_FEE_BPS = defineSetting({
+  key: "finance.gatewayFeeBps",
+  group: "finance",
+  type: z.record(z.string(), z.number().int().min(0).max(10_000)),
+  default: { sslcommerz: 250, bkash: 185, nagad: 150, mock: 0 },
+  label: { bn: "আনুমানিক গেটওয়ে ফি (বেসিস পয়েন্ট, ১০০ = ১%)", en: "Estimated gateway fee (basis points, 100 = 1%)" },
+  help: {
+    bn: "প্রকৃত মুনাফা রিপোর্টে ব্যবহৃত হয় যতক্ষণ না সেই সময়ের গেটওয়ে সেটেলমেন্ট এন্ট্রি করা হয়",
+    en: "Used by the true profit report until a gateway settlement for that period is recorded",
+  },
+  secret: false,
+  public: false,
+  permission: "settings.finance.write",
+  ui: { widget: "json" },
+});
+
+export const REPORTS_SCHEDULED_ENABLED = defineSetting({
+  key: "reports.scheduled.enabled",
+  group: "reports",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "নির্ধারিত ইমেইল রিপোর্ট পাঠান", en: "Send scheduled email reports" },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "toggle" },
+});
+
+export const REPORTS_SCHEDULED_SEND_HOUR = defineSetting({
+  key: "reports.scheduled.sendHour",
+  group: "reports",
+  type: z.number().int().min(0).max(23),
+  default: 8,
+  label: { bn: "রিপোর্ট পাঠানোর সময় (ঘণ্টা, ঢাকা সময়)", en: "Send hour (Dhaka time, 0–23)" },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "text" },
+});
+
+export const ALERTS_ANOMALY_ENABLED = defineSetting({
+  key: "alerts.anomaly.enabled",
+  group: "reports",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "অস্বাভাবিকতা শনাক্ত করে অ্যালার্ট দিন", en: "Anomaly alerts" },
+  help: {
+    bn: "গতকালের অর্ডার, আয়, বাতিল ও রিজেকশন হার আগের দিনগুলোর গড়ের সাথে তুলনা করা হয়",
+    en: "Compares yesterday's orders, revenue, cancellation and rejection rates with the trailing average",
+  },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "toggle" },
+});
+
+export const ALERTS_ANOMALY_THRESHOLD_PERCENT = defineSetting({
+  key: "alerts.anomaly.thresholdPercent",
+  group: "reports",
+  type: z.number().min(5).max(500),
+  default: 50,
+  label: { bn: "গড় থেকে কত % বিচ্যুতি হলে অ্যালার্ট", en: "Alert when this % away from the baseline" },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "text" },
+});
+
+export const ALERTS_ANOMALY_BASELINE_DAYS = defineSetting({
+  key: "alerts.anomaly.baselineDays",
+  group: "reports",
+  type: z.number().int().min(3).max(90),
+  default: 14,
+  label: { bn: "তুলনার জন্য আগের দিনের সংখ্যা", en: "Baseline window (days)" },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "text" },
+});
+
+export const ALERTS_ANOMALY_MIN_BASELINE_ORDERS = defineSetting({
+  key: "alerts.anomaly.minBaselineOrders",
+  group: "reports",
+  type: z.number().int().min(1),
+  default: 5,
+  label: { bn: "ন্যূনতম গড় দৈনিক অর্ডার (এর কম হলে অ্যালার্ট নয়)", en: "Minimum average daily orders before alerting" },
+  help: { bn: "নতুন বা ছোট দোকানে অকারণ অ্যালার্ট এড়াতে", en: "Avoids noisy alerts for new or very small stores" },
+  secret: false,
+  public: false,
+  permission: "settings.reports.write",
+  ui: { widget: "text" },
+});

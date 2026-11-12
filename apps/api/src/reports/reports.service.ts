@@ -8,10 +8,9 @@ const SHIPMENT_REJECTED_LIKE: ShipmentStatus[] = ["rejected_at_door", "returned_
 
 /**
  * Core reports (docs/PROJECT_SPEC.md §8.2) — sales, products, courier,
- * staff, discounts, search terms; "profit", "inventory valuation" and
- * "customer cohorts" are explicitly later phases per that same section
- * (profit needs ad-spend import, cohorts are phase 3) and are not built
- * here — see docs/DECISIONS.md. Day-bucketed grouping (sales by day) is
+ * staff, discounts, search terms. The true profit report arrived in M12
+ * (`finance/profit.service.ts`); customer cohorts are phase 3 — see
+ * docs/DECISIONS.md. Day-bucketed grouping (sales by day) is
  * done in JS after one range-bounded fetch rather than a raw SQL
  * `date_trunc` query — admin report volumes are small enough that this is
  * never a real cost, and it avoids a second, untestable raw-SQL code path

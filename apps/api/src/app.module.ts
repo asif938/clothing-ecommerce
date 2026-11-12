@@ -63,6 +63,8 @@ import { SizeRecommenderModule } from "./size-recommender/size-recommender.modul
 import { AudienceModule } from "./audience/audience.module";
 import { AbandonedCartModule } from "./abandoned-cart/abandoned-cart.module";
 import { BlogModule } from "./blog/blog.module";
+import { ProcurementModule } from "./procurement/procurement.module";
+import { FinanceModule } from "./finance/finance.module";
 import { AutomationModule } from "./automation/automation.module";
 import { AutomationOutboxModule } from "./automation/automation-outbox.module";
 import { OrderQueueModule } from "./order-queue/order-queue.module";
@@ -170,6 +172,9 @@ import { ApprovalsModule } from "./approvals/approvals.module";
     CourierRulesModule,
     ApprovalsModule,
     AutomationModule,
+    // Milestone 12 (§16 M12): inventory and finance.
+    ProcurementModule,
+    FinanceModule,
   ],
 })
 export class AppModule {}

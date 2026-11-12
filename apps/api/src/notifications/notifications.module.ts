@@ -31,7 +31,8 @@ import { StaffNotificationsController } from "./staff-notifications.controller";
     NotificationChannelRulesService,
     StaffNotificationsService,
   ],
-  exports: [NotificationsService, StaffNotificationsService],
+  // NotificationDriversService: M12 scheduled email reports send through the configured email provider directly.
+  exports: [NotificationsService, StaffNotificationsService, NotificationDriversService],
 })
 export class NotificationsModule implements OnModuleInit {
   constructor(
