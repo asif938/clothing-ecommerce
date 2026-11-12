@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Link } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { CustomerLoyaltyCard } from "../../../../../components/customer-loyalty-card";
 
 interface CustomerProfile {
   customer: {
@@ -186,6 +187,7 @@ export default function CustomerProfilePage() {
           </ul>
         </Card>
       </div>
+      <CustomerLoyaltyCard customerId={id} />
     </div>
   );
 }

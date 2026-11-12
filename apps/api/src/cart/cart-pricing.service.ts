@@ -12,6 +12,8 @@ import { FlashSalesService } from "../discounts/flash-sales.service";
 import { PaymentRulesService } from "../payment-rules/payment-rules.service";
 import type { AdvanceRequirement, PaymentRulesOutcome, RuleContext } from "../payment-rules/payment-rules-engine";
 import { LocationsService } from "../locations/locations.service";
+import { computeRedemption, type RedemptionRejection } from "@clothing/shared/marketing";
+import { LoyaltyService } from "../loyalty/loyalty.service";
 
 const CART_IMAGE_WIDTH = 300;
 
@@ -55,6 +57,19 @@ export interface CartPricingContext {
   paymentMethod: string | null;
 }
 
+/** §6.3 step 9 — loyalty points on this cart (only for a logged-in customer while the program is enabled). */
+export interface CartLoyaltyQuote {
+  enabled: boolean;
+  balance: number;
+  requestedPoints: number;
+  pointsApplied: number;
+  discount: number;
+  maxUsablePoints: number;
+  pointValue: number;
+  minRedeemPoints: number;
+  rejection: RedemptionRejection | null;
+}
+
 export interface CartPricingResult {
   lines: PricedLine[];
   subtotal: number;
@@ -69,6 +84,7 @@ export interface CartPricingResult {
   shippingBlockedMessage: string | null;
   shippingDiscount: number;
   giftWrapFee: number;
+  loyalty: CartLoyaltyQuote | null;
   paymentRules: PaymentRulesOutcome;
   total: number;
   codAmount: number;
@@ -99,6 +115,7 @@ export class CartPricingService {
     private readonly flashSales: FlashSalesService,
     private readonly paymentRules: PaymentRulesService,
     private readonly locations: LocationsService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   private async resolveImageUrl(media: Media | null): Promise<string | null> {
@@ -249,7 +266,8 @@ export class CartPricingService {
 
     const shippingDiscount = discountResult.freeShipping ? shippingFee : 0;
     const giftWrapFee = cart.giftWrap ? await this.settings.getValue<number>("checkout.giftWrapFee") : 0;
-    const total = subtotalAfterDiscounts + shippingFee - shippingDiscount + giftWrapFee;
+    const loyalty = await this.quoteLoyalty(cart.redeemPoints, context.customerId, subtotalAfterDiscounts);
+    const total = subtotalAfterDiscounts + shippingFee - shippingDiscount + giftWrapFee - (loyalty?.discount ?? 0);
 
     const ruleContextBase: Omit<RuleContext, "riskLevel" | "riskScore" | "phoneBlocked"> = {
       total,
@@ -295,6 +313,7 @@ export class CartPricingService {
       shippingBlockedMessage,
       shippingDiscount,
       giftWrapFee,
+      loyalty,
       paymentRules: paymentRulesOutcome,
       total,
       codAmount: total,
@@ -302,6 +321,27 @@ export class CartPricingService {
       warnings,
       appliedBundles,
       ruleContextBase,
+    };
+  }
+
+  /** Points only ever pay for goods (never shipping), capped by `loyalty.maxRedeemPercent` — see `computeRedemption`. */
+  private async quoteLoyalty(requestedPoints: number, customerId: string | null, goodsTotal: number): Promise<CartLoyaltyQuote | null> {
+    if (!customerId) return null;
+    const settings = await this.loyaltyService.getSettings();
+    if (!settings.enabled) return null;
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId }, select: { pointsBalance: true } });
+    const balance = customer?.pointsBalance ?? 0;
+    const result = computeRedemption(requestedPoints, balance, goodsTotal, settings);
+    return {
+      enabled: true,
+      balance,
+      requestedPoints,
+      pointsApplied: result.points,
+      discount: result.discount,
+      maxUsablePoints: result.maxUsablePoints,
+      pointValue: settings.pointValue,
+      minRedeemPoints: settings.minRedeemPoints,
+      rejection: result.rejection,
     };
   }
 

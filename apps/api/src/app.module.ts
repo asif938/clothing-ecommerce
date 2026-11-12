@@ -71,6 +71,11 @@ import { OrderQueueModule } from "./order-queue/order-queue.module";
 import { OrderConfirmationModule } from "./order-confirmation/order-confirmation.module";
 import { CourierRulesModule } from "./courier-rules/courier-rules.module";
 import { ApprovalsModule } from "./approvals/approvals.module";
+import { LoyaltyModule } from "./loyalty/loyalty.module";
+import { CrmModule } from "./crm/crm.module";
+import { MarketingModule } from "./marketing/marketing.module";
+import { AiModule } from "./ai/ai.module";
+import { SeoAuditModule } from "./seo-audit/seo-audit.module";
 
 @Module({
   imports: [
@@ -171,6 +176,12 @@ import { ApprovalsModule } from "./approvals/approvals.module";
     OrderConfirmationModule,
     CourierRulesModule,
     ApprovalsModule,
+    // Milestone 13 (docs/PROJECT_SPEC.md §16 M13) — CRM, marketing automation and AI content.
+    LoyaltyModule,
+    CrmModule,
+    MarketingModule,
+    AiModule,
+    SeoAuditModule,
     AutomationModule,
     // Milestone 12 (§16 M12): inventory and finance.
     ProcurementModule,

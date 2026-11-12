@@ -634,3 +634,178 @@ default; widgets they're not allowed to see are hidden automatically.
 বেছে সাজিয়ে নিজের জন্য *সেভ* করুন। লেআউট অনুমতি থাকলে কোনো রোল বা সবার জন্যও
 সেভ করা যায়। প্রত্যেকে আগে নিজের, তারপর রোলের, তারপর স্টোরের ডিফল্ট লেআউট
 দেখেন; যে উইজেট দেখার অনুমতি নেই তা আপনাআপনি লুকানো থাকে।
+
+## Loyalty program & tiers (`loyalty.manage`, Settings → loyalty)
+
+**EN** — Turn the program on in Settings → loyalty and set the rules (default:
+1 point per ৳100, 1 point = ৳1, at least 50 points per use, at most 20% of the
+goods paid with points, points usable 7 days after delivery, expiring after
+12 months; bonus points for an approved photo review and on birthdays).
+Marketing → *Loyalty* shows points outstanding and their taka liability, and
+lets you add tiers by lifetime spend with an earn multiplier (150% = 1.5×).
+A customer's profile shows their balance, pending and soon-expiring points,
+the full history, and lets you add or remove points with a reason (audited).
+Logged-in shoppers see *My points* in their account and a "Use points" box at
+checkout. Cancelled orders give their points back automatically; points for
+an order returned within the waiting period are never released. Orders paid
+partly with points can't be merged or split.
+
+**BN** — সেটিংস → loyalty থেকে প্রোগ্রাম চালু করে নিয়ম দিন (ডিফল্ট: প্রতি ৳১০০-তে
+১ পয়েন্ট, ১ পয়েন্ট = ৳১, একবারে কমপক্ষে ৫০ পয়েন্ট, পণ্যের মূল্যের সর্বোচ্চ ২০%
+পয়েন্টে, ডেলিভারির ৭ দিন পর ব্যবহারযোগ্য, ১২ মাসে মেয়াদ শেষ; ছবিসহ অনুমোদিত
+রিভিউ ও জন্মদিনে বোনাস)। মার্কেটিং → *লয়্যালটি*-তে বকেয়া পয়েন্ট ও তার টাকার দায়
+দেখুন, মোট কেনাকাটা অনুযায়ী টিয়ার ও গুণক (১৫০% = ১.৫×) যোগ করুন। গ্রাহকের
+প্রোফাইলে ব্যালান্স, অপেক্ষমাণ ও শীঘ্র মেয়াদোত্তীর্ণ পয়েন্ট, পুরো ইতিহাস দেখা যায়
+এবং কারণসহ পয়েন্ট যোগ/বিয়োগ করা যায় (অডিট হয়)। গ্রাহক অ্যাকাউন্টে *আমার পয়েন্ট*
+ও চেকআউটে "পয়েন্ট ব্যবহার করুন" দেখেন। বাতিল অর্ডারের পয়েন্ট নিজে থেকে ফেরত
+আসে; অপেক্ষার সময়ে রিটার্ন হলে পয়েন্ট যোগ হয় না। পয়েন্টে আংশিক পরিশোধিত অর্ডার
+মার্জ/স্প্লিট করা যায় না।
+
+## RFM segments (`customers.manage`)
+
+**EN** — Every night after 2 AM the system scores each customer who ordered
+in the last year (Settings → crm) 1–5 on recency, frequency and spend,
+compared with your other customers, and names a segment (Champions, Loyal,
+At risk, Hibernating …). On *Segments*, *Create preset segments* adds one
+segment per RFM group; *Recalculate now* re-scores immediately. Segment rules
+can also use `rfmSegment`, `rfmRecency`, `rfmFrequency`, `rfmMonetary`,
+`tierId`, `pointsBalance` and `consent` ("sms", "email" or "whatsapp").
+
+**BN** — প্রতিরাতে ২টার পর গত এক বছরে (সেটিংস → crm) অর্ডার করা প্রত্যেক গ্রাহককে
+রিসেন্সি, ফ্রিকোয়েন্সি ও খরচে ১–৫ স্কোর দেওয়া হয় — অন্য গ্রাহকদের সাথে তুলনা করে —
+এবং একটি সেগমেন্ট নাম (চ্যাম্পিয়ন, অনুগত, ঝুঁকিতে, নিষ্ক্রিয় …)। *সেগমেন্ট* পেজে
+*প্রিসেট সেগমেন্ট তৈরি* প্রতিটি RFM দলের জন্য সেগমেন্ট যোগ করে; *এখনই হিসাব করুন*
+সাথে সাথে স্কোর করে। সেগমেন্ট রুলে `rfmSegment`, `rfmRecency`, `rfmFrequency`,
+`rfmMonetary`, `tierId`, `pointsBalance` ও `consent` ব্যবহার করা যায়।
+
+## Broadcasts & unique-code campaigns (`marketing.broadcasts.manage`, `marketing.broadcasts.send`)
+
+**EN** — Marketing → *Broadcasts* → *New broadcast*: pick a channel, a
+segment (or everyone), write the Bangla and English message (each customer
+gets the language of their account) and watch the live recipient count and
+cost estimate (rates in Settings → marketing). Only customers who opted in to
+marketing on that channel are counted — shoppers opt in from their account
+page. To give everyone their own single-use coupon, pick a code-type
+discount; each recipient gets a personal code in `{coupon_code}` that only
+works on their account. Save the draft, check the preview, *Send test* to
+your own phone or inbox, then *Send now* or schedule (needs the send
+permission). Messages go out in batches; the page shows delivered / waiting
+/ failed and, for coupons, how many were used and the orders they brought.
+*Stop sending* withdraws messages not yet sent.
+
+**BN** — মার্কেটিং → *ব্রডকাস্ট* → *নতুন ব্রডকাস্ট*: চ্যানেল, সেগমেন্ট (বা সবাই)
+বাছুন, বাংলা ও ইংরেজি বার্তা লিখুন (প্রত্যেকে অ্যাকাউন্টের ভাষায় পান) এবং প্রাপকের
+সংখ্যা ও আনুমানিক খরচ দেখুন (রেট সেটিংস → marketing-এ)। শুধু সেই চ্যানেলে
+মার্কেটিং সম্মতি দেওয়া গ্রাহক গণনা হন — গ্রাহক অ্যাকাউন্ট পেজ থেকে সম্মতি দেন।
+সবাইকে আলাদা একবার ব্যবহারযোগ্য কুপন দিতে কোড-টাইপ ডিসকাউন্ট বাছুন; প্রত্যেকে
+`{coupon_code}`-এ নিজের কোড পান যা শুধু তার অ্যাকাউন্টে চলে। ড্রাফট সেভ করে
+প্রিভিউ দেখুন, নিজের ফোন/ইমেইলে *পরীক্ষামূলক পাঠান*, তারপর *এখনই পাঠান* বা
+সময় নির্ধারণ করুন (পাঠানোর অনুমতি লাগে)। বার্তা ব্যাচে যায়; পেজে পৌঁছেছে/অপেক্ষায়/
+ব্যর্থ এবং কুপনের ব্যবহার ও অর্ডার দেখা যায়। *পাঠানো বন্ধ করুন* না-যাওয়া বার্তা
+ফিরিয়ে নেয়।
+
+## Automated journeys (`marketing.journeys.manage`, Settings → marketing)
+
+**EN** — Marketing → *Journeys* → *Add starter journeys* creates Welcome,
+Review request, Win-back and Birthday journeys (all off). Edit the steps
+(delay, channels in order of preference, Bangla/English text, optional
+personal coupon) and switch each one on; nothing sends until Settings →
+marketing → "Automated journeys enabled" is also on. Welcome starts for new
+accounts, Review request after delivery (`{review_url}` links to the review
+page), Win-back when a customer hasn't ordered for the set days (and stops
+the moment they order), Birthday on the birthday in their profile.
+
+**BN** — মার্কেটিং → *জার্নি* → *শুরুর জার্নি যোগ করুন* স্বাগতম, রিভিউ অনুরোধ,
+উইন-ব্যাক ও জন্মদিন জার্নি তৈরি করে (সব বন্ধ)। ধাপ (দেরি, পছন্দের ক্রমে চ্যানেল,
+বাংলা/ইংরেজি লেখা, ঐচ্ছিক ব্যক্তিগত কুপন) সম্পাদনা করে প্রতিটি চালু করুন; সেটিংস →
+marketing → "অটোমেটেড জার্নি চালু" না থাকলে কিছু যায় না। স্বাগতম নতুন অ্যাকাউন্টে,
+রিভিউ অনুরোধ ডেলিভারির পর (`{review_url}` রিভিউ পেজের লিংক), উইন-ব্যাক নির্দিষ্ট
+দিন অর্ডার না করলে (অর্ডার করলেই থামে), জন্মদিন প্রোফাইলের জন্মদিনে শুরু হয়।
+
+## Ad audiences (`marketing.audiences.manage`)
+
+**EN** — Add a Meta Custom Audiences or Google Customer Match provider under
+Integrations → audience, turn on Settings → marketing → audience sync, then
+on Marketing → *Ad audiences* pick a segment and provider. *Sync now*
+uploads hashed phone numbers and emails; *Daily* keeps it updated. By default
+only customers with marketing consent are uploaded.
+
+**BN** — Integrations → audience-এ Meta বা Google প্রোভাইডার যোগ করুন, সেটিংস →
+marketing-এ অডিয়েন্স সিঙ্ক চালু করুন, তারপর মার্কেটিং → *বিজ্ঞাপন অডিয়েন্স*-এ
+সেগমেন্ট ও প্রোভাইডার বাছুন। *এখনই সিঙ্ক* হ্যাশ করা ফোন ও ইমেইল আপলোড করে;
+*প্রতিদিন* হালনাগাদ রাখে। ডিফল্টে শুধু মার্কেটিং সম্মতি দেওয়া গ্রাহক যান।
+
+## Ad spend & ROAS (`marketing.ad_spend.manage`)
+
+**EN** — Export a daily campaign report from Meta Ads Manager, Google Ads or
+TikTok (CSV or Excel), upload it on Marketing → *Ad spend & ROAS*, choose the
+platform and match the columns (they're guessed for you). For a USD ad
+account enter the exchange rate. The ROAS table joins spend with orders whose
+`utm_source` belongs to that platform (Settings → marketing) and whose
+`utm_campaign` equals the campaign name or ID — so tag your ad links, e.g.
+`?utm_source=facebook&utm_campaign=Eid Sale`. Imported spend also appears in
+the true profit report.
+
+**BN** — Meta Ads Manager, Google Ads বা TikTok থেকে দৈনিক ক্যাম্পেইন রিপোর্ট (CSV বা
+Excel) এক্সপোর্ট করে মার্কেটিং → *বিজ্ঞাপন খরচ ও ROAS*-এ আপলোড করুন, প্ল্যাটফর্ম
+বাছুন ও কলাম মেলান (আন্দাজ করে দেওয়া থাকে)। USD অ্যাকাউন্টে বিনিময় হার দিন।
+ROAS টেবিল খরচকে সেই অর্ডারের সাথে মেলায় যার `utm_source` প্ল্যাটফর্মের (সেটিংস →
+marketing) এবং `utm_campaign` ক্যাম্পেইনের নাম বা ID — তাই বিজ্ঞাপনের লিংকে ট্যাগ
+দিন, যেমন `?utm_source=facebook&utm_campaign=Eid Sale`। ইমপোর্ট করা খরচ প্রকৃত
+মুনাফা রিপোর্টেও আসে।
+
+## Promo calendar (`marketing.calendar.read`)
+
+**EN** — Marketing → *Promo calendar* shows discounts, flash sales,
+announcement bars, popups, scheduled price changes, broadcasts and scheduled
+page launches on a month grid; click an item to open its editor.
+
+**BN** — মার্কেটিং → *প্রোমো ক্যালেন্ডার* মাসের গ্রিডে ডিসকাউন্ট, ফ্ল্যাশ সেল, ঘোষণা
+বার, পপআপ, নির্ধারিত দাম পরিবর্তন, ব্রডকাস্ট ও পেজ প্রকাশ দেখায়; ক্লিক করলে
+সম্পাদনার পেজ খোলে।
+
+## AI content (`ai.manage`, `ai.use`, Settings → ai)
+
+**EN** — Add a provider under Integrations → ai (Anthropic Claude, OpenAI,
+Google Gemini, or Mock to try it free), set its prices per million tokens for
+cost estimates, and turn on Settings → ai. On the *AI* page choose, per
+feature (description, SEO meta, alt text, translation), the provider, model,
+effort/temperature, monthly budget in US cents or tokens, and edit the
+prompt (every change is versioned; restore any version). When a budget is
+used up the feature stops until next month; staff with the AI permission get
+an alert at the threshold. If a provider fails, the next enabled one is tried
+(setting). In the product editor, *AI assistant* writes drafts — you can edit
+them, then *Apply* (saved through the normal product history) or *Discard*.
+Nothing is ever published automatically. The usage report shows calls,
+tokens and estimated cost per feature and provider each month.
+
+**BN** — Integrations → ai-তে প্রোভাইডার যোগ করুন (Anthropic Claude, OpenAI, Google
+Gemini, বা বিনা খরচে পরীক্ষার জন্য মক), খরচ অনুমানের জন্য প্রতি মিলিয়ন টোকেনের দাম
+দিন, এবং সেটিংস → ai চালু করুন। *AI* পেজে প্রতিটি ফিচারের (বিবরণ, SEO মেটা, alt
+টেক্সট, অনুবাদ) প্রোভাইডার, মডেল, effort/টেম্পারেচার, মাসিক বাজেট (US সেন্ট বা
+টোকেন) বাছুন এবং প্রম্পট সম্পাদনা করুন (প্রতিটি পরিবর্তনের সংস্করণ থাকে)। বাজেট
+শেষ হলে পরের মাস পর্যন্ত ফিচার বন্ধ থাকে; সীমার কাছে গেলে AI অনুমতিপ্রাপ্ত স্টাফ
+অ্যালার্ট পান। একটি প্রোভাইডার ব্যর্থ হলে পরের সক্রিয়টি চেষ্টা হয় (সেটিং)। পণ্য
+এডিটরে *AI সহকারী* ড্রাফট লেখে — সম্পাদনা করে *প্রয়োগ* (স্বাভাবিক পণ্য ইতিহাসে
+সংরক্ষিত) বা *বাতিল* করুন। কিছুই নিজে থেকে প্রকাশ হয় না। ব্যবহারের রিপোর্টে মাসে
+ফিচার ও প্রোভাইডার অনুযায়ী কল, টোকেন ও আনুমানিক খরচ দেখা যায়।
+
+## Product quality, SEO score & broken links (`catalog.manage`, `seo.audit`)
+
+**EN** — *Product quality* lists products worst first with what's missing
+(images, Bangla/English text, SEO, size chart, weight, alt text, category,
+compare-at price, cost); click an issue count to filter. *SEO & links* scores
+products, categories, collections, pages and blog posts on title and meta
+description length, clean URL, enough content, image alt text and noindex.
+*Scan now* checks every link in pages, blog posts, menus, banners, popups,
+product/category descriptions and redirects and lists the ones that lead to
+missing, hidden or unpublished content (external sites too, if enabled in
+Settings → seo).
+
+**BN** — *পণ্যের মান* সবচেয়ে খারাপ পণ্য আগে দেখায় এবং কী বাদ আছে (ছবি, বাংলা/ইংরেজি
+লেখা, SEO, সাইজ চার্ট, ওজন, alt টেক্সট, ক্যাটাগরি, তুলনামূল্য, ক্রয়মূল্য); ফিল্টার
+করতে সমস্যার সংখ্যায় ক্লিক করুন। *SEO ও লিংক* পণ্য, ক্যাটাগরি, কালেকশন, পেজ ও
+ব্লগকে শিরোনাম ও মেটা বিবরণের দৈর্ঘ্য, পরিষ্কার URL, যথেষ্ট কনটেন্ট, ছবির alt ও
+noindex দিয়ে স্কোর করে। *এখনই স্ক্যান* পেজ, ব্লগ, মেনু, ব্যানার, পপআপ, পণ্য/ক্যাটাগরির
+বিবরণ ও রিডাইরেক্টের প্রতিটি লিংক যাচাই করে এবং যেগুলো না-থাকা, লুকানো বা অপ্রকাশিত
+কনটেন্টে যায় তা দেখায় (সেটিংস → seo-তে চালু থাকলে বাইরের সাইটও)।

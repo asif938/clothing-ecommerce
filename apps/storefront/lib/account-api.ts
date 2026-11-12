@@ -19,6 +19,40 @@ export interface OrderSummary {
   total: number;
   createdAt: string;
 }
+export interface LoyaltySummary {
+  enabled: boolean;
+  balance: number;
+  balanceValue: number;
+  pending: number;
+  expiringWithin30Days: number;
+  tier: { name: { bn?: string; en?: string }; perks: { bn?: string; en?: string } | null; color: string | null } | null;
+  nextTier: { name: { bn?: string; en?: string }; remaining: number } | null;
+  rules: { spendPerPoint: number; pointValue: number; minRedeemPoints: number; maxRedeemPercent: number; expiryMonths: number };
+}
+export interface LoyaltyEntry {
+  id: string;
+  points: number;
+  reason: string;
+  status: string;
+  createdAt: string;
+  availableAt: string | null;
+  expiresAt: string | null;
+}
+export const myLoyalty = () => callApi<{ summary: LoyaltySummary; ledger: { items: LoyaltyEntry[]; total: number } }>("/store/account/loyalty");
+
+export interface Profile {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  birthday: string | null;
+  locale: string;
+  marketingConsentSms: boolean;
+  marketingConsentEmail: boolean;
+  marketingConsentWhatsapp: boolean;
+}
+export const myProfile = () => callApi<Profile>("/store/account/profile");
+export const saveProfile = (patch: Partial<Omit<Profile, "phone">>) => callApi<Profile>("/store/account/profile", { method: "PATCH", body: JSON.stringify(patch) });
+
 export const myOrders = () => callApi<OrderSummary[]>("/store/orders/mine");
 
 export interface OrderDetailItem {

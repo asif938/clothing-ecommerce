@@ -83,9 +83,14 @@ export class ProfitService {
       byDay.set(day, d);
     }
 
+    // §16 M13 — imported ad spend for the same dates (Dhaka calendar days stored as plain dates).
+    const adSpendAgg = await this.prisma.adSpend.aggregate({ where: { date: { gte: new Date(`${dhakaDateKey(from)}T00:00:00.000Z`), lte: new Date(`${dhakaDateKey(to)}T00:00:00.000Z`) } }, _sum: { spend: true } });
+    const adSpend = adSpendAgg._sum.spend ?? 0;
+    const summary = summarizeProfit(rows, recordedFees);
+
     return {
       range: { from, to },
-      summary: { ...summarizeProfit(rows, recordedFees), ordersInPipeline: inPipeline },
+      summary: { ...summary, ordersInPipeline: inPipeline, adSpend, profitAfterAdSpend: summary.profit - adSpend },
       days: [...byDay.values()],
       orders: rows,
     };

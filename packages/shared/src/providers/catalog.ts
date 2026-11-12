@@ -27,6 +27,11 @@ import { mockCourierDriverDefinition } from "./drivers/courier-mock.ts";
 import { steadfastDriverDefinition } from "./drivers/courier-steadfast.ts";
 import { pathaoDriverDefinition } from "./drivers/courier-pathao.ts";
 import { redxDriverDefinition } from "./drivers/courier-redx.ts";
+import { mockAiDriverDefinition } from "./drivers/ai-mock.ts";
+import { anthropicAiDriverDefinition } from "./drivers/ai-anthropic.ts";
+import { openAiDriverDefinition } from "./drivers/ai-openai.ts";
+import { geminiDriverDefinition } from "./drivers/ai-gemini.ts";
+import { mockAudienceDriverDefinition, metaAudienceDriverDefinition, googleAudienceDriverDefinition } from "./drivers/audience.ts";
 
 /**
  * The static catalog of every driver implemented so far, keyed by
@@ -68,6 +73,14 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   metaCapiDriverDefinition as unknown as ProviderDriverDefinition,
   ga4MpDriverDefinition as unknown as ProviderDriverDefinition,
   tiktokEventsDriverDefinition as unknown as ProviderDriverDefinition,
+  // §16 M13 — AI content and ad audience sync.
+  mockAiDriverDefinition as unknown as ProviderDriverDefinition,
+  anthropicAiDriverDefinition as unknown as ProviderDriverDefinition,
+  openAiDriverDefinition as unknown as ProviderDriverDefinition,
+  geminiDriverDefinition as unknown as ProviderDriverDefinition,
+  mockAudienceDriverDefinition as unknown as ProviderDriverDefinition,
+  metaAudienceDriverDefinition as unknown as ProviderDriverDefinition,
+  googleAudienceDriverDefinition as unknown as ProviderDriverDefinition,
 ];
 
 export function getDriverDefinition(

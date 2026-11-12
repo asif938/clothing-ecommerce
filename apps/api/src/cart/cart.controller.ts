@@ -12,6 +12,7 @@ import {
   setCartAddressSchema,
   setCodesSchema,
   setCustomerNoteSchema,
+  setRedeemPointsSchema,
   setGiftWrapSchema,
   updateItemSchema,
   type AddItemDto,
@@ -19,6 +20,7 @@ import {
   type SetCartAddressDto,
   type SetCodesDto,
   type SetCustomerNoteDto,
+  type SetRedeemPointsDto,
   type SetGiftWrapDto,
   type UpdateItemDto,
 } from "./dto";
@@ -106,6 +108,12 @@ export class CartController {
   @Patch("gift-wrap")
   async setGiftWrap(@Body(new ZodValidationPipe(setGiftWrapSchema)) body: SetGiftWrapDto, @Req() req: Request) {
     const cart = await this.cart.setGiftWrap(this.identity(req), body.giftWrap);
+    return await this.respond(req, cart);
+  }
+
+  @Put("points")
+  async setPoints(@Body(new ZodValidationPipe(setRedeemPointsSchema)) body: SetRedeemPointsDto, @Req() req: Request) {
+    const cart = await this.cart.setRedeemPoints(this.identity(req), body.points);
     return await this.respond(req, cart);
   }
 

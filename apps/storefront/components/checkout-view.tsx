@@ -6,6 +6,7 @@ import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { readCookie } from "../lib/analytics";
 import { useCart } from "../lib/use-cart";
+import { readUtm } from "../lib/utm";
 import {
   availablePaymentMethods,
   areas as fetchAreas,
@@ -16,6 +17,7 @@ import {
   selectCartShippingRate,
   sendOtp,
   setCartAddress,
+  setCartPoints,
   type ShippingRateOption,
 } from "../lib/cart-api";
 
@@ -114,7 +116,7 @@ export function CheckoutView() {
       // the same id for platform-side dedup.
       const trackingEventId = crypto.randomUUID();
       const result = await placeOrder(
-        { paymentMethod, otpCode: otpCode || undefined, termsAccepted, trackingEventId, fbc: readCookie("_fbc"), fbp: readCookie("_fbp"), sourceUrl: window.location.href },
+        { paymentMethod, otpCode: otpCode || undefined, termsAccepted, trackingEventId, fbc: readCookie("_fbc"), fbp: readCookie("_fbp"), sourceUrl: window.location.href, ...readUtm() },
         idempotencyKey.current,
       );
       if (result.redirectUrl) {
@@ -238,6 +240,31 @@ export function CheckoutView() {
         </section>
       )}
 
+      {pricing?.loyalty && pricing.loyalty.balance > 0 && (
+        <section className="mb-6 space-y-1 rounded-theme border border-border p-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={pricing.loyalty.pointsApplied > 0}
+              disabled={pricing.loyalty.maxUsablePoints === 0}
+              onChange={(e) => void setCartPoints(e.target.checked ? pricing.loyalty!.maxUsablePoints : 0).then(cart.setCart)}
+            />
+            {locale === "bn"
+              ? `${pricing.loyalty.maxUsablePoints} পয়েন্ট ব্যবহার করুন (−${formatBdt(pricing.loyalty.maxUsablePoints * pricing.loyalty.pointValue)})`
+              : `Use ${pricing.loyalty.maxUsablePoints} points (−${formatBdt(pricing.loyalty.maxUsablePoints * pricing.loyalty.pointValue)})`}
+          </label>
+          <p className="text-xs text-surface-foreground/60">
+            {pricing.loyalty.maxUsablePoints === 0
+              ? locale === "bn"
+                ? `কমপক্ষে ${pricing.loyalty.minRedeemPoints} পয়েন্ট লাগবে। আপনার আছে ${pricing.loyalty.balance}।`
+                : `You need at least ${pricing.loyalty.minRedeemPoints} usable points. You have ${pricing.loyalty.balance}.`
+              : locale === "bn"
+                ? `আপনার ব্যালান্স: ${pricing.loyalty.balance} পয়েন্ট`
+                : `Your balance: ${pricing.loyalty.balance} points`}
+          </p>
+        </section>
+      )}
+
       <section className="mb-6 flex items-center gap-2">
         <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} id="terms" />
         <label htmlFor="terms" className="text-sm">
@@ -255,6 +282,12 @@ export function CheckoutView() {
             <span>{locale === "bn" ? "ডেলিভারি" : "Delivery"}</span>
             <span>{formatBdt(pricing.shippingFee - pricing.shippingDiscount)}</span>
           </div>
+          {pricing.loyalty && pricing.loyalty.discount > 0 && (
+            <div className="flex justify-between">
+              <span>{locale === "bn" ? "পয়েন্ট" : "Points"}</span>
+              <span>−{formatBdt(pricing.loyalty.discount)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-semibold text-surface-foreground">
             <span>{locale === "bn" ? "সর্বমোট" : "Total"}</span>
             <span>{formatBdt(pricing.total)}</span>

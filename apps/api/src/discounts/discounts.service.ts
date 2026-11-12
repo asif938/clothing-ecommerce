@@ -164,12 +164,16 @@ export class DiscountsService {
       // `code` field, or one of many rows in `discount_codes` (e.g. 500
       // distinct single-use codes generated for one "VIP10" discount) —
       // either resolves to the same underlying `Discount`.
-      const discount =
-        (await this.prisma.discount.findFirst({ where: { code, type: "code" } })) ??
-        (await this.prisma.discountCode.findUnique({ where: { code }, include: { discount: true } }))?.discount ??
-        null;
+      const sharedDiscount = await this.prisma.discount.findFirst({ where: { code, type: "code" } });
+      const bulkCode = sharedDiscount ? null : await this.prisma.discountCode.findUnique({ where: { code }, include: { discount: true } });
+      const discount = sharedDiscount ?? bulkCode?.discount ?? null;
       if (!discount) {
         rejectedCodes.push({ code, reasonCode: "NOT_FOUND", message: "This code does not exist." });
+        continue;
+      }
+      // §16 M13 unique-code campaigns: a code minted for one customer only works on that customer's account.
+      if (bulkCode?.assignedTo && bulkCode.assignedTo !== customerId) {
+        rejectedCodes.push({ code, reasonCode: "NOT_YOURS", message: customerId ? "This code belongs to another customer." : "Log in to use this personal code." });
         continue;
       }
       if (!this.isWithinSchedule(discount, now)) {

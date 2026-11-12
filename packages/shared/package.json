@@ -15,7 +15,9 @@
     "./providers": "./src/providers/index.ts",
     "./media": "./src/media/url.ts",
     "./notifications": "./src/notifications/index.ts",
-    "./automation": "./src/automation/index.ts"
+    "./automation": "./src/automation/index.ts",
+    "./marketing": "./src/marketing/index.ts",
+    "./ai": "./src/ai/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -24,6 +26,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@aws-sdk/client-s3": "3.1155.0",
     "@aws-sdk/s3-request-presigner": "3.1155.0",
     "@node-rs/argon2": "2.2.2",

@@ -15,7 +15,8 @@ import { Banner, Button, Card, TextField } from "../../../../components/ui";
 // generic form above needing no capability-specific code) but no tab to
 // reach them from. "tracking" (M8) would have landed in the same silent
 // gap had this not been caught.
-const CAPABILITIES = ["storage", "email", "sms", "whatsapp", "payment", "courier", "captcha", "fraud_check", "tracking"] as const;
+// M13 adds "ai" (Anthropic/OpenAI/Gemini/mock) and "audience" (Meta/Google ad audiences/mock).
+const CAPABILITIES = ["storage", "email", "sms", "whatsapp", "payment", "courier", "captcha", "fraud_check", "tracking", "ai", "audience"] as const;
 
 interface DriverCatalogEntry {
   capability: string;

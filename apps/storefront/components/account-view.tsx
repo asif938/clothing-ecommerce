@@ -6,6 +6,7 @@ import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { me, myOrders, logout, type OrderSummary } from "../lib/account-api";
 import { PushOptIn } from "./push-opt-in";
+import { AccountProfileForm } from "./account-profile-form";
 
 export function AccountView() {
   const params = useParams<{ locale: string }>();
@@ -60,7 +61,12 @@ export function AccountView() {
         <Link href="/account/measurements" className="block text-sm text-brand underline">
           {locale === "bn" ? "আমার মাপ" : "My measurements"}
         </Link>
+        <Link href="/account/points" className="block text-sm text-brand underline">
+          {locale === "bn" ? "আমার পয়েন্ট" : "My points"}
+        </Link>
       </div>
+
+      <AccountProfileForm bn={locale === "bn"} />
 
       <div className="mb-6">
         <PushOptIn

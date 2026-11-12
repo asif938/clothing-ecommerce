@@ -21,6 +21,7 @@ import { OtpService } from "../customer-auth/otp.service";
 import { CaptchaProvidersService } from "./captcha-providers.service";
 import { StockReservationService } from "./stock-reservation.service";
 import { OrderNumberService } from "./order-number.service";
+import { LoyaltyService } from "../loyalty/loyalty.service";
 import type { PlaceOrderDto } from "./dto";
 
 const ORDER_WITH_PAYMENTS_INCLUDE = { items: true, payments: true } as const;
@@ -67,6 +68,7 @@ export class CheckoutService {
     private readonly staffNotifications: StaffNotificationsService,
     private readonly tracking: TrackingService,
     private readonly automationOutbox: AutomationOutboxService,
+    private readonly loyalty: LoyaltyService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -194,6 +196,12 @@ export class CheckoutService {
           riskLevel: risk.level,
           requiresReview: outcome.manualReviewRequired,
           utmSource: dto.utmSource ?? null,
+          // §16 M13 — campaign attribution for the ROAS report.
+          utmMedium: dto.utmMedium ?? null,
+          utmCampaign: dto.utmCampaign ?? null,
+          utmContent: dto.utmContent ?? null,
+          pointsRedeemed: quote.loyalty?.pointsApplied ?? 0,
+          pointsDiscount: quote.loyalty?.discount ?? 0,
           ip: requestContext.ip,
           userAgent: requestContext.userAgent,
           deviceId: dto.deviceId ?? null,
@@ -224,6 +232,11 @@ export class CheckoutService {
         },
         include: { items: true, payments: true },
       });
+
+      // §6.3 step 9 — spend the points in the same transaction; a concurrent redemption that emptied the balance rolls the whole order back.
+      if (quote.loyalty && quote.loyalty.pointsApplied > 0 && requestContext.identity.customerId) {
+        await this.loyalty.redeemInTx(tx, requestContext.identity.customerId, created.id, quote.loyalty.pointsApplied);
+      }
 
       for (const line of priceableLines) {
         if (line.flashSaleItemId) await this.flashSales.recordSold(line.flashSaleItemId, line.quantity);

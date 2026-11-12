@@ -1282,9 +1282,22 @@ model Customer {
   referredBy               String?        @map("referred_by")
   firstUtm                 Json?          @map("first_utm")
   lastSeenAt               DateTime?      @map("last_seen_at")
+  // §16 M13 — loyalty tier (recomputed from lifetime spend) and nightly RFM
+  // scores (1–5 each, quintiles within the store; null = no order in window).
+  tierId                   String?        @map("tier_id")
+  rfmRecency               Int?           @map("rfm_recency")
+  rfmFrequency             Int?           @map("rfm_frequency")
+  rfmMonetary              Int?           @map("rfm_monetary")
+  rfmSegment               String?        @map("rfm_segment")
+  rfmScoredAt              DateTime?      @map("rfm_scored_at")
+  lastOrderAt              DateTime?      @map("last_order_at")
   createdAt                DateTime       @default(now()) @map("created_at")
   updatedAt                DateTime       @updatedAt @map("updated_at")
   deletedAt                DateTime?      @map("deleted_at")
+
+  tier                LoyaltyTier?         @relation(fields: [tierId], references: [id], onDelete: SetNull)
+  loyaltyTransactions LoyaltyTransaction[]
+  journeyEnrollments  JourneyEnrollment[]
 
   sessions          CustomerSession[]
   addresses         Address[]
@@ -1412,6 +1425,9 @@ model Cart {
   abandonedAt            DateTime?  @map("abandoned_at")
   recoveredAt            DateTime?  @map("recovered_at")
   recoverySequenceStep   Int        @default(0) @map("recovery_sequence_step")
+  // §16 M13 — loyalty points the (logged-in) customer asked to use; the
+  // pricing pipeline decides how many actually apply (§6.3 step 9).
+  redeemPoints           Int        @default(0) @map("redeem_points")
   createdAt              DateTime   @default(now()) @map("created_at")
   updatedAt              DateTime   @updatedAt @map("updated_at")
 
@@ -1742,6 +1758,11 @@ model Order {
   // order created by a split points at the order it was carved from.
   mergedIntoOrderId         String?            @map("merged_into_order_id")
   splitFromOrderId          String?            @map("split_from_order_id")
+  // §16 M13 — loyalty redemption at checkout (§6.3 step 9): points spent and
+  // the poisha they took off `total`. Kept apart from `discountTotal`, which
+  // stays coupons/automatic discounts only.
+  pointsRedeemed            Int                @default(0) @map("points_redeemed")
+  pointsDiscount            Int                @default(0) @map("points_discount")
   createdAt                 DateTime           @default(now()) @map("created_at")
   updatedAt                 DateTime           @updatedAt @map("updated_at")
 
@@ -1884,6 +1905,10 @@ enum NotificationEvent {
   back_in_stock
   // Milestone 11 (§16 M11) — "please confirm your order" self-confirmation link.
   order_confirmation_request
+  // Milestone 13 (§16 M13) — marketing sends with their own per-send copy
+  // (broadcast/journey bodies live on those rows, not in message_templates).
+  marketing_broadcast
+  journey_message
 }
 
 enum NotificationRecipientType {
@@ -2970,4 +2995,364 @@ model DashboardLayout {
 
   @@unique([scope, scopeId])
   @@map("dashboard_layouts")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 13 (docs/PROJECT_SPEC.md §16 M13) — CRM, marketing automation and
+// AI content.
+// ---------------------------------------------------------------------------
+
+// §5.8 `loyalty_tiers` — reached by lifetime spend; earn multiplier in percent
+// (100 = 1×) so the maths stays integer.
+model LoyaltyTier {
+  id                    String   @id @default(cuid(2))
+  name                  Json
+  minSpent              Int      @map("min_spent")
+  earnMultiplierPercent Int      @default(100) @map("earn_multiplier_percent")
+  perks                 Json?
+  color                 String?
+  position              Int      @default(0)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  customers Customer[]
+
+  @@map("loyalty_tiers")
+}
+
+enum LoyaltyReason {
+  order_delivered
+  order_redeem
+  redeem_reversal
+  review_photo
+  birthday
+  referral
+  expire
+  adjust
+}
+
+enum LoyaltyTransactionStatus {
+  pending
+  available
+  void
+}
+
+// §5.8 `loyalty_transactions` — the ledger. `Customer.pointsBalance` is the sum
+// of available rows, kept in step inside the same transaction. Earned rows are
+// lots: `remaining` is what is left unspent, consumed soonest-expiring first by
+// redemptions and zeroed by the expiry sweep. `(reason, reference)` is unique
+// so every sweep that grants points is idempotent.
+model LoyaltyTransaction {
+  id          String                   @id @default(cuid(2))
+  customerId  String                   @map("customer_id")
+  points      Int
+  reason      LoyaltyReason
+  status      LoyaltyTransactionStatus @default(available)
+  reference   String?
+  orderId     String?                  @map("order_id")
+  remaining   Int                      @default(0)
+  availableAt DateTime?                @map("available_at")
+  expiresAt   DateTime?                @map("expires_at")
+  note        String?
+  createdBy   String?                  @map("created_by")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([reason, reference])
+  @@index([customerId, createdAt])
+  @@index([status, availableAt])
+  @@index([expiresAt])
+  @@index([orderId])
+  @@map("loyalty_transactions")
+}
+
+enum JourneyType {
+  welcome
+  post_purchase
+  win_back
+  birthday
+}
+
+enum JourneyEnrollmentStatus {
+  active
+  completed
+  exited
+  failed
+}
+
+// §8.2 Marketing "Automated journeys (welcome, post-purchase review request,
+// win-back, birthday)". `steps` is an ordered JSON array of
+// `{ delayHours, channels[], bodyBn, bodyEn, subjectBn?, subjectEn?, couponDiscountId? }`;
+// `config` carries type-specific knobs (e.g. win-back inactivity days).
+model Journey {
+  id             String      @id @default(cuid(2))
+  name           String
+  type           JourneyType
+  isActive       Boolean     @default(false) @map("is_active")
+  respectConsent Boolean     @default(true) @map("respect_consent")
+  config         Json        @default("{}")
+  steps          Json        @default("[]")
+  activatedAt    DateTime?   @map("activated_at")
+  enrolledCount  Int         @default(0) @map("enrolled_count")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  enrollments JourneyEnrollment[]
+
+  @@index([type, isActive])
+  @@map("journeys")
+}
+
+// One customer pass through one journey. `contextKey` makes enrolment
+// idempotent per trigger (the order id for post-purchase, the year for
+// birthdays, the last-order date for win-back, "once" for welcome).
+model JourneyEnrollment {
+  id         String                  @id @default(cuid(2))
+  journeyId  String                  @map("journey_id")
+  customerId String                  @map("customer_id")
+  contextKey String                  @map("context_key")
+  stepIndex  Int                     @default(0) @map("step_index")
+  status     JourneyEnrollmentStatus @default(active)
+  nextRunAt  DateTime?               @map("next_run_at")
+  lastError  String?                 @map("last_error")
+  orderId    String?                 @map("order_id")
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+
+  journey  Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([journeyId, customerId, contextKey])
+  @@index([status, nextRunAt])
+  @@map("journey_enrollments")
+}
+
+enum BroadcastStatus {
+  draft
+  scheduled
+  sending
+  sent
+  cancelled
+  failed
+}
+
+// §8.2 Marketing "Campaigns: SMS/WhatsApp/email broadcasts to segments with
+// preview, test send, schedule, cost estimate, delivery report". Recipients
+// are materialized into `notification_logs` (event `marketing_broadcast`,
+// related entity `broadcast`) in id-ordered batches; `cursor` is the last
+// customer id queued so a crash resumes instead of double-sending.
+// `discountId` makes it a unique-code campaign: one single-use code per
+// recipient, assigned to them.
+model Broadcast {
+  id                String              @id @default(cuid(2))
+  name              String
+  channel           NotificationChannel
+  segmentId         String?             @map("segment_id")
+  subjectBn         String?             @map("subject_bn")
+  subjectEn         String?             @map("subject_en")
+  bodyBn            String              @map("body_bn")
+  bodyEn            String              @map("body_en")
+  discountId        String?             @map("discount_id")
+  codePrefix        String?             @map("code_prefix")
+  status            BroadcastStatus     @default(draft)
+  scheduledAt       DateTime?           @map("scheduled_at")
+  startedAt         DateTime?           @map("started_at")
+  completedAt       DateTime?           @map("completed_at")
+  recipientEstimate Int                 @default(0) @map("recipient_estimate")
+  estimatedCost     Int                 @default(0) @map("estimated_cost")
+  queuedCount       Int                 @default(0) @map("queued_count")
+  skippedCount      Int                 @default(0) @map("skipped_count")
+  cursor            String?
+  lastError         String?             @map("last_error")
+  createdBy         String?             @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  @@index([status, scheduledAt])
+  @@map("broadcasts")
+}
+
+enum AudienceSyncStatus {
+  idle
+  running
+  succeeded
+  failed
+}
+
+// §8.2 Customers "audience sync to Meta/Google". One row per (segment,
+// audience provider instance); the platform audience id is remembered so
+// later syncs add to the same list.
+model AudienceSync {
+  id                 String             @id @default(cuid(2))
+  segmentId          String             @map("segment_id")
+  providerInstanceId String             @map("provider_instance_id")
+  name               String
+  externalAudienceId String?            @map("external_audience_id")
+  autoSync           Boolean            @default(false) @map("auto_sync")
+  status             AudienceSyncStatus @default(idle)
+  lastSyncedAt       DateTime?          @map("last_synced_at")
+  lastMemberCount    Int                @default(0) @map("last_member_count")
+  lastError          String?            @map("last_error")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@unique([segmentId, providerInstanceId])
+  @@map("audience_syncs")
+}
+
+enum AdPlatform {
+  meta
+  google
+  tiktok
+  other
+}
+
+// §5.10 `ad_spend` — CSV import first (API later). One row per day ×
+// platform × campaign; re-importing the same day overwrites it.
+model AdSpend {
+  id           String     @id @default(cuid(2))
+  date         DateTime   @db.Date
+  platform     AdPlatform
+  campaignId   String     @default("") @map("campaign_id")
+  campaignName String     @map("campaign_name")
+  spend        Int
+  impressions  Int        @default(0)
+  clicks       Int        @default(0)
+  importBatch  String?    @map("import_batch")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@unique([date, platform, campaignId, campaignName])
+  @@index([date])
+  @@map("ad_spend")
+}
+
+// §5.10 `ai_feature_configs` — which provider/model a feature uses, its
+// parameters, editable prompt template (versioned) and monthly budgets.
+model AiFeatureConfig {
+  id                 String   @id @default(cuid(2))
+  feature            String   @unique
+  providerInstanceId String?  @map("provider_instance_id")
+  model              String?
+  temperature        Float?
+  effort             String?
+  maxTokens          Int      @default(4000) @map("max_tokens")
+  promptTemplate     String   @map("prompt_template")
+  promptVersion      Int      @default(1) @map("prompt_version")
+  enabled            Boolean  @default(true)
+  monthlyBudgetCents Int?     @map("monthly_budget_cents")
+  monthlyTokenBudget Int?     @map("monthly_token_budget")
+  alertedMonth       String?  @map("alerted_month")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  versions AiPromptVersion[]
+
+  @@map("ai_feature_configs")
+}
+
+model AiPromptVersion {
+  id              String   @id @default(cuid(2))
+  featureConfigId String   @map("feature_config_id")
+  version         Int
+  template        String
+  createdBy       String?  @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  featureConfig AiFeatureConfig @relation(fields: [featureConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([featureConfigId, version])
+  @@map("ai_prompt_versions")
+}
+
+// §5.10 `ai_usage_logs`. Cost is an estimate in micro-USD (1 USD =
+// 1,000,000) from the instance per-million-token prices.
+model AiUsageLog {
+  id                 String   @id @default(cuid(2))
+  feature            String
+  providerInstanceId String?  @map("provider_instance_id")
+  driver             String
+  model              String
+  inputTokens        Int      @default(0) @map("input_tokens")
+  outputTokens       Int      @default(0) @map("output_tokens")
+  estCostMicroUsd    Int      @default(0) @map("est_cost_micro_usd")
+  latencyMs          Int      @default(0) @map("latency_ms")
+  status             String
+  error              String?
+  actorId            String?  @map("actor_id")
+  entityType         String?  @map("entity_type")
+  entityId           String?  @map("entity_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([feature, createdAt])
+  @@index([createdAt])
+  @@map("ai_usage_logs")
+}
+
+enum AiDraftStatus {
+  pending
+  applied
+  discarded
+}
+
+// §10.4 "All AI output that changes content is saved as a draft for human
+// review, never auto-published." Staff may edit `output` before applying.
+model AiDraft {
+  id         String        @id @default(cuid(2))
+  feature    String
+  entityType String        @map("entity_type")
+  entityId   String        @map("entity_id")
+  input      Json?
+  output     Json
+  status     AiDraftStatus @default(pending)
+  usageLogId String?       @map("usage_log_id")
+  createdBy  String?       @map("created_by")
+  reviewedBy String?       @map("reviewed_by")
+  reviewedAt DateTime?     @map("reviewed_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@index([entityType, entityId, status])
+  @@map("ai_drafts")
+}
+
+enum LinkScanStatus {
+  running
+  completed
+  failed
+}
+
+// §16 M13 "broken link checker" — one scan over CMS pages, blog posts, menus,
+// announcement bars, popups, product/category descriptions and redirects.
+model LinkScan {
+  id           String         @id @default(cuid(2))
+  status       LinkScanStatus @default(running)
+  linksChecked Int            @default(0) @map("links_checked")
+  brokenCount  Int            @default(0) @map("broken_count")
+  error        String?
+  createdBy    String?        @map("created_by")
+  startedAt    DateTime       @default(now()) @map("started_at")
+  finishedAt   DateTime?      @map("finished_at")
+
+  results LinkScanResult[]
+
+  @@map("link_scans")
+}
+
+model LinkScanResult {
+  id          String @id @default(cuid(2))
+  scanId      String @map("scan_id")
+  sourceType  String @map("source_type")
+  sourceId    String @map("source_id")
+  sourceLabel String @map("source_label")
+  url         String
+  kind        String
+  reason      String
+  httpStatus  Int?   @map("http_status")
+
+  scan LinkScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@map("link_scan_results")
 }

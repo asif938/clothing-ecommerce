@@ -2327,3 +2327,59 @@ Postgres computes it. No migration is needed (the DB column was already generate
 **Decision.** Features that run by themselves have settings toggles (`reports.scheduled.enabled`, `alerts.anomaly.enabled`). Staff-driven tools (suppliers, POs, transfers, stock takes, analysis, reconciliation, profit, layouts) do nothing unless used and are switched per role via their permissions.
 
 **Alternatives.** A feature flag per screen (rejected: duplicates the permission system).
+
+## 2026-11-13 — M13: loyalty is a lot-based ledger; balance is a cached sum
+
+**Context.** §5.8/§6.12 need earn-after-delivery with a pending period, redemption at checkout, per-point expiry and refunds on cancellation.
+
+**Decision.** `loyalty_transactions` is the source of truth; earned rows are *lots* with `remaining`, spent soonest-expiring first (`consumeLotsFifo`), and `customers.points_balance` changes only in the same transaction as the row that explains it, with a conditional `updateMany` (`balance >= points`) so two checkouts can't overspend. Every grant is idempotent via unique `(reason, reference)`. Earning, release, reversal, expiry and bonuses are scheduler sweeps — no hooks into order/review code. Turning loyalty on only rewards orders delivered in the last 30 days (no mass back-award). Release re-checks the order and recomputes points so returns during the window reduce them.
+
+**Alternatives.** Balance computed on read (rejected: checkout needs a cheap, race-safe check); event hooks in the order lifecycle (rejected: more coupling, sweeps are already the pattern).
+
+## 2026-11-13 — M13: points pay only for goods, and are kept out of `discountTotal`
+
+**Context.** §6.3 step 9 caps points at a % of the order; shipping is the brand's cost.
+
+**Decision.** The cap is `loyalty.maxRedeemPercent` of goods after discounts; shipping is never paid with points. Orders store `points_redeemed`/`points_discount` separately from coupon discounts; order edit keeps the points discount; merge/split refuse orders that used points (simplest rule that can't lose or double-refund points). Points never earn points (`eligibleSpendForOrder` removes the points share). Tiers use `customers.total_spent` (the existing lifetime metric).
+
+**Alternatives.** Treating points as a payment method (rejected: changes COD/advance maths and refunds).
+
+## 2026-11-13 — M13: RFM is stored on the customer, scored nightly by quintiles
+
+**Decision.** Nightly (after 02:00 Dhaka, once per day — "already ran" is read from `rfm_scored_at`, so it survives restarts and spun-down free-tier hosts), score R/F/M 1–5 by quintile within the store over `crm.rfm.windowDays`, map R × avg(F,M) to 11 named segments, write them onto `customers` grouped into ≤125 `updateMany`s. Segment rules filter on them like any field; presets are ordinary segments.
+
+**Alternatives.** Fixed thresholds (rejected: wrong for both tiny and large shops); a membership table (rejected, same reasoning as M8 segments).
+
+## 2026-11-13 — M13: marketing sends reuse the notification pipeline with their own copy
+
+**Decision.** Broadcasts and journeys write `notification_logs` rows directly (new events `marketing_broadcast`, `journey_message`) with copy rendered from their own bn/en text, so M7's dispatcher, retries, logs and per-channel drivers are reused unchanged. Because the copy isn't in `message_templates`, a failed channel is retried but not re-routed to another channel. Broadcasts always require marketing consent on the channel; journeys default to requiring it (post-purchase review requests may opt out — they're service messages). Broadcasts queue `batchSize` recipients per tick, id-ordered with a stored cursor, so a crash resumes without double sends; cancelling withdraws queued-but-unsent rows.
+
+**Alternatives.** A separate marketing sender (rejected: duplicate retry/log logic).
+
+## 2026-11-13 — M13: unique-code campaigns mint codes assigned to the recipient
+
+**Decision.** A broadcast (or journey step) linked to a code-type discount mints one `discount_codes` row per recipient with `assigned_to = customer id`; the discount engine now rejects an assigned code used by anyone else ("NOT_YOURS", or "log in" for guests). Code prefix = staff prefix + 3 chars of the broadcast id, so the report can count issued/used codes and their orders per broadcast. Single-use comes from the discount's own limits.
+
+## 2026-11-13 — M13: audience sync is add-only and consent-gated
+
+**Decision.** New provider capability `audience` (mock, Meta Custom Audiences, Google Ads Customer Match), SHA-256 of normalized phone/email per each platform's spec. Uploads are add-only (platforms dedupe); leaving a segment doesn't remove someone from the platform list — recreate the audience to prune. `marketing.audienceSync.requireConsent` (default on) uploads only customers with any marketing consent. Google uses OAuth refresh-token + OfflineUserDataJob; API version is a config field (default `v22`) since it changes often. Neither real driver has been run against a live account.
+
+## 2026-11-13 — M13: ad spend is file-imported into poisha; ROAS joins by UTM
+
+**Decision.** Same inspect → map → import flow as M12 COD files; rows are keyed (date, platform, campaign id, campaign name) and re-imports overwrite. USD accounts convert with a staff-entered rate, integer-only (`spendToPoisha`). ROAS: platform from `utm_source` via an editable map; campaign from `utm_campaign` = campaign id or name; unmatched paid orders get their own row. Revenue basis is a setting (placed vs delivered), net of refunds. The storefront now captures `utm_*` on landing (session storage) and sends them at checkout — previously no UTM ever reached orders. Ad spend for the period is subtracted in the true profit summary (`profitAfterAdSpend`), closing the M12 gap.
+
+## 2026-11-13 — M13: AI is multi-provider per feature, with a code-owned output contract
+
+**Decision.** Capability `ai` with drivers mock, Anthropic (official `@anthropic-ai/sdk`, default `claude-opus-5-5`, server-side refusal fallback opted in for models that support it; no `temperature` because current Claude models reject sampling parameters — effort is the knob), OpenAI and Gemini (plain `fetch`, model required). Each feature has a config row (provider, model, effort/temperature, max tokens, versioned prompt, monthly cents/token budgets). Staff edit the prompt; the JSON output contract is appended by code so edits can't break parsing, and the mock driver echoes the contract's example so everything works without keys. Budgets are hard stops (feature and store-wide); one alert per feature per month at `ai.budgetAlertPercent`. Fallback to the next enabled provider is a setting. Cost is an estimate in micro-USD from per-instance prices in US cents per million tokens (integers). All output is an `ai_drafts` row applied through the normal product services (versioned, audited) — never auto-published. Images are downscaled to 1024 px JPEG before sending.
+
+**Alternatives.** Raw `fetch` for Anthropic too (rejected: the SDK is the supported client); free-form prompts with parse-what-comes-back (rejected: fragile).
+
+## 2026-11-13 — M13: admin-only analysis tools have no toggle; broken links resolve against the DB
+
+**Decision.** Product quality, SEO score, broken link checker, promo calendar and ROAS are admin-only analysis (same rule as M12). Customer-facing or spending features have toggles: loyalty, journeys, broadcasts, audience sync, AI. Link checking resolves internal paths against the database using the storefront's route table (`matchStorefrontRoute`, following one redirect) — no HTTP to our own site, so it works on the free tier; external links get a HEAD check only when `seo.brokenLinks.checkExternal` is on, SSRF-guarded, capped at 300 per scan. Seasonal themes aren't on the promo calendar because no scheduled-theme entity exists yet.
+
+## 2026-11-13 — M13: storefront profile endpoint for birthday and consent
+
+**Context.** Journeys/broadcasts need birthday and per-channel marketing consent; no storefront endpoint could set them.
+
+**Decision.** `GET/PATCH /store/account/profile` (name, email, birthday stored as UTC-midnight date, locale, three consent flags), plus `/store/account/loyalty`. Storefront copy follows the existing inline-bilingual pattern of the account screens.

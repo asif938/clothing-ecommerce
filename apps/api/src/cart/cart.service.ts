@@ -110,6 +110,14 @@ export class CartService {
     return await this.assertAccess(cart.id, identity);
   }
 
+  /** §16 M13 — how many loyalty points the customer wants to use; pricing decides how many apply. Guests can't redeem. */
+  async setRedeemPoints(identity: CartIdentity, points: number) {
+    if (!identity.customerId) throw new ForbiddenException({ code: "LOGIN_REQUIRED", message: "Log in to use your points." });
+    const cart = await this.getOrCreateActiveCart(identity);
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { redeemPoints: points } });
+    return this.getOrCreateActiveCart(identity);
+  }
+
   async setCustomerNote(identity: CartIdentity, note: string | null) {
     const cart = await this.getOrCreateActiveCart(identity);
     await this.prisma.cart.update({ where: { id: cart.id }, data: { customerNote: note } });

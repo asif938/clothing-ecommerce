@@ -2178,13 +2178,129 @@ dashboards.
 - Everything M1–M11 already listed as a known gap and untouched here
   remains unchanged.
 
+## Milestone 13 — CRM, marketing automation and AI content
+
+Status: complete (§16 M13) at the code/test level, with the same caveat as
+every prior milestone: nothing was run against a real database or in a
+browser here — see "Not verified in this environment". Scope per §16:
+loyalty program and tiers, RFM segments, automated journeys, broadcasts
+with cost estimate, audience sync, ad spend import + ROAS, promo calendar,
+unique-code campaigns, AI providers (Anthropic/OpenAI/Gemini) with
+per-feature config, budgets and usage report, AI description/SEO/alt
+text/translation drafts, product quality checker, SEO score and broken
+link checker.
+
+### Built
+
+- **`packages/db`**: migration `20261113090000_crm_marketing_ai` (generated
+  with `prisma migrate diff` against the committed schema — purely
+  additive). New tables `loyalty_tiers`, `loyalty_transactions`,
+  `journeys`, `journey_enrollments`, `broadcasts`, `audience_syncs`,
+  `ad_spend`, `ai_feature_configs`, `ai_prompt_versions`, `ai_usage_logs`,
+  `ai_drafts`, `link_scans`, `link_scan_results`; `customers` gained
+  `tier_id` + RFM columns + `last_order_at`; `carts.redeem_points`;
+  `orders.points_redeemed/points_discount`; notification events
+  `marketing_broadcast`, `journey_message`.
+- **`packages/shared`**: 13 permissions; 25 settings in
+  `settings/definitions-m13.ts` (loyalty, crm, marketing, ai, seo); new
+  `@clothing/shared/marketing` (loyalty maths, RFM scoring, broadcast cost
+  estimate, ROAS attribution, product quality checker, SEO score, link
+  extraction + storefront route matching) and `@clothing/shared/ai`
+  (feature catalog, default prompts, output contracts, cost/budget maths);
+  provider capability `audience`; AI drivers mock / Anthropic (official
+  `@anthropic-ai/sdk` 1.8.0, refusal fallback) / OpenAI / Gemini; audience
+  drivers mock / Meta Custom Audiences / Google Customer Match.
+- **`apps/api`** — new modules:
+  - `LoyaltyModule`: tiers CRUD, per-customer summary/ledger/adjust,
+    sweeps (earn → pending, release, reversal on cancel, lot expiry,
+    photo-review and birthday bonuses), program stats; storefront
+    `/store/account/loyalty` and `/store/account/profile` (birthday +
+    consent). Redemption is step 9 of the cart pricing pipeline
+    (`PUT /store/cart/points`) and is spent inside the order-placement
+    transaction. Order edit keeps the points discount; merge/split refuse
+    orders that used points.
+  - `CrmModule`: nightly RFM scoring, summary, preset segments; segment
+    rules gained `rfmSegment/rfmRecency/rfmFrequency/rfmMonetary/tierId/
+    pointsBalance/consent`.
+  - `MarketingModule`: journeys (4 trigger types, multi-step, starters,
+    consent-aware channel choice, personal coupons), broadcasts (live
+    estimate, preview, test send, schedule/cancel, batched sending through
+    M7's dispatcher, delivery + code-redemption report), audience sync,
+    ad-spend import + ROAS, promo calendar. The discount engine now
+    enforces codes assigned to a customer.
+  - `AiModule`: per-feature config with versioned prompts, budgets (hard
+    stop + alert), provider fallback, usage logging and monthly report;
+    product drafts for description, SEO meta, alt text (per image) and
+    bn↔en translation, applied through the normal product services.
+  - `SeoAuditModule`: product quality list, SEO scores for 5 page types,
+    background broken-link scans.
+  - True profit summary now subtracts imported ad spend
+    (`profitAfterAdSpend`). Checkout stores utm medium/campaign/content.
+- **`apps/admin`**: Marketing tabs (Broadcasts list + detail, Journeys,
+  Loyalty, Ad audiences, Ad spend & ROAS, Promo calendar), AI page
+  (features, prompts with history, budgets, usage), Product quality, SEO &
+  links, RFM panel on Segments, loyalty card on the customer profile, AI
+  assistant panel in the product editor, `ai`/`audience` tabs in
+  Integrations. All strings bn + en (validated as ICU messages).
+- **`apps/storefront`**: "Use points" at checkout with a points line in the
+  totals, `/account/points`, profile form (name, email, birthday, marketing
+  consent per channel) on the account page, and first-touch UTM capture
+  sent with the order (no UTM reached orders before).
+- Docs: decisions (2026-11-13 entries), admin guide entries.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `apps/api` (source and
+  tests), `apps/storefront`, and `apps/admin` source (only the stale
+  `.next/types/validator.ts` errors from the pending login fix remain).
+  ESLint clean on every touched file (one pre-existing warning in the
+  customer profile page).
+- Unit tests: `packages/shared` 194 (was 142), `apps/api` 503 (was 469)
+  — all passing, including the health spec that timed out under load in M12.
+- **Booted the real API** with an unreachable database: the full DI graph
+  resolves (this caught a missing `ProvidersModule` import, fixed), 59 new
+  routes map, `/health` is 200, storefront account routes return 401
+  without a session, validation returns 400, and DB-backed routes fail
+  with the database error rather than crashing.
+- `prisma validate` passes; the migration SQL was reviewed (only CREATE /
+  ADD COLUMN / ADD VALUE).
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database.** The configured
+  dev database (Neon) is still at M11 — M12's migration isn't applied
+  there either; I didn't touch it. Before running: `pnpm db:generate`,
+  `pnpm db:migrate:deploy`, `pnpm db:seed` (grants the new permissions to
+  Super Admin).
+- Nothing was clicked through in a browser: the new admin screens, the
+  checkout points box, the profile form.
+- No live provider calls: Anthropic, OpenAI, Gemini, Meta and Google Ads
+  drivers are written against their docs/SDK but unexercised (no keys).
+  Use the mock AI and mock audience drivers to try the flows end to end.
+- The raw SQL in sweeps (`$queryRaw` for earn/reversal/bonus/enrolment/
+  RFM) has only been typechecked, not executed against Postgres.
+
+### Known issues / explicitly deferred
+
+- Referral points (§6.12) wait for the referral program (M16); store
+  credit and gift cards are M16 too.
+- Audience sync never removes people who left a segment.
+- Marketing messages that fail on one channel are retried, not re-routed
+  to the next channel (journeys pick the first reachable channel up front).
+- WhatsApp broadcasts go out as plain text — Meta requires approved
+  templates for business-initiated messages (same M7 limitation).
+- Tiers use lifetime `total_spent`, which counts orders at placement
+  (including later cancellations) — the existing M5 metric.
+- Product quality / SEO lists load up to 5,000 products in memory per
+  request; fine for the target shop size, revisit for very large catalogs.
+- No unsubscribe link/keyword handling for SMS; customers change consent
+  in their account.
+- Seasonal themes aren't on the promo calendar (no scheduled-theme entity).
+
 ---
 
 ### Next up
 
-Phase 2 (§16) continues: **M13 — CRM, marketing automation and AI
-content** (loyalty program and tiers, RFM segments, automated journeys,
-broadcasts with cost estimate, audience sync, ad spend import + ROAS,
-promo calendar, unique-code campaigns, AI providers with per-feature
-config, budgets and usage report, AI content drafts, product quality
-checker, SEO score and broken link checker).
+Phase 3 (§16): **M14 — Personalization and experimentation**
+(personalized recommendations, visual search, A/B testing for
+blocks/banners/offers).

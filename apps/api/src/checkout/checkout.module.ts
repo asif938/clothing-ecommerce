@@ -18,6 +18,7 @@ import { CaptchaProvidersService } from "./captcha-providers.service";
 import { StockReservationModule } from "./stock-reservation.module";
 import { OrdersLifecycleModule } from "./orders-lifecycle.module";
 import { OrderNumberModule } from "./order-number.module";
+import { LoyaltyModule } from "../loyalty/loyalty.module";
 import { OrderExpiryService } from "./order-expiry.service";
 import { OrdersService } from "./orders.service";
 import { OrdersController } from "./orders.controller";
@@ -25,6 +26,7 @@ import { OrdersController } from "./orders.controller";
 @Module({
   imports: [
     CartModule,
+    LoyaltyModule,
     DiscountsModule,
     RiskModule,
     BlocklistModule,

@@ -20,7 +20,7 @@ import { BundleItemsService } from "./bundle-items.service";
   imports: [MediaModule, InventoryModule],
   controllers: [ProductsController, ProductOptionsController, ProductVariantsController, ProductMediaController, ProductRelationsController, BundleItemsController],
   providers: [ProductsService, ProductOptionsService, ProductVariantsService, ProductMediaService, ProductRelationsService, BundleItemsService],
-  exports: [ProductsService, ProductVariantsService, BundleItemsService],
+  exports: [ProductsService, ProductVariantsService, BundleItemsService, ProductMediaService],
 })
 export class ProductsModule implements OnModuleInit {
   constructor(

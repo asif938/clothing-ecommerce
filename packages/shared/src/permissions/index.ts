@@ -155,6 +155,24 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "settings.inventory.write", group: "settings", label: { bn: "ইনভেন্টরি সেটিংস পরিবর্তন করুন", en: "Edit inventory settings" } },
   { key: "settings.finance.write", group: "settings", label: { bn: "ফাইন্যান্স সেটিংস পরিবর্তন করুন", en: "Edit finance settings" } },
   { key: "settings.reports.write", group: "settings", label: { bn: "রিপোর্ট ও অ্যালার্ট সেটিংস পরিবর্তন করুন", en: "Edit report & alert settings" } },
+
+  // Milestone 13 (§16 M13) — CRM, marketing automation and AI content.
+  // Sending a broadcast spends real money (SMS/WhatsApp), so it is split
+  // from composing one; generating AI drafts is split from configuring
+  // providers, prompts and budgets.
+  { key: "loyalty.manage", group: "loyalty", label: { bn: "লয়্যালটি টিয়ার ও পয়েন্ট পরিচালনা করুন", en: "Manage loyalty tiers & points" } },
+  { key: "marketing.journeys.manage", group: "marketing", label: { bn: "অটোমেটেড জার্নি পরিচালনা করুন", en: "Manage automated journeys" } },
+  { key: "marketing.broadcasts.manage", group: "marketing", label: { bn: "ব্রডকাস্ট তৈরি ও সম্পাদনা করুন", en: "Create & edit broadcasts" } },
+  { key: "marketing.broadcasts.send", group: "marketing", label: { bn: "ব্রডকাস্ট পাঠান বা শিডিউল করুন", en: "Send or schedule broadcasts" } },
+  { key: "marketing.audiences.manage", group: "marketing", label: { bn: "বিজ্ঞাপন অডিয়েন্স সিঙ্ক পরিচালনা করুন", en: "Manage ad audience sync" } },
+  { key: "marketing.ad_spend.manage", group: "marketing", label: { bn: "বিজ্ঞাপন খরচ ইমপোর্ট ও ROAS দেখুন", en: "Import ad spend & view ROAS" } },
+  { key: "marketing.calendar.read", group: "marketing", label: { bn: "প্রোমো ক্যালেন্ডার দেখুন", en: "View the promo calendar" } },
+  { key: "ai.manage", group: "ai", label: { bn: "AI প্রোভাইডার, প্রম্পট ও বাজেট পরিচালনা করুন", en: "Manage AI providers, prompts & budgets" } },
+  { key: "ai.use", group: "ai", label: { bn: "AI দিয়ে ড্রাফট তৈরি করুন", en: "Generate AI drafts" } },
+  { key: "seo.audit", group: "seo", label: { bn: "SEO স্কোর ও ভাঙা লিংক পরীক্ষা করুন", en: "Run SEO scores & broken link checks" } },
+  { key: "settings.loyalty.write", group: "settings", label: { bn: "লয়্যালটি সেটিংস পরিবর্তন করুন", en: "Edit loyalty settings" } },
+  { key: "settings.ai.write", group: "settings", label: { bn: "AI সেটিংস পরিবর্তন করুন", en: "Edit AI settings" } },
+  { key: "settings.crm.write", group: "settings", label: { bn: "CRM সেটিংস পরিবর্তন করুন", en: "Edit CRM settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

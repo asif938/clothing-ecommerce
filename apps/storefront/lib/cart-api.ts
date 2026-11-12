@@ -51,6 +51,8 @@ export interface CartPricing {
   codAmount: number;
   freeDeliveryRemaining: number | null;
   warnings: string[];
+  /** §16 M13 — present only for a logged-in customer while the loyalty program is on. */
+  loyalty: { enabled: boolean; balance: number; requestedPoints: number; pointsApplied: number; discount: number; maxUsablePoints: number; pointValue: number; minRedeemPoints: number; rejection: string | null } | null;
 }
 
 export interface CartItem {
@@ -105,6 +107,7 @@ export const setCartCodes = (codes: string[]) => callApi<CartResponse>("/store/c
 export const setCartAddress = (address: { divisionId: string; districtId: string; areaId: string; addressLine: string; landmark?: string; contactName: string; contactPhone: string; contactEmail?: string }) =>
   callApi<CartResponse>("/store/cart/address", { method: "PATCH", body: JSON.stringify(address) });
 export const selectCartShippingRate = (rateId: string) => callApi<CartResponse>("/store/cart/shipping-rate", { method: "PATCH", body: JSON.stringify({ rateId }) });
+export const setCartPoints = (points: number) => callApi<CartResponse>("/store/cart/points", { method: "PUT", body: JSON.stringify({ points }) });
 export const setCartGiftWrap = (giftWrap: boolean) => callApi<CartResponse>("/store/cart/gift-wrap", { method: "PATCH", body: JSON.stringify({ giftWrap }) });
 
 export interface PlaceOrderInput {
@@ -118,6 +121,11 @@ export interface PlaceOrderInput {
   fbc?: string;
   fbp?: string;
   sourceUrl?: string;
+  /** §16 M13 — campaign attribution for the ROAS report. */
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
 }
 
 export interface PlaceOrderResult {

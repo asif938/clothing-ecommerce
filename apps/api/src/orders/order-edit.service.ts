@@ -125,7 +125,8 @@ export class OrderEditService {
       shippingFee = quote.fee;
     }
 
-    const total = Math.max(0, subtotal - order.discountTotal + shippingFee);
+    // §16 M13 — points paid stay paid: the edit keeps the original points discount.
+    const total = Math.max(0, subtotal - order.discountTotal - order.pointsDiscount + shippingFee);
     const codAmount = Math.max(0, total - order.paidTotal);
 
     await this.prisma.$transaction(async (tx) => {

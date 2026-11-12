@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { RfmPanel } from "../../../../components/rfm-panel";
 
 interface Segment {
   id: string;
@@ -82,6 +83,8 @@ export default function SegmentsPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
       {error && <Banner kind="error">{error}</Banner>}
+
+      <RfmPanel onPresetsCreated={() => void load()} />
 
       <Card className="flex flex-col gap-3">
         {segments.map((segment) => (

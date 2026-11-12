@@ -29,3 +29,8 @@ export * from "./drivers/tracking-mock.ts";
 export * from "./drivers/tracking-meta-capi.ts";
 export * from "./drivers/tracking-ga4-mp.ts";
 export * from "./drivers/tracking-tiktok-events.ts";
+export * from "./drivers/ai-mock.ts";
+export * from "./drivers/ai-anthropic.ts";
+export * from "./drivers/ai-openai.ts";
+export * from "./drivers/ai-gemini.ts";
+export * from "./drivers/audience.ts";

@@ -9,7 +9,24 @@ import type { Prisma } from "@clothing/db";
  * always computed live from its rules, so there is nothing to keep in sync
  * when a customer's stats change — see docs/DECISIONS.md.
  */
-export type SegmentRuleField = "totalSpent" | "ordersCount" | "deliveredCount" | "rejectedAtDoorCount" | "riskScore" | "tag" | "status" | "inactiveDays" | "districtId";
+// §16 M13 adds RFM scores/segment (computed nightly by `RfmService`), loyalty tier/points, and marketing consent per channel.
+export type SegmentRuleField =
+  | "totalSpent"
+  | "ordersCount"
+  | "deliveredCount"
+  | "rejectedAtDoorCount"
+  | "riskScore"
+  | "tag"
+  | "status"
+  | "inactiveDays"
+  | "districtId"
+  | "rfmSegment"
+  | "rfmRecency"
+  | "rfmFrequency"
+  | "rfmMonetary"
+  | "tierId"
+  | "pointsBalance"
+  | "consent";
 export type SegmentRuleOp = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in";
 
 export interface SegmentRuleCondition {
@@ -23,7 +40,9 @@ export interface SegmentRules {
   conditions: SegmentRuleCondition[];
 }
 
-function numericFilter(field: "totalSpent" | "ordersCount" | "deliveredCount" | "rejectedAtDoorCount" | "riskScore", condition: SegmentRuleCondition): Prisma.CustomerWhereInput {
+type NumericField = "totalSpent" | "ordersCount" | "deliveredCount" | "rejectedAtDoorCount" | "riskScore" | "rfmRecency" | "rfmFrequency" | "rfmMonetary" | "pointsBalance";
+
+function numericFilter(field: NumericField, condition: SegmentRuleCondition): Prisma.CustomerWhereInput {
   const amount = condition.value as number;
   const filter =
     condition.op === "gt" ? { gt: amount } : condition.op === "gte" ? { gte: amount } : condition.op === "lt" ? { lt: amount } : condition.op === "lte" ? { lte: amount } : condition.op === "neq" ? { not: amount } : { equals: amount };
@@ -37,7 +56,21 @@ function conditionToWhere(condition: SegmentRuleCondition): Prisma.CustomerWhere
     case "deliveredCount":
     case "rejectedAtDoorCount":
     case "riskScore":
+    case "rfmRecency":
+    case "rfmFrequency":
+    case "rfmMonetary":
+    case "pointsBalance":
       return numericFilter(condition.field, condition);
+    case "rfmSegment":
+      return condition.op === "in" ? { rfmSegment: { in: condition.value as string[] } } : condition.op === "neq" ? { NOT: { rfmSegment: condition.value as string } } : { rfmSegment: condition.value as string };
+    case "tierId":
+      return condition.op === "in" ? { tierId: { in: condition.value as string[] } } : condition.op === "neq" ? { NOT: { tierId: condition.value as string } } : { tierId: condition.value as string };
+    case "consent": {
+      // value: "sms" | "email" | "whatsapp" — customers who opted in to marketing on that channel.
+      const channel = condition.value as "sms" | "email" | "whatsapp";
+      const key = channel === "email" ? "marketingConsentEmail" : channel === "whatsapp" ? "marketingConsentWhatsapp" : "marketingConsentSms";
+      return { [key]: condition.op !== "neq" } as Prisma.CustomerWhereInput;
+    }
     case "tag":
       return condition.op === "in" ? { tags: { hasSome: condition.value as string[] } } : { tags: { has: condition.value as string } };
     case "status":

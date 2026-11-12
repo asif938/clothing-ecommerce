@@ -10,6 +10,7 @@ import { Footer } from "../../components/footer";
 import { Header } from "../../components/header";
 import { PwaRegister } from "../../components/pwa-register";
 import { TrackingScripts } from "../../components/tracking-scripts";
+import { UtmCapture } from "../../components/utm-capture";
 import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
@@ -87,6 +88,7 @@ export default async function LocaleLayout({
           consentRequired={config["features.cookieConsent"] === true}
         />
         <PwaRegister enabled={config["pwa.enabled"] === true} />
+        <UtmCapture />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} />

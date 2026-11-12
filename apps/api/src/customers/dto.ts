@@ -37,7 +37,7 @@ export const anonymizeCustomerSchema = z.object({
 export type AnonymizeCustomerDto = z.infer<typeof anonymizeCustomerSchema>;
 
 const segmentRuleConditionSchema = z.object({
-  field: z.enum(["totalSpent", "ordersCount", "deliveredCount", "rejectedAtDoorCount", "riskScore", "tag", "status", "inactiveDays", "districtId"]),
+  field: z.enum(["totalSpent", "ordersCount", "deliveredCount", "rejectedAtDoorCount", "riskScore", "tag", "status", "inactiveDays", "districtId", "rfmSegment", "rfmRecency", "rfmFrequency", "rfmMonetary", "tierId", "pointsBalance", "consent"]),
   op: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "in"]),
   value: z.unknown(),
 });

@@ -9,6 +9,7 @@ import { Link } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { mediaImageLoader } from "../../../../../lib/media-image-loader";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { AiAssistPanel } from "../../../../../components/ai-assist-panel";
 
 interface LocalizedText {
   en?: string;
@@ -743,6 +744,7 @@ export default function ProductEditorPage() {
           {versions.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}
         </ul>
       </Card>
+      <AiAssistPanel productId={productId} onApplied={() => void load()} />
     </div>
   );
 }

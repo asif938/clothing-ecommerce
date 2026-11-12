@@ -38,4 +38,7 @@ export const setGiftWrapSchema = z.object({ giftWrap: z.boolean() });
 export type SetGiftWrapDto = z.infer<typeof setGiftWrapSchema>;
 
 export const setCustomerNoteSchema = z.object({ note: z.string().max(1000).nullable() });
+export const setRedeemPointsSchema = z.object({ points: z.number().int().min(0).max(10_000_000) });
+export type SetRedeemPointsDto = z.infer<typeof setRedeemPointsSchema>;
+
 export type SetCustomerNoteDto = z.infer<typeof setCustomerNoteSchema>;

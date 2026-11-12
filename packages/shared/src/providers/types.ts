@@ -29,6 +29,8 @@ export const PROVIDER_CAPABILITIES = [
   "captcha",
   "fraud_check",
   "tracking",
+  // §16 M13 — customer-list upload to ad platforms (Meta Custom Audiences, Google Customer Match).
+  "audience",
 ] as const;
 export type ProviderCapability = (typeof PROVIDER_CAPABILITIES)[number];
 
@@ -275,4 +277,61 @@ export interface CourierDriver {
    * API leave it out and staff import the courier's settlement file instead.
    */
   getCodSettlement?(parcels: CourierSettlementQuery[]): Promise<CourierSettlementLine[]>;
+}
+
+/**
+ * AI text generation (docs/PROJECT_SPEC.md §10.4, §16 M13). One call, one
+ * reply: the API owns prompts, budgets, usage logging and parsing; a driver
+ * only talks to its vendor and reports token usage for cost estimates.
+ */
+export interface AiImageInput {
+  mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  base64: string;
+}
+
+export interface AiGenerateInput {
+  model: string;
+  system: string;
+  prompt: string;
+  images?: AiImageInput[];
+  maxTokens: number;
+  /** Ignored by drivers whose models reject sampling parameters (current Claude models). */
+  temperature?: number | null;
+  /** Reasoning effort for drivers that support it (Anthropic `output_config.effort`). */
+  effort?: "low" | "medium" | "high" | null;
+}
+
+export interface AiGenerateResult {
+  text: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface AiDriver {
+  generate(input: AiGenerateInput): Promise<AiGenerateResult>;
+}
+
+/** Per-instance pricing used for budget estimates — US cents per million tokens (integers, like every other money value). */
+export interface AiPricingConfig {
+  inputCentsPerMTok: number;
+  outputCentsPerMTok: number;
+}
+
+/**
+ * Ad-platform audience upload (docs/PROJECT_SPEC.md §8.2 Customers "audience
+ * sync to Meta/Google", §16 M13). Drivers hash identifiers themselves
+ * (SHA-256 of normalized phone digits / lowercased email), same rule as the
+ * tracking drivers: callers pass raw values.
+ */
+export interface AudienceMember {
+  /** E.164, e.g. +8801712345678. */
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface AudienceDriver {
+  /** Returns the platform's audience id, creating the audience when `existingId` is null. */
+  ensureAudience(name: string, existingId: string | null): Promise<string>;
+  addMembers(audienceId: string, members: AudienceMember[]): Promise<{ received: number }>;
 }

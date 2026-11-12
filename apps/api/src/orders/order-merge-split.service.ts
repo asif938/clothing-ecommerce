@@ -45,6 +45,8 @@ export class OrderMergeSplitService {
     const sources = dto.sourceOrderIds.map((id) => orders.find((o) => o.id === id)!);
 
     for (const order of orders) {
+      // §16 M13 — loyalty points are tied to the order they paid for; merging would lose or double-refund them.
+      if (order.pointsRedeemed > 0) throw new BadRequestException({ code: "HAS_POINTS", message: `Order ${order.orderNumber} was partly paid with loyalty points and can't be merged.` });
       if (!MERGE_SPLIT_STATUSES.includes(order.status)) {
         throw new BadRequestException({ code: "INVALID_STATE", message: `Order ${order.orderNumber} is ${order.status} - only pending, confirmed or on-hold orders can be merged.` });
       }
@@ -136,6 +138,7 @@ export class OrderMergeSplitService {
     if (!MERGE_SPLIT_STATUSES.includes(order.status)) {
       throw new BadRequestException({ code: "INVALID_STATE", message: "Only pending, confirmed or on-hold orders can be split." });
     }
+    if (order.pointsRedeemed > 0) throw new BadRequestException({ code: "HAS_POINTS", message: "This order was partly paid with loyalty points, so it can't be split." });
     if (order.paidTotal > 0) {
       throw new BadRequestException({ code: "HAS_PAYMENTS", message: "This order has a payment on it, so it can't be split. Refund the payment first." });
     }
