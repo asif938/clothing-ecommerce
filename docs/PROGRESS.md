@@ -4,6 +4,28 @@ Updated after every milestone. See `docs/PROJECT_SPEC.md` §16 for the full
 milestone plan and acceptance criteria, and `docs/DECISIONS.md` for the
 reasoning behind choices made along the way.
 
+## Current status (2026-11-12)
+
+| Phase (§16) | Milestones | State |
+| --- | --- | --- |
+| Phase 1 — MVP | M0–M9 | Complete |
+| Phase 2 — Growth and operations automation | M10–M13 | Complete |
+| Phase 3 — Advanced and intelligence | M14–M17 | Not started — **M14 is next** |
+
+- Latest milestone commit: `f8386d9` (M13). The repository has no git
+  remote, so milestone commits are local only.
+- Unit tests: `packages/shared` 194, `apps/api` 503 — all passing.
+- Database: migrations up to `20261113090000_crm_marketing_ai` (M13) are
+  committed, but the configured dev database is still at M11; run
+  `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
+  using M12/M13 features.
+- Cross-cutting caveat: no milestone has been clicked through in a
+  browser or run against live third-party providers here — each section's
+  "Not verified" list says what remains.
+- Remaining plan: M14 personalization and experimentation, M15 support
+  inbox and AI assistant, M16 loyalty extensions (referrals, gift cards,
+  store credit, affiliates), M17 advanced analytics and procurement.
+
 ---
 
 ## Milestone 0 — Repository and tooling
@@ -2169,8 +2191,9 @@ dashboards.
   cancelled still counts as the "last sale".
 - Anomaly rejection rate is bucketed by the shipment's last update time
   (there is no rejected-at timestamp).
-- True profit: ad spend is 0 until M13's ad-spend import; returned units
-  are assumed restocked (no write-off for failed inspection).
+- True profit: ad spend is 0 until M13's ad-spend import (closed in M13 —
+  see `profitAfterAdSpend`); returned units are assumed restocked (no
+  write-off for failed inspection).
 - Transfers have no partial dispatch; a transfer is received once (no
   second receipt for late-arriving units).
 - Scheduled reports send an HTML table only (no CSV attachment — the email
