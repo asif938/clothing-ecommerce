@@ -6,4 +6,6 @@ import "./definitions.ts";
 import "./definitions-m13.ts";
 // Milestone 14 (§16 M14) — personalization and experimentation settings.
 import "./definitions-m14.ts";
+// Milestone 15 (§16 M15) - support settings.
+import "./definitions-m15.ts";
 export { AD_PLATFORMS, type AdPlatform, type AdSpendSourceMap } from "./definitions-m13.ts";

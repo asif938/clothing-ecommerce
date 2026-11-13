@@ -16,7 +16,7 @@ import { Banner, Button, Card, TextField } from "../../../../components/ui";
 // reach them from. "tracking" (M8) would have landed in the same silent
 // gap had this not been caught.
 // M13 adds "ai" (Anthropic/OpenAI/Gemini/mock) and "audience" (Meta/Google ad audiences/mock).
-const CAPABILITIES = ["storage", "email", "sms", "whatsapp", "payment", "courier", "captcha", "fraud_check", "tracking", "ai", "audience"] as const;
+const CAPABILITIES = ["storage", "email", "sms", "whatsapp", "payment", "courier", "captcha", "fraud_check", "tracking", "ai", "audience", "chat_channel", "telephony"] as const;
 
 interface DriverCatalogEntry {
   capability: string;

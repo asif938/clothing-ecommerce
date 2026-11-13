@@ -32,6 +32,8 @@ import { anthropicAiDriverDefinition } from "./drivers/ai-anthropic.ts";
 import { openAiDriverDefinition } from "./drivers/ai-openai.ts";
 import { geminiDriverDefinition } from "./drivers/ai-gemini.ts";
 import { mockAudienceDriverDefinition, metaAudienceDriverDefinition, googleAudienceDriverDefinition } from "./drivers/audience.ts";
+import { messengerDriverDefinition, instagramDriverDefinition, mockChatDriverDefinition } from "./drivers/meta-messaging.ts";
+import { genericTelephonyDriverDefinition, mockTelephonyDriverDefinition } from "./drivers/telephony.ts";
 
 /**
  * The static catalog of every driver implemented so far, keyed by
@@ -81,6 +83,11 @@ export const PROVIDER_DRIVER_CATALOG: ProviderDriverDefinition[] = [
   mockAudienceDriverDefinition as unknown as ProviderDriverDefinition,
   metaAudienceDriverDefinition as unknown as ProviderDriverDefinition,
   googleAudienceDriverDefinition as unknown as ProviderDriverDefinition,
+  mockChatDriverDefinition as unknown as ProviderDriverDefinition,
+  messengerDriverDefinition as unknown as ProviderDriverDefinition,
+  instagramDriverDefinition as unknown as ProviderDriverDefinition,
+  mockTelephonyDriverDefinition as unknown as ProviderDriverDefinition,
+  genericTelephonyDriverDefinition as unknown as ProviderDriverDefinition,
 ];
 
 export function getDriverDefinition(

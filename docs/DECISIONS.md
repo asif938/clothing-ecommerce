@@ -2427,3 +2427,45 @@ Postgres computes it. No migration is needed (the DB column was already generate
 ## 2026-11-13 — M14: "for you" is a block, recommendations are existing PDP/cart sections
 
 **Decision.** "For you" is the `for_you` CMS block (§9.1 phase 2) with optional headings for personalised and fallback (best sellers) states, so staff place it like any other block. The PDP shows "Frequently bought together" and "Similar products" from `/store/recommendations/products/:id` (ISR-cached, not personal) in place of the hand-picked similar/complete-the-look/cross-sell sections, which they already include; upsell relations still show as before. The cart page gets a "Frequently bought together" slot. Storefront copy follows the existing inline-bilingual pattern.
+
+## 2026-11-13 — M15: inbox channels are providers; WhatsApp reuses its capability
+
+**Decision.** WhatsApp stays on the existing `whatsapp` capability (one Cloud API number serves notifications and the inbox); its driver gained `sendSession` (reports the message id) and `parseWebhook`, plus optional `appSecret`/`verifyToken` config. Messenger and Instagram are a new `chat_channel` capability (`messenger`, `instagram`, `mock`) sending through the Graph API `/{page-id}/messages` with the page token. Webhooks arrive at `/api/v1/webhooks/inbox/:instanceId`: the GET answers Meta's `hub.verify_token` check; POSTs must carry a valid `X-Hub-Signature-256` HMAC of the raw body (the API now keeps `req.rawBody`). A real Meta instance without an app secret can't receive at all — refused, never trusted. Every event is stored raw in the new `webhook_events` table, processed, and retried by a sweep on failure (max 5); Meta still gets a 200 so it doesn't disable the webhook. Each mock channel accepts an unsigned `{ contactId, text }` webhook, and the admin can post a test message, so the whole flow runs with no Meta app.
+
+**Alternatives.** One "meta" capability for all three (rejected: WhatsApp notification config already lives on `whatsapp`; staff would configure the same number twice).
+
+## 2026-11-13 — M15: one conversation per channel + contact
+
+**Decision.** `conversations` is unique on (channel, contact id) — WhatsApp number, Messenger PSID, Instagram-scoped id, or the visitor's `anonymous_id` for live chat. A second WhatsApp number on the same store would share threads for a customer who writes to both; accepted for a single-brand deployment. Customers are linked by phone (WhatsApp) or login (live chat). Webhook retries are harmless: (conversation, provider message id) is unique. Media from WhatsApp is recorded by type/caption only (downloading needs a second authenticated call); Messenger/Instagram attachment URLs are kept.
+
+## 2026-11-13 — M15: Meta's 24-hour window is enforced, not worked around
+
+**Decision.** Staff (and the assistant) can only reply within 24 h of the customer's last message on WhatsApp/Messenger/Instagram — the platforms' free-form reply window. Outside it the composer is disabled and suggests calling. Template-based re-engagement messages stay out of scope (same M7 limitation for business-initiated WhatsApp).
+
+## 2026-11-13 — M15: the chat assistant is tool-using chat through the M13 AI framework
+
+**Context.** §10.4: "answers about products, sizes, stock, order status via tool calls to our API, with strict guardrails and handoff to human".
+
+**Decision.** `AiDriver` gained an optional `chat()` over a vendor-neutral transcript (user / assistant + tool calls / tool results); Anthropic (official SDK, `tool_use`/`tool_result` blocks), OpenAI (function calling), Gemini (`functionDeclarations`) and the mock implement it. `AiService.chat` applies the same switches, per-feature budgets, provider fallback (skipping drivers without `chat`) and usage logging as `generate`; the `chat_assistant` feature's editable prompt is the system prompt. The API runs the loop (max 4 tool rounds; the last round only offers `handoff_to_human`) with five tools: `search_products`, `get_product` (incl. stock), `size_advice` (M10 recommender), `order_status`, `handoff_to_human`. Guardrails live in code, not only the prompt: tool inputs are re-validated with zod; `order_status` only answers when the order's phone matches the phone the channel vouches for (WhatsApp number or the logged-in account) or one the customer typed, and gives the same "not found" for wrong-phone and no-such-order; results are capped at 3,000 characters; replies at 1,500. Handoff happens when the model calls the tool, when the customer asks for a person (deterministic Bangla/English/Banglish detection before any AI), when AI is off/over budget/failing, or when the model has no answer. A staff reply switches the assistant off for that conversation. The assistant runs inline after an inbound message (fire-and-forget so webhooks answer fast) with a sweep for anything missed. Thinking is not enabled for chat (latency), so rebuilding assistant turns from text + tool calls loses nothing.
+
+**Alternatives.** Letting the model call our HTTP API directly (rejected: no per-tool guardrails); the SDK tool runner (rejected: vendor-specific; the loop must work for all three vendors and the mock).
+
+## 2026-11-13 — M15: AI reply suggestions are composer drafts only
+
+**Decision.** The `reply_suggestion` feature returns up to three replies in the customer's language (Bengali script → Bangla) from the last 20 messages plus a short customer/order summary; staff click one into the composer and edit before sending. Nothing is sent automatically. Requires `ai.use`.
+
+## 2026-11-13 — M15: ticket SLA is calendar minutes with two deadlines
+
+**Decision.** Tickets get a first-response and a resolution deadline from their priority (`support.sla.*` settings, minutes). Calendar time, not business hours — a business-hours calendar (holidays, Eid) is a larger feature and the defaults are generous. Re-prioritising recomputes both from creation time and clears a breach the new deadline no longer has. The first customer-facing reply meets first response (internal notes don't); resolving/closing meets resolution. A sweep marks each breach once (conditional `updateMany`) and alerts the assignee, or everyone with `support.tickets`. A customer-visible ticket reply is sent through the linked conversation when there is one; otherwise it is logged (and counts as the response — the agent contacted them by phone/SMS). Numbers are `TCK-YYMMDD-NNNN` like M12 documents.
+
+## 2026-11-13 — M15: click-to-call is a generic HTTP provider with a tel: fallback
+
+**Decision.** New `telephony` capability: `generic_http` (admin-configured request template with `{agent}`, `{customer}`, `{reference}`, `{api_key}`, `{caller_id}`, number format, call-id path, and a status-webhook mapping with a status map and optional shared secret) and `mock`. The provider rings the agent's own phone (a new `staff_users.phone`, set on Support → Calls) then bridges to the customer; our call-log id is passed as the reference so the status webhook (`/api/v1/webhooks/telephony/:instanceId`) finds the call. Without a provider, Call still logs the call and opens a `tel:` link, and the agent records the outcome. No named BD PBX driver ships: none could be verified here, and the generic driver covers the common "call bridge" API shape.
+
+## 2026-11-13 — M15: live chat polls and is identified by the API cookie
+
+**Decision.** The storefront widget (in the floating chat stack, behind `support.liveChat.enabled`) polls every 4 s only while open — no websockets on the free tier; the admin inbox polls every 5–10 s. The visitor is the httpOnly `anonymous_id` cookie (linked to the customer when logged in); name and phone are optional on the first message. Messages are rate-limited per visitor (in-memory, setting). "Talk to a person" sets the conversation to waiting-for-agent and alerts staff. Storefront copy follows the inline-bilingual pattern.
+
+## 2026-11-13 — M15: create order from chat reuses the manual order screen
+
+**Decision.** "Create order" in the inbox opens the existing manual order form (§8.2) pre-filled with channel, phone and name; on save the order is linked to the conversation (`conversations.order_ids` + a system note) and staff return to the thread. No second order-entry path.

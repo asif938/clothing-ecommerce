@@ -31,6 +31,9 @@ export const PROVIDER_CAPABILITIES = [
   "tracking",
   // §16 M13 — customer-list upload to ad platforms (Meta Custom Audiences, Google Customer Match).
   "audience",
+  // §16 M15 — support inbox channels besides WhatsApp (Messenger, Instagram) and click-to-call.
+  "chat_channel",
+  "telephony",
 ] as const;
 export type ProviderCapability = (typeof PROVIDER_CAPABILITIES)[number];
 
@@ -118,6 +121,69 @@ export interface SmsDriver {
  */
 export interface WhatsappDriver {
   send(to: string, text: string): Promise<void>;
+  /** §16 M15 inbox: a session (customer-initiated, 24 h window) reply that reports the provider's message id. */
+  sendSession?(to: string, text: string): Promise<{ externalMessageId: string | null }>;
+  /** §16 M15 inbox: inbound messages and delivery statuses from the provider's webhook payload. */
+  parseWebhook?(payload: unknown): InboxEvent[];
+}
+
+/**
+ * Support inbox events (docs/PROJECT_SPEC.md §5.10 `conversations`, §16
+ * M15), normalised across WhatsApp Cloud, Messenger, Instagram and the mock.
+ * `contactId` is the channel's own id for the customer (WhatsApp number,
+ * Messenger PSID, Instagram-scoped id).
+ */
+export interface InboundChatMessage {
+  kind: "message";
+  contactId: string;
+  externalMessageId: string;
+  contactName?: string | null;
+  /** E.164 when the channel exposes it (WhatsApp). */
+  phone?: string | null;
+  text: string;
+  attachments: { type: "image" | "video" | "audio" | "file" | "location" | "sticker" | "other"; url?: string | null; caption?: string | null }[];
+  timestamp: Date;
+}
+
+export interface ChatStatusUpdate {
+  kind: "status";
+  externalMessageId: string;
+  status: "sent" | "delivered" | "read" | "failed";
+  error?: string | null;
+}
+
+export type InboxEvent = InboundChatMessage | ChatStatusUpdate;
+
+/** Messenger / Instagram (and their mock). Replies only — these platforms only let a business answer a customer who wrote first. */
+export interface ChatChannelDriver {
+  channel: "messenger" | "instagram";
+  sendText(contactId: string, text: string): Promise<{ externalMessageId: string | null }>;
+  parseWebhook(payload: unknown): InboxEvent[];
+}
+
+/**
+ * Click-to-call (docs/PROJECT_SPEC.md §8.2 call-centre tools, §16 M15
+ * "click-to-call telephony integration (generic provider)"): the provider
+ * rings the agent's phone, then bridges to the customer.
+ */
+export interface TelephonyCallRequest {
+  agentNumber: string;
+  customerNumber: string;
+  /** Our call-log id, echoed back by providers that support a reference. */
+  reference: string;
+}
+
+export interface TelephonyCallUpdate {
+  externalId: string | null;
+  reference: string | null;
+  status: "initiated" | "ringing" | "answered" | "completed" | "no_answer" | "busy" | "failed";
+  durationSeconds?: number | null;
+  recordingUrl?: string | null;
+}
+
+export interface TelephonyDriver {
+  startCall(request: TelephonyCallRequest): Promise<{ externalId: string | null }>;
+  parseWebhook(payload: unknown): TelephonyCallUpdate | null;
 }
 
 /**
@@ -308,8 +374,53 @@ export interface AiGenerateResult {
   outputTokens: number;
 }
 
+/**
+ * Tool-using chat (docs/PROJECT_SPEC.md §10.4 "chat assistant … via tool
+ * calls to our API", §16 M15). A vendor-neutral transcript: the API runs
+ * the loop and executes tools itself; a driver translates one turn to its
+ * vendor's format and back.
+ */
+export interface AiToolDefinition {
+  name: string;
+  description: string;
+  /** JSON Schema of the tool input (an object schema). */
+  inputSchema: Record<string, unknown>;
+}
+
+export interface AiToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export type AiChatMessage =
+  | { role: "user"; text: string }
+  | { role: "assistant"; text: string; toolCalls?: AiToolCall[] }
+  | { role: "tool"; results: { toolCallId: string; name: string; content: string; isError?: boolean }[] };
+
+export interface AiChatInput {
+  model: string;
+  system: string;
+  messages: AiChatMessage[];
+  tools: AiToolDefinition[];
+  maxTokens: number;
+  temperature?: number | null;
+  effort?: "low" | "medium" | "high" | null;
+}
+
+export interface AiChatResult {
+  text: string;
+  toolCalls: AiToolCall[];
+  stopReason: "end" | "tool_use" | "max_tokens";
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface AiDriver {
   generate(input: AiGenerateInput): Promise<AiGenerateResult>;
+  /** Optional: drivers without tool use can't run the chat assistant (the API falls through to the next provider). */
+  chat?(input: AiChatInput): Promise<AiChatResult>;
 }
 
 /** Per-instance pricing used for budget estimates — US cents per million tokens (integers, like every other money value). */

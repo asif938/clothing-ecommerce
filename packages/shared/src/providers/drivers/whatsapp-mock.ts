@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ProviderDriverDefinition, WhatsappDriver } from "../types.ts";
+import { parseMockChatWebhook } from "./meta-messaging.ts";
 
 export const mockWhatsappConfigSchema = z.object({
   simulate: z.enum(["success", "failure"]).default("success"),
@@ -8,14 +9,21 @@ export const mockWhatsappConfigSchema = z.object({
 export type MockWhatsappConfig = z.infer<typeof mockWhatsappConfigSchema>;
 
 export function createMockWhatsappDriver(config: MockWhatsappConfig, onSend?: (to: string, text: string) => void): WhatsappDriver {
+  async function send(to: string, text: string): Promise<void> {
+    if (config.delayMs > 0) await new Promise((r) => setTimeout(r, config.delayMs));
+    onSend?.(to, text);
+    if (config.simulate === "failure") {
+      throw new Error("Mock WhatsApp driver configured to simulate failure");
+    }
+  }
   return {
-    async send(to, text) {
-      if (config.delayMs > 0) await new Promise((r) => setTimeout(r, config.delayMs));
-      onSend?.(to, text);
-      if (config.simulate === "failure") {
-        throw new Error("Mock WhatsApp driver configured to simulate failure");
-      }
+    send,
+    async sendSession(to, text) {
+      await send(to, text);
+      return { externalMessageId: `mock_wa_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` };
     },
+    // §16 M15 — `{ contactId, text, name?, phone? }` posted to the inbox webhook lands as an inbound WhatsApp message.
+    parseWebhook: parseMockChatWebhook,
   };
 }
 

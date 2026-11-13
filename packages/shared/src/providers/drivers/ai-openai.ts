@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiDriver, ProviderDriverDefinition } from "../types.ts";
+import type { AiChatMessage, AiDriver, ProviderDriverDefinition } from "../types.ts";
 
 /**
  * OpenAI (docs/PROJECT_SPEC.md §10.4) — Chat Completions over plain
@@ -21,6 +21,33 @@ export type OpenAiConfig = z.infer<typeof openAiConfigSchema>;
 
 function headers(config: OpenAiConfig): Record<string, string> {
   return { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json", ...(config.organization ? { "OpenAI-Organization": config.organization } : {}) };
+}
+
+/** Neutral transcript → Chat Completions messages (tool results become `role: "tool"` messages, one per call). */
+export function toOpenAiMessages(system: string, messages: AiChatMessage[]): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [{ role: "system", content: system }];
+  for (const message of messages) {
+    if (message.role === "user") out.push({ role: "user", content: message.text });
+    else if (message.role === "assistant") {
+      out.push({
+        role: "assistant",
+        content: message.text || null,
+        ...(message.toolCalls?.length ? { tool_calls: message.toolCalls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: JSON.stringify(c.input) } })) } : {}),
+      });
+    } else {
+      for (const result of message.results) out.push({ role: "tool", tool_call_id: result.toolCallId, content: result.content });
+    }
+  }
+  return out;
+}
+
+function parseArguments(raw: string | undefined): Record<string, unknown> {
+  try {
+    const value = JSON.parse(raw ?? "{}") as unknown;
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function createOpenAiDriver(config: OpenAiConfig): AiDriver {
@@ -56,6 +83,39 @@ export function createOpenAiDriver(config: OpenAiConfig): AiDriver {
       const text = choice?.message?.content ?? "";
       if (!text) throw new Error(choice?.finish_reason === "length" ? "The reply was cut off — raise max tokens for this feature." : "The model returned no text.");
       return { text, model: body.model ?? input.model, inputTokens: body.usage?.prompt_tokens ?? 0, outputTokens: body.usage?.completion_tokens ?? 0 };
+    },
+
+    async chat(input) {
+      const response = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+        method: "POST",
+        headers: headers(config),
+        signal: AbortSignal.timeout(config.timeoutMs),
+        body: JSON.stringify({
+          model: input.model,
+          messages: toOpenAiMessages(input.system, input.messages),
+          tools: input.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.inputSchema } })),
+          max_completion_tokens: input.maxTokens,
+          ...(input.temperature !== null && input.temperature !== undefined ? { temperature: input.temperature } : {}),
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        model?: string;
+        choices?: { message?: { content?: string | null; refusal?: string | null; tool_calls?: { id: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string }[];
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+        error?: { message?: string };
+      };
+      if (!response.ok) throw new Error(body.error?.message ?? `OpenAI request failed (HTTP ${response.status})`);
+      const choice = body.choices?.[0];
+      if (choice?.message?.refusal) throw new Error(`The model declined this request: ${choice.message.refusal}`);
+      const toolCalls = (choice?.message?.tool_calls ?? []).filter((c) => c.function?.name).map((c) => ({ id: c.id, name: c.function!.name!, input: parseArguments(c.function?.arguments) }));
+      return {
+        text: choice?.message?.content ?? "",
+        toolCalls,
+        stopReason: toolCalls.length > 0 ? "tool_use" : choice?.finish_reason === "length" ? "max_tokens" : "end",
+        model: body.model ?? input.model,
+        inputTokens: body.usage?.prompt_tokens ?? 0,
+        outputTokens: body.usage?.completion_tokens ?? 0,
+      };
     },
   };
 }

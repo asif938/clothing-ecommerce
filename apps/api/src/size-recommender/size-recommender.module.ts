@@ -5,5 +5,6 @@ import { StoreMeasurementsController, StoreSizeRecommenderController } from "./s
 @Module({
   controllers: [StoreMeasurementsController, StoreSizeRecommenderController],
   providers: [SizeRecommenderService],
+  exports: [SizeRecommenderService],
 })
 export class SizeRecommenderModule {}

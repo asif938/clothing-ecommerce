@@ -40,6 +40,7 @@ export default function NewManualOrderPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [channel, setChannel] = useState<"phone" | "messenger" | "whatsapp">("phone");
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [divisions, setDivisions] = useState<LocationOption[]>([]);
@@ -61,6 +62,17 @@ export default function NewManualOrderPage() {
 
   useEffect(() => {
     void api.get<LocationOption[]>("/store/locations/divisions").then(setDivisions);
+  }, []);
+  // §16 M15 — "Create order" from the support inbox pre-fills channel, phone and name.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromChannel = params.get("channel");
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time read of the URL on mount */
+    if (fromChannel === "phone" || fromChannel === "messenger" || fromChannel === "whatsapp") setChannel(fromChannel);
+    if (params.get("phone")) setCustomerPhone(params.get("phone")!.replace(/^\+88/, ""));
+    if (params.get("name")) setCustomerName(params.get("name")!);
+    if (params.get("conversationId")) setConversationId(params.get("conversationId"));
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
   useEffect(() => {
     if (!divisionId) return;
@@ -113,6 +125,12 @@ export default function NewManualOrderPage() {
         payment: paymentStatus === "cod" ? { status: "cod" } : { status: "already_paid", method: paidMethod, externalRef: externalRef || null },
         customerNote: customerNote || null,
       });
+      // §16 M15 "create order from chat": link the order back to the conversation it came from.
+      if (conversationId) {
+        await api.post(`/admin/support/conversations/${conversationId}/orders`, { orderId: order.id }).catch(() => undefined);
+        router.push(`/support/inbox?c=${conversationId}`);
+        return;
+      }
       router.push(`/orders/${order.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create order");

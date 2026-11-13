@@ -20,8 +20,11 @@ import {
   geminiConfigSchema,
   mockAiConfigSchema,
   openAiConfigSchema,
+  type AiChatMessage,
+  type AiChatResult,
   type AiDriver,
   type AiImageInput,
+  type AiToolDefinition,
 } from "@clothing/shared/providers";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
@@ -49,6 +52,19 @@ export interface GenerateRequest<F extends AiFeature> {
   /** null for system/storefront calls (e.g. visual search, §16 M14). */
   actor: AuthenticatedStaff | null;
   entity?: { type: string; id: string };
+}
+
+export interface ChatRequest {
+  feature: AiFeature;
+  variables: Record<string, string>;
+  messages: AiChatMessage[];
+  tools: AiToolDefinition[];
+  actor: AuthenticatedStaff | null;
+  entity?: { type: string; id: string };
+}
+
+export interface ChatTurnResult extends AiChatResult {
+  usageLogId: string;
 }
 
 export interface GenerateResult<F extends AiFeature> {
@@ -305,7 +321,64 @@ export class AiService {
     throw new HttpException({ code: "AI_FAILED", message: `The AI request failed. ${errors.join(" · ")}` }, HttpStatus.BAD_GATEWAY);
   }
 
-  private logUsage(request: GenerateRequest<AiFeature>, provider: ResolvedProvider, model: string, usage: { inputTokens: number; outputTokens: number }, latencyMs: number, status: string, error: string | null) {
+  /**
+   * One turn of tool-using chat (§16 M15 chat assistant). Same switches,
+   * budgets, provider order, fallback and usage logging as `generate`; the
+   * caller runs the tool loop and calls this once per round. The feature's
+   * editable prompt is the system prompt. Providers whose driver has no
+   * `chat` are skipped.
+   */
+  async chat(request: ChatRequest): Promise<ChatTurnResult> {
+    if (!(await this.settings.getValue<boolean>("ai.enabled"))) throw new BadRequestException({ code: "AI_DISABLED", message: "AI assistance is turned off in Settings → ai." });
+    const config = await this.featureConfig(request.feature);
+    if (!config.enabled) throw new BadRequestException({ code: "AI_FEATURE_DISABLED", message: "This AI feature is turned off." });
+    await this.assertBudgets(request.feature, config);
+
+    const chain = await this.providerChain(config);
+    if (chain.length === 0) throw new BadRequestException({ code: "AI_NO_PROVIDER", message: "No AI provider is enabled — add one under Integrations → ai." });
+
+    const brand = await this.settings.getValue<{ bn?: string; en?: string }>("brand.name");
+    const system = renderTemplate(config.promptTemplate, { brand_name: brand?.en || brand?.bn || "", tone: AI_DEFAULT_TONE, ...request.variables });
+    const errors: string[] = [];
+
+    for (const instance of chain) {
+      let provider: ResolvedProvider;
+      try {
+        provider = this.resolve(instance);
+      } catch (error) {
+        errors.push(`${instance.name}: ${error instanceof Error ? error.message : "invalid configuration"}`);
+        continue;
+      }
+      if (!provider.driver.chat) {
+        errors.push(`${instance.name}: this driver can't run tool-using chat`);
+        continue;
+      }
+      const model = instance.id === chain[0]!.id && config.model ? config.model : provider.defaultModel;
+      const startedAt = Date.now();
+      try {
+        const reply = await provider.driver.chat({
+          model,
+          system,
+          messages: request.messages,
+          tools: request.tools,
+          maxTokens: config.maxTokens,
+          temperature: config.temperature,
+          effort: (config.effort as "low" | "medium" | "high" | null) ?? null,
+        });
+        const log = await this.logUsage(request, provider, reply.model, { inputTokens: reply.inputTokens, outputTokens: reply.outputTokens }, Date.now() - startedAt, "succeeded", null);
+        await this.alertIfNeeded(request.feature, config).catch((error: unknown) => this.logger.warn(`AI budget alert failed: ${error instanceof Error ? error.message : "Unknown error"}`));
+        return { ...reply, usageLogId: log.id };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        errors.push(`${instance.name}: ${message}`);
+        await this.logUsage(request, provider, model, { inputTokens: 0, outputTokens: 0 }, Date.now() - startedAt, "failed", message);
+        this.logger.warn(`AI ${request.feature} chat via ${instance.driver} failed: ${message}`);
+      }
+    }
+    throw new HttpException({ code: "AI_FAILED", message: `The AI request failed. ${errors.join(" · ")}` }, HttpStatus.BAD_GATEWAY);
+  }
+
+  private logUsage(request: Pick<GenerateRequest<AiFeature>, "feature" | "actor" | "entity">, provider: ResolvedProvider, model: string, usage: { inputTokens: number; outputTokens: number }, latencyMs: number, status: string, error: string | null) {
     return this.prisma.aiUsageLog.create({
       data: {
         feature: request.feature,

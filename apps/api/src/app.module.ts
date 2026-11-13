@@ -78,6 +78,7 @@ import { AiModule } from "./ai/ai.module";
 import { SeoAuditModule } from "./seo-audit/seo-audit.module";
 import { ExperimentsModule } from "./experiments/experiments.module";
 import { PersonalizationModule } from "./personalization/personalization.module";
+import { SupportModule } from "./support/support.module";
 
 @Module({
   imports: [
@@ -187,6 +188,8 @@ import { PersonalizationModule } from "./personalization/personalization.module"
     // §16 M14 — personalization and experimentation.
     PersonalizationModule,
     ExperimentsModule,
+    // §16 M15 — support.
+    SupportModule,
     AutomationModule,
     // Milestone 12 (§16 M12): inventory and finance.
     ProcurementModule,

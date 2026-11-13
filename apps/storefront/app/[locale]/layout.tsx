@@ -104,6 +104,8 @@ export default async function LocaleLayout({
             locale={locale}
           />
           <ChatButtons
+            liveChatEnabled={config["support.liveChat.enabled"] === true}
+            locale={locale}
             whatsappEnabled={config["chat.whatsappEnabled"] === true}
             whatsappNumber={typeof config["chat.whatsappNumber"] === "string" ? (config["chat.whatsappNumber"] as string) : null}
             messengerEnabled={config["chat.messengerEnabled"] === true}

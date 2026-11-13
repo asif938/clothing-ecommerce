@@ -18,7 +18,8 @@
     "./automation": "./src/automation/index.ts",
     "./marketing": "./src/marketing/index.ts",
     "./ai": "./src/ai/index.ts",
-    "./personalization": "./src/personalization/index.ts"
+    "./personalization": "./src/personalization/index.ts",
+    "./support": "./src/support/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

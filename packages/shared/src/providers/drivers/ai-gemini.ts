@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiDriver, ProviderDriverDefinition } from "../types.ts";
+import type { AiChatMessage, AiDriver, ProviderDriverDefinition } from "../types.ts";
 
 /**
  * Google Gemini (docs/PROJECT_SPEC.md §10.4) — `models/{model}:generateContent`
@@ -20,6 +20,35 @@ export type GeminiConfig = z.infer<typeof geminiConfigSchema>;
 
 function modelPath(model: string): string {
   return model.startsWith("models/") ? model : `models/${model}`;
+}
+
+/**
+ * Neutral transcript → Gemini `contents`. Gemini function calls carry no
+ * id, so ours are minted as `gemini_<n>_<name>` and the function name for
+ * each `functionResponse` comes from the result itself.
+ */
+export function toGeminiContents(messages: AiChatMessage[]): Record<string, unknown>[] {
+  const out: { role: string; parts: Record<string, unknown>[] }[] = [];
+  const push = (role: "user" | "model", parts: Record<string, unknown>[]) => {
+    const last = out[out.length - 1];
+    if (last && last.role === role) last.parts.push(...parts);
+    else out.push({ role, parts });
+  };
+  for (const message of messages) {
+    if (message.role === "user") push("user", [{ text: message.text }]);
+    else if (message.role === "assistant") {
+      const parts: Record<string, unknown>[] = [];
+      if (message.text) parts.push({ text: message.text });
+      for (const call of message.toolCalls ?? []) parts.push({ functionCall: { name: call.name, args: call.input } });
+      if (parts.length > 0) push("model", parts);
+    } else {
+      push(
+        "user",
+        message.results.map((r) => ({ functionResponse: { name: r.name, response: { content: r.content, ...(r.isError ? { error: true } : {}) } } })),
+      );
+    }
+  }
+  return out;
 }
 
 export function createGeminiDriver(config: GeminiConfig): AiDriver {
@@ -56,6 +85,45 @@ export function createGeminiDriver(config: GeminiConfig): AiDriver {
       const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("");
       if (!text) throw new Error(candidate?.finishReason === "MAX_TOKENS" ? "The reply was cut off — raise max tokens for this feature." : `The model returned no text (${candidate?.finishReason ?? "unknown"}).`);
       return { text, model: body.modelVersion ?? input.model, inputTokens: body.usageMetadata?.promptTokenCount ?? 0, outputTokens: body.usageMetadata?.candidatesTokenCount ?? 0 };
+    },
+
+    async chat(input) {
+      const response = await fetch(`${config.baseUrl}/${config.apiVersion}/${modelPath(input.model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": config.apiKey, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(config.timeoutMs),
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: toGeminiContents(input.messages),
+          tools: [{ functionDeclarations: input.tools.map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema })) }],
+          generationConfig: {
+            maxOutputTokens: input.maxTokens,
+            ...(input.temperature !== null && input.temperature !== undefined ? { temperature: input.temperature } : {}),
+          },
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        candidates?: { content?: { parts?: { text?: string; functionCall?: { name?: string; args?: Record<string, unknown> } }[] }; finishReason?: string }[];
+        promptFeedback?: { blockReason?: string };
+        usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+        modelVersion?: string;
+        error?: { message?: string };
+      };
+      if (!response.ok) throw new Error(body.error?.message ?? `Gemini request failed (HTTP ${response.status})`);
+      if (body.promptFeedback?.blockReason) throw new Error(`The model declined this request (${body.promptFeedback.blockReason}).`);
+      const candidate = body.candidates?.[0];
+      const parts = candidate?.content?.parts ?? [];
+      const toolCalls = parts
+        .filter((p) => p.functionCall?.name)
+        .map((p, i) => ({ id: `gemini_${i}_${p.functionCall!.name!}`, name: p.functionCall!.name!, input: p.functionCall!.args ?? {} }));
+      return {
+        text: parts.map((p) => p.text ?? "").join(""),
+        toolCalls,
+        stopReason: toolCalls.length > 0 ? "tool_use" : candidate?.finishReason === "MAX_TOKENS" ? "max_tokens" : "end",
+        model: body.modelVersion ?? input.model,
+        inputTokens: body.usageMetadata?.promptTokenCount ?? 0,
+        outputTokens: body.usageMetadata?.candidatesTokenCount ?? 0,
+      };
     },
   };
 }

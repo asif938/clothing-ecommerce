@@ -34,3 +34,5 @@ export * from "./drivers/ai-anthropic.ts";
 export * from "./drivers/ai-openai.ts";
 export * from "./drivers/ai-gemini.ts";
 export * from "./drivers/audience.ts";
+export * from "./drivers/meta-messaging.ts";
+export * from "./drivers/telephony.ts";

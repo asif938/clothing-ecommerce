@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ProviderDriverDefinition, WhatsappDriver } from "../types.ts";
+import { parseWhatsappWebhook } from "./meta-messaging.ts";
 
 /**
  * Meta WhatsApp Business Cloud API (docs/PROJECT_SPEC.md §10.3). Implemented
@@ -17,6 +18,10 @@ export const whatsappCloudConfigSchema = z.object({
   phoneNumberId: z.string().min(1),
   apiVersion: z.string().default("v21.0"),
   baseUrl: z.string().url().default("https://graph.facebook.com"),
+  /** §16 M15 inbox — Meta app secret, verifies `X-Hub-Signature-256` on inbound webhooks. Required to receive messages. */
+  appSecret: z.string().min(1).optional(),
+  /** §16 M15 inbox — the verify token entered in the Meta app's webhook setup. */
+  verifyToken: z.string().min(8).optional(),
 });
 export type WhatsappCloudConfig = z.infer<typeof whatsappCloudConfigSchema>;
 
@@ -29,23 +34,29 @@ function normalizeRecipient(to: string): string {
 }
 
 export function createWhatsappCloudDriver(config: WhatsappCloudConfig): WhatsappDriver {
+  async function sendText(to: string, text: string): Promise<{ externalMessageId: string | null }> {
+    const response = await fetch(endpoint(config, "/messages"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: normalizeRecipient(to),
+        type: "text",
+        text: { body: text },
+      }),
+    });
+    const body = (await response.json().catch(() => ({}))) as { messages?: { id?: string }[]; error?: { message?: string } };
+    if (!response.ok) {
+      throw new Error(body.error?.message ?? `WhatsApp Cloud API send failed (HTTP ${response.status})`);
+    }
+    return { externalMessageId: body.messages?.[0]?.id ?? null };
+  }
   return {
     async send(to, text) {
-      const response = await fetch(endpoint(config, "/messages"), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${config.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: normalizeRecipient(to),
-          type: "text",
-          text: { body: text },
-        }),
-      });
-      const body = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
-      if (!response.ok) {
-        throw new Error(body.error?.message ?? `WhatsApp Cloud API send failed (HTTP ${response.status})`);
-      }
+      await sendText(to, text);
     },
+    sendSession: sendText,
+    parseWebhook: parseWhatsappWebhook,
   };
 }
 
@@ -54,7 +65,7 @@ export const whatsappCloudDriverDefinition: ProviderDriverDefinition<WhatsappClo
   driver: "whatsapp_cloud",
   label: { bn: "WhatsApp ক্লাউড API (Meta)", en: "WhatsApp Cloud API (Meta)" },
   configSchema: whatsappCloudConfigSchema,
-  secretFields: ["accessToken"],
+  secretFields: ["accessToken", "appSecret"],
   async testConnection(config) {
     try {
       const response = await fetch(endpoint(config, "?fields=verified_name,display_phone_number"), {

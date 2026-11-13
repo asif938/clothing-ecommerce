@@ -7,6 +7,7 @@ import { Link, useRouter } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
 import { useCurrentStaff } from "../../../../../lib/use-current-staff";
+import { CallButton } from "../../../../../components/call-button";
 
 interface OrderItem {
   id: string;
@@ -57,6 +58,7 @@ interface ReturnRow {
 }
 interface OrderDetail {
   id: string;
+  customerId: string | null;
   orderNumber: string;
   status: string;
   paymentStatus: string;
@@ -258,7 +260,10 @@ export default function OrderDetailPage() {
         <Card className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-surface-foreground">{t("addressAndContact")}</h2>
           <p className="text-sm text-surface-foreground">{order.shippingAddress.recipientName}</p>
-          <p className="text-sm text-surface-foreground/70">{order.shippingAddress.phone}</p>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-surface-foreground/70">
+            {order.shippingAddress.phone}
+            <CallButton phone={order.shippingAddress.phone} orderId={order.id} customerId={order.customerId ?? undefined} />
+          </p>
           <p className="text-sm text-surface-foreground/70">{order.shippingAddress.addressLine}{order.shippingAddress.landmark ? `, ${order.shippingAddress.landmark}` : ""}</p>
           {order.customerNote && <p className="text-sm text-surface-foreground/70">{t("customerNote")}: {order.customerNote}</p>}
           <div className="mt-2 flex flex-wrap gap-1">

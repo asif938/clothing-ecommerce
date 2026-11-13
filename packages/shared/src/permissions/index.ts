@@ -178,6 +178,12 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "experiments.read", group: "personalization", label: { bn: "A/B টেস্ট ও ফলাফল দেখুন", en: "View A/B tests & results" } },
   { key: "experiments.manage", group: "personalization", label: { bn: "A/B টেস্ট তৈরি, চালু ও বন্ধ করুন", en: "Create, start & stop A/B tests" } },
   { key: "settings.personalization.write", group: "settings", label: { bn: "পার্সোনালাইজেশন সেটিংস পরিবর্তন করুন", en: "Edit personalization settings" } },
+  // §16 M15 — support.
+  { key: "support.inbox", group: "support", label: { bn: "ইনবক্স দেখুন ও গ্রাহককে উত্তর দিন", en: "View the inbox and reply to customers" } },
+  { key: "support.manage", group: "support", label: { bn: "কথোপকথন অন্যকে দিন, সংরক্ষিত উত্তর পরিচালনা করুন", en: "Assign conversations & manage canned replies" } },
+  { key: "support.tickets", group: "support", label: { bn: "টিকিট তৈরি ও পরিচালনা করুন", en: "Create & manage tickets" } },
+  { key: "support.calls", group: "support", label: { bn: "ক্লিক-টু-কল ও কল লগ", en: "Click-to-call & call log" } },
+  { key: "settings.support.write", group: "settings", label: { bn: "সাপোর্ট সেটিংস পরিবর্তন করুন", en: "Edit support settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

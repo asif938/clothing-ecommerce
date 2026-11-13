@@ -43,7 +43,7 @@ describe("extractJsonObject / parseAiOutput", () => {
 describe("output contracts and the mock driver", () => {
   it("every feature's contract carries an example the mock can echo and the parser accepts", async () => {
     const driver = createMockAiDriver({ simulate: "success", defaultModel: "mock", inputCentsPerMTok: 0, outputCentsPerMTok: 0, delayMs: 0 });
-    for (const feature of AI_FEATURES) {
+    for (const feature of AI_FEATURES.filter((f) => !AI_FEATURE_DEFINITIONS[f].chat)) {
       const contract = AI_FEATURE_DEFINITIONS[feature].outputContract;
       expect(exampleFromContract(contract)).not.toBeNull();
       const reply = await driver.generate({ model: "mock", system: "sys", prompt: `do it\n\n${contract}`, maxTokens: 100 });

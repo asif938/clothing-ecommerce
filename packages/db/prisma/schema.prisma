@@ -66,6 +66,8 @@ model StaffUser {
   passwordHash        String          @map("password_hash")
   totpSecret          String?         @map("totp_secret")
   totpEnabled         Boolean         @default(false) @map("totp_enabled")
+  // §16 M15 — the agent's own phone for click-to-call (the provider rings it first).
+  phone               String?         @map("phone")
   locale              String          @default("bn")
   avatarMediaId       String?         @map("avatar_media_id")
   status              StaffUserStatus @default(active)
@@ -3495,4 +3497,252 @@ model ExperimentConversion {
   @@unique([experimentId, visitorId, goal, reference])
   @@index([experimentId, variantKey, goal])
   @@map("experiment_conversions")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 15 (§16 M15) — support
+// ---------------------------------------------------------------------------
+
+enum ConversationChannel {
+  live_chat
+  whatsapp
+  messenger
+  instagram
+}
+
+enum ConversationStatus {
+  open
+  waiting_agent
+  pending
+  resolved
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+  internal
+}
+
+enum MessageAuthorType {
+  customer
+  staff
+  bot
+  system
+}
+
+enum MessageDeliveryStatus {
+  received
+  queued
+  sent
+  delivered
+  read
+  failed
+}
+
+/// One thread with one customer on one channel (§5.10 `conversations`).
+/// `contactId` is the channel's id for the customer: WhatsApp number,
+/// Messenger PSID, Instagram-scoped id, or the visitor's anonymous_id.
+model Conversation {
+  id                 String              @id @default(cuid(2))
+  channel            ConversationChannel
+  providerInstanceId String?             @map("provider_instance_id")
+  contactId          String              @map("contact_id")
+  contactName        String?             @map("contact_name")
+  contactPhone       String?             @map("contact_phone")
+  customerId         String?             @map("customer_id")
+  status             ConversationStatus  @default(open)
+  assignedTo         String?             @map("assigned_to")
+  /// The AI assistant answers while true; a staff reply or a handoff turns it off.
+  botActive          Boolean             @default(false) @map("bot_active")
+  handoffReason      String?             @map("handoff_reason")
+  /// Set when an inbound message is waiting for the assistant (crash recovery for the inline reply).
+  botPendingSince    DateTime?           @map("bot_pending_since")
+  lastMessageAt      DateTime            @default(now()) @map("last_message_at")
+  lastInboundAt      DateTime?           @map("last_inbound_at")
+  lastMessagePreview String?             @map("last_message_preview")
+  unreadCount        Int                 @default(0) @map("unread_count")
+  orderIds           String[]            @default([]) @map("order_ids")
+  tags               String[]            @default([])
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  messages ConversationMessage[]
+  tickets  Ticket[]
+
+  @@unique([channel, contactId])
+  @@index([status, lastMessageAt])
+  @@index([assignedTo])
+  @@index([customerId])
+  @@index([botPendingSince])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String                @id @default(cuid(2))
+  conversationId String                @map("conversation_id")
+  direction      MessageDirection
+  authorType     MessageAuthorType     @map("author_type")
+  staffId        String?               @map("staff_id")
+  body           String
+  attachments    Json?
+  /// Provider message id — deduplicates webhook retries and matches delivery statuses.
+  externalId     String?               @map("external_id")
+  deliveryStatus MessageDeliveryStatus @default(received) @map("delivery_status")
+  error          String?
+  /// Assistant tool calls behind a bot reply (for staff review).
+  toolTrace      Json?                 @map("tool_trace")
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, externalId])
+  @@index([conversationId, createdAt])
+  @@index([externalId])
+  @@map("conversation_messages")
+}
+
+enum TicketType {
+  general
+  order_issue
+  delivery
+  return_exchange
+  payment
+  product
+  complaint
+}
+
+enum TicketPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum TicketStatus {
+  open
+  pending
+  resolved
+  closed
+}
+
+/// §5.10 `tickets` with first-response and resolution SLA deadlines.
+model Ticket {
+  id                      String         @id @default(cuid(2))
+  number                  String         @unique
+  subject                 String
+  type                    TicketType     @default(general)
+  priority                TicketPriority @default(normal)
+  status                  TicketStatus   @default(open)
+  customerId              String?        @map("customer_id")
+  orderId                 String?        @map("order_id")
+  conversationId          String?        @map("conversation_id")
+  contactName             String?        @map("contact_name")
+  contactPhone            String?        @map("contact_phone")
+  assignedTo              String?        @map("assigned_to")
+  firstResponseDueAt      DateTime       @map("first_response_due_at")
+  firstResponseAt         DateTime?      @map("first_response_at")
+  resolutionDueAt         DateTime       @map("resolution_due_at")
+  resolvedAt              DateTime?      @map("resolved_at")
+  firstResponseBreachedAt DateTime?      @map("first_response_breached_at")
+  resolutionBreachedAt    DateTime?      @map("resolution_breached_at")
+  createdBy               String?        @map("created_by")
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+
+  conversation Conversation?   @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  messages     TicketMessage[]
+
+  @@index([status, resolutionDueAt])
+  @@index([assignedTo, status])
+  @@index([customerId])
+  @@index([orderId])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id         String            @id @default(cuid(2))
+  ticketId   String            @map("ticket_id")
+  authorType MessageAuthorType @map("author_type")
+  staffId    String?           @map("staff_id")
+  body       String
+  /// Internal notes are never shown to the customer.
+  internal   Boolean           @default(false)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_messages")
+}
+
+model CannedReply {
+  id         String   @id @default(cuid(2))
+  title      String
+  /// Typed after "/" in the composer.
+  shortcut   String   @unique
+  body       Json
+  category   String?
+  usageCount Int      @default(0) @map("usage_count")
+  createdBy  String?  @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("canned_replies")
+}
+
+enum CallStatus {
+  initiated
+  ringing
+  answered
+  completed
+  no_answer
+  busy
+  failed
+}
+
+model CallLog {
+  id                 String     @id @default(cuid(2))
+  providerInstanceId String?    @map("provider_instance_id")
+  driver             String
+  staffId            String?    @map("staff_id")
+  customerId         String?    @map("customer_id")
+  orderId            String?    @map("order_id")
+  conversationId     String?    @map("conversation_id")
+  phone              String
+  status             CallStatus @default(initiated)
+  externalId         String?    @map("external_id")
+  durationSeconds    Int?       @map("duration_seconds")
+  recordingUrl       String?    @map("recording_url")
+  error              String?
+  startedAt          DateTime   @default(now()) @map("started_at")
+  endedAt            DateTime?  @map("ended_at")
+
+  @@index([staffId, startedAt])
+  @@index([orderId])
+  @@index([externalId])
+  @@map("call_logs")
+}
+
+enum WebhookEventStatus {
+  received
+  processed
+  failed
+  rejected
+}
+
+/// Raw inbound provider webhooks (§4.3 rule 5) — kept for debugging and retried when processing failed.
+model WebhookEvent {
+  id                 String             @id @default(cuid(2))
+  capability         String
+  driver             String
+  providerInstanceId String?            @map("provider_instance_id")
+  payload            Json
+  status             WebhookEventStatus @default(received)
+  attempts           Int                @default(0)
+  error              String?
+  receivedAt         DateTime           @default(now()) @map("received_at")
+  processedAt        DateTime?          @map("processed_at")
+
+  @@index([status, receivedAt])
+  @@map("webhook_events")
 }

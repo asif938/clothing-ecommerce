@@ -895,3 +895,113 @@ p-value, অর্ডার ও প্রতি ভিজিটরে আয় 
 করার সময় বিজয়ী প্রয়োগ করা যায়: ব্লকের বিজয়ী সেটিংস পেজের ড্রাফটে যায় (আপনি প্রকাশ
 করবেন), বারে বিজয়ী লেখা বসে, অফার টেস্টে হেরে যাওয়া ডিসকাউন্ট বন্ধ হয়। সেটিংসে A/B
 টেস্ট বন্ধ করলে সবাই কন্ট্রোল দেখেন।
+
+## Support inbox (`support.inbox`, `support.manage`, Settings → support)
+
+**EN** — *Support inbox* collects WhatsApp, Messenger, Instagram and website
+live chat in one list. Connect channels under Integrations: WhatsApp uses
+your existing WhatsApp Cloud API provider (add its *app secret* and *verify
+token*), Messenger/Instagram use a *chat channel* provider (page id, page
+access token, app secret, verify token). Each channel shows the webhook URL
+to paste into the Meta app. To try it without Meta, add a *Mock* provider and
+use *Send test message* on the inbox. Pick a conversation to read and reply;
+switch to *Internal note* for the team only; type `/shortcut` or use *Insert
+canned reply*; *Suggest replies (AI)* drafts three answers you can edit. Meta
+only allows replies within 24 hours of the customer's last message — after
+that, call them. Assign a conversation to yourself (or anyone, with
+`support.manage`), resolve it when done; a customer writing again reopens it.
+The side panel shows the customer, their orders and tickets, *Call*, *Create
+order* (opens the manual order form pre-filled, and links the order back to
+the chat) and *Create ticket*. Turn on live chat in Settings → support.
+
+**BN** — *সাপোর্ট ইনবক্স* WhatsApp, Messenger, Instagram ও ওয়েবসাইটের লাইভ
+চ্যাট এক তালিকায় আনে। ইন্টিগ্রেশনে চ্যানেল যুক্ত করুন: WhatsApp-এর জন্য আগের
+WhatsApp Cloud API প্রোভাইডারেই *app secret* ও *verify token* দিন;
+Messenger/Instagram-এর জন্য *chat channel* প্রোভাইডার (page id, page access
+token, app secret, verify token)। প্রতিটি চ্যানেলের পাশে Meta অ্যাপে বসানোর
+webhook URL দেখায়। Meta ছাড়া পরীক্ষা করতে *Mock* প্রোভাইডার যোগ করে ইনবক্সে
+*পরীক্ষার বার্তা পাঠান* ব্যবহার করুন। কথোপকথন বেছে পড়ুন ও উত্তর দিন; শুধু টিমের
+জন্য *অভ্যন্তরীণ নোট*; `/shortcut` লিখুন বা *সংরক্ষিত উত্তর বসান*; *উত্তরের
+পরামর্শ (AI)* তিনটি খসড়া দেয় যা সম্পাদনা করে পাঠাবেন। গ্রাহকের শেষ বার্তার ২৪ ঘণ্টা
+পর Meta আর উত্তর দিতে দেয় না — তখন ফোন করুন। কথোপকথন নিজেকে (বা
+`support.manage` থাকলে যে কাউকে) দিন, কাজ শেষে সমাধান করুন; গ্রাহক আবার লিখলে
+খুলে যায়। পাশের প্যানেলে গ্রাহক, তাঁর অর্ডার ও টিকিট, *কল*, *অর্ডার তৈরি*
+(আগে থেকে পূরণ করা ম্যানুয়াল অর্ডার ফর্ম খোলে, অর্ডার চ্যাটের সাথে যুক্ত হয়) ও
+*টিকিট তৈরি* থাকে। সেটিংস → support-এ লাইভ চ্যাট চালু করুন।
+
+## AI chat assistant (Settings → support, Settings → ai)
+
+**EN** — Turn on Settings → support → *AI chat assistant* and choose its
+channels (live chat by default). It answers new messages about products,
+prices, sizes, stock and the customer's orders by looking them up (it never
+guesses), and hands the conversation to your team — "waiting for agent",
+with an alert — when the customer asks for a person, is upset, wants a
+refund/return/cancellation/payment fix, or it can't help. Order details are
+only shared when the order's phone number matches the customer's. Edit its
+instructions, provider, model and monthly budget on the *AI* page (*Chat
+assistant*); if AI is off or the budget runs out, conversations go straight
+to your team. When you reply yourself, the assistant stops for that
+conversation; *Let assistant answer* turns it back on. Each assistant reply
+shows what it looked up.
+
+**BN** — সেটিংস → support → *AI চ্যাট সহকারী* চালু করে চ্যানেল বাছুন (ডিফল্ট
+লাইভ চ্যাট)। এটি পণ্য, দাম, সাইজ, স্টক ও গ্রাহকের অর্ডার নিয়ে নতুন বার্তার উত্তর
+দেয় তথ্য খুঁজে দেখে (কখনো আন্দাজ করে না), আর গ্রাহক মানুষ চাইলে, বিরক্ত হলে,
+রিফান্ড/রিটার্ন/বাতিল/পেমেন্ট সমস্যা হলে বা সাহায্য করতে না পারলে কথোপকথন আপনার
+টিমকে দেয় — "প্রতিনিধির অপেক্ষায়", অ্যালার্টসহ। অর্ডারের ফোন নম্বর গ্রাহকের সাথে
+মিললেই কেবল অর্ডারের তথ্য জানায়। *AI* পেজে (*চ্যাট সহকারী*) নির্দেশনা,
+প্রোভাইডার, মডেল ও মাসিক বাজেট বদলান; AI বন্ধ থাকলে বা বাজেট শেষ হলে কথোপকথন সরাসরি
+টিমের কাছে যায়। আপনি নিজে উত্তর দিলে ওই কথোপকথনে সহকারী থামে; *সহকারীকে উত্তর
+দিতে দিন* দিয়ে আবার চালু করুন। প্রতিটি উত্তরের নিচে দেখায় সহকারী কী খুঁজে দেখেছে।
+
+## Tickets & SLA (`support.tickets`, Settings → support)
+
+**EN** — Create a ticket on *Tickets* or from a chat. Each ticket has a
+type, priority, assignee and two deadlines set from its priority: first
+response and resolution (Settings → support, in minutes). The list shows
+"on track / due soon / missed" and can show only missed ones; changing the
+priority moves the deadlines. Reply to the customer (sent through the linked
+chat when there is one) or add internal notes; the first reply meets the
+first-response deadline and resolving meets the resolution one. When a
+deadline passes the assignee (or the support team) gets an alert.
+
+**BN** — *টিকিট* পেজে বা চ্যাট থেকে টিকিট তৈরি করুন। প্রতিটি টিকিটের ধরন,
+অগ্রাধিকার, দায়িত্বপ্রাপ্ত কর্মী এবং অগ্রাধিকার অনুযায়ী দুটি সময়সীমা থাকে: প্রথম
+উত্তর ও সমাধান (সেটিংস → support, মিনিটে)। তালিকায় "ঠিক আছে / সময় শেষ হচ্ছে /
+সময় পেরিয়েছে" দেখায় এবং শুধু পেরোনোগুলো দেখা যায়; অগ্রাধিকার বদলালে সময়সীমা
+বদলায়। গ্রাহককে উত্তর দিন (চ্যাট যুক্ত থাকলে সেখানেই যায়) বা অভ্যন্তরীণ নোট দিন;
+প্রথম উত্তরে প্রথম-উত্তরের সময়সীমা পূরণ হয়, সমাধান করলে সমাধানেরটি। সময় পেরোলে
+দায়িত্বপ্রাপ্ত কর্মী (বা সাপোর্ট টিম) অ্যালার্ট পান।
+
+## Canned replies (`support.inbox`, `support.manage`)
+
+**EN** — *Canned replies* stores bilingual answers with a shortcut; type
+`/shortcut` followed by a space in the inbox to insert one. They can use
+`{customer_name}`, `{order_number}` (the last order created from the chat),
+`{brand_name}`, `{support_phone}` and `{agent_name}`. The list shows how often
+each is used. Creating and editing needs `support.manage`.
+
+**BN** — *সংরক্ষিত উত্তর*-এ শর্টকাটসহ দুই ভাষার উত্তর রাখুন; ইনবক্সে `/shortcut`
+লিখে স্পেস দিলে বসে যায়। এতে `{customer_name}`, `{order_number}` (চ্যাট থেকে
+তৈরি শেষ অর্ডার), `{brand_name}`, `{support_phone}` ও `{agent_name}` ব্যবহার করা
+যায়। তালিকায় কোনটি কতবার ব্যবহৃত হয়েছে দেখায়। তৈরি ও সম্পাদনায় `support.manage`
+লাগে।
+
+## Click-to-call (`support.calls`)
+
+**EN** — *Call* buttons appear on orders, tickets and chats. Without a
+telephony provider, Call opens your phone's dialer and the call is logged —
+mark how it went on *Calls*. To place calls through a cloud PBX/call-centre
+service, add a *Generic HTTP telephony* provider under Integrations (its
+request URL and fields, and how its status webhook reports calls — the
+webhook URL is `/api/v1/webhooks/telephony/<provider id>` on your API), then
+enter *My phone number* on *Calls*: the service rings you first, then
+connects the customer, and the log fills in status, duration and recording.
+
+**BN** — অর্ডার, টিকিট ও চ্যাটে *কল* বোতাম থাকে। টেলিফোনি প্রোভাইডার না থাকলে কল
+চাপলে ফোনের ডায়ালার খোলে এবং কল লেখা থাকে — *কল* পেজে ফলাফল দিন। ক্লাউড
+PBX/কল-সেন্টার সার্ভিস দিয়ে কল করতে ইন্টিগ্রেশনে *জেনেরিক HTTP টেলিফোনি* প্রোভাইডার
+যোগ করুন (অনুরোধের URL ও ফিল্ড, এবং স্ট্যাটাস webhook কীভাবে কলের খবর দেয় —
+webhook URL আপনার API-তে `/api/v1/webhooks/telephony/<provider id>`), তারপর *কল*
+পেজে *আমার ফোন নম্বর* দিন: সার্ভিস আগে আপনাকে রিং দেয়, তারপর গ্রাহককে যুক্ত করে,
+আর তালিকায় অবস্থা, সময় ও রেকর্ডিং আসে।

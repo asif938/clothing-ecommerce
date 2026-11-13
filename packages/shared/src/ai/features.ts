@@ -14,7 +14,7 @@ import type { LocalizedText } from "../i18n/localized-text.ts";
  * milestone lands (M14/M15).
  */
 
-export const AI_FEATURES = ["product_description", "seo_meta", "alt_text", "translation", "visual_tags"] as const;
+export const AI_FEATURES = ["product_description", "seo_meta", "alt_text", "translation", "visual_tags", "reply_suggestion", "chat_assistant"] as const;
 export type AiFeature = (typeof AI_FEATURES)[number];
 
 /** Features that produce a reviewable product draft (the rest feed other systems, e.g. `visual_tags` → visual search, §16 M14). */
@@ -35,6 +35,10 @@ export const AI_OUTPUT_SCHEMAS = {
     style: z.array(z.string().trim().max(40)).max(8).optional(),
     keywords: z.array(z.string().trim().max(40)).max(16),
   }),
+  // §16 M15 — support inbox.
+  reply_suggestion: z.object({ suggestions: z.array(z.string().trim().min(1).max(1000)).min(1).max(3) }),
+  /** The chat assistant replies in plain text through tool-using chat; this schema only exists so every feature has one. */
+  chat_assistant: z.object({ reply: z.string() }),
 } satisfies Record<AiFeature, z.ZodType>;
 
 export type AiOutput<F extends AiFeature> = z.infer<(typeof AI_OUTPUT_SCHEMAS)[F]>;
@@ -50,6 +54,8 @@ export interface AiFeatureDefinition {
   defaultPrompt: string;
   /** Appended by code after the rendered template; carries an `<example>` the mock driver echoes. */
   outputContract: string;
+  /** §16 M15 — runs as tool-using chat (`AiService.chat`), replying in plain text; has no JSON output contract. */
+  chat?: boolean;
 }
 
 const COMMON = ["brand_name", "tone"];
@@ -117,6 +123,42 @@ export const AI_FEATURE_DEFINITIONS: Record<AiFeature, AiFeatureDefinition> = {
       "its pattern (solid, striped, checked, floral, printed, embroidered…), a few style words, and up to 16 short English search keywords.",
     outputContract:
       'Respond with only a JSON object, no markdown fences:\n<example>{"garment":"panjabi","colors":["navy","white"],"pattern":"embroidered","style":["festive","straight cut"],"keywords":["panjabi","navy","embroidered","cotton","eid"]}</example>',
+  },
+  reply_suggestion: {
+    key: "reply_suggestion",
+    label: { bn: "উত্তরের পরামর্শ (সাপোর্ট)", en: "Reply suggestions (support)" },
+    help: { bn: "ইনবক্সে গ্রাহকের শেষ বার্তার জন্য ৩টি উত্তরের খসড়া", en: "Three draft replies to the customer's latest message in the inbox" },
+    variables: [...COMMON, "channel", "customer_name", "customer_context", "conversation", "language"],
+    usesImages: false,
+    defaultPrompt:
+      "You help a support agent at {brand_name}, a clothing shop in Bangladesh, answer customers on {channel}. Write up to three short, different reply options " +
+      "to the customer's latest message, in {language} (match how the customer writes — Bangla, English or Banglish). Be {tone}, polite and specific. " +
+      "Use only the facts below; never promise refunds, discounts, delivery dates or stock that are not stated. If something must be checked, say the agent will check.\n\n" +
+      "Customer: {customer_name}\nWhat we know: {customer_context}\n\nConversation (oldest first):\n{conversation}",
+    outputContract: 'Respond with only a JSON object, no markdown fences:\n<example>{"suggestions":["…","…"]}</example>',
+  },
+  chat_assistant: {
+    key: "chat_assistant",
+    label: { bn: "চ্যাট সহকারী (স্বয়ংক্রিয় উত্তর)", en: "Chat assistant (automatic replies)" },
+    help: {
+      bn: "লাইভ চ্যাট/মেসেজে পণ্য, সাইজ, স্টক ও অর্ডারের প্রশ্নের উত্তর দেয়; দরকার হলে মানুষের কাছে পাঠায়",
+      en: "Answers product, size, stock and order questions in chat, and hands over to a person when needed",
+    },
+    variables: ["brand_name", "tone", "channel", "support_hours", "support_phone"],
+    usesImages: false,
+    defaultPrompt:
+      "You are the online shop assistant for {brand_name}, a clothing brand in Bangladesh, chatting with a customer on {channel}. Be {tone}, brief (1–4 short sentences) and friendly. " +
+      "Reply in the language the customer uses (Bangla, English or Banglish).\n\n" +
+      "Rules:\n" +
+      "- Answer only about our products, sizes, stock, delivery and the customer's orders. Politely decline anything else.\n" +
+      "- Never guess prices, stock, sizes or order details: look them up with the tools every time, and say so if a tool finds nothing.\n" +
+      "- Order details need the order number; the tool checks it belongs to this customer. Never reveal anything about other orders or customers.\n" +
+      "- Never promise discounts, refunds, exchanges, compensation or delivery dates beyond what the tools return, and never ask for passwords, OTP codes or card/bKash PINs.\n" +
+      "- Call handoff_to_human when the customer asks for a person, is upset or complaining, wants a refund/return/cancellation/payment fix, or when you can't help after one try.\n" +
+      "- Share product links exactly as the tools return them.\n\n" +
+      "Support hours: {support_hours}. Phone: {support_phone}.",
+    outputContract: "",
+    chat: true,
   },
 };
 

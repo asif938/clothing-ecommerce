@@ -10,21 +10,20 @@ reasoning behind choices made along the way.
 | --- | --- | --- |
 | Phase 1 — MVP | M0–M9 | Complete |
 | Phase 2 — Growth and operations automation | M10–M13 | Complete |
-| Phase 3 — Advanced and intelligence | M14–M17 | M14 complete — **M15 is next** |
+| Phase 3 — Advanced and intelligence | M14–M17 | M14–M15 complete — **M16 is next** |
 
-- Latest milestone: M14 (personalization and experimentation). The repository has no git
+- Latest milestone: M15 (support). The repository has no git
   remote, so milestone commits are local only.
-- Unit tests: `packages/shared` 217, `packages/blocks` 13, `apps/api` 533,
+- Unit tests: `packages/shared` 232, `packages/blocks` 13, `apps/api` 559,
   `apps/storefront` 10 — all passing.
-- Database: migrations up to `20261114090000_personalization_experiments`
-  (M14) are committed, but the configured dev database is still at M11;
-  run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
-  using M12–M14 features.
+- Database: migrations up to `20261115090000_support` (M15) are
+  committed, but the configured dev database is still at M11; run
+  `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
+  using M12–M15 features.
 - Cross-cutting caveat: no milestone has been clicked through in a
   browser or run against live third-party providers here — each section's
   "Not verified" list says what remains.
-- Remaining plan: M15 support
-  inbox and AI assistant, M16 loyalty extensions (referrals, gift cards,
+- Remaining plan: M16 loyalty extensions (referrals, gift cards,
   store credit, affiliates), M17 advanced analytics and procurement.
 
 ---
@@ -2436,9 +2435,113 @@ embeddings/vision), A/B testing framework for blocks/banners/offers.
 
 ---
 
+## Milestone 15 — Support
+
+Status: complete (§16 M15) at the code/test level, with the same caveat as
+every prior milestone: nothing was run against a real database, a real Meta
+app or telephony account, or in a browser here — see "Not verified in this
+environment". Scope per §16: unified inbox (WhatsApp Cloud, Messenger,
+Instagram, live chat widget), create order from chat, tickets with SLA,
+canned replies, AI reply suggestions, AI chat assistant with tool calls
+(product info, size advice, stock, order status) and human handoff,
+click-to-call telephony integration (generic provider).
+
+### Built
+
+- **`packages/db`**: migration `20261115090000_support` (generated with
+  `prisma migrate diff` — purely additive): `conversations`,
+  `conversation_messages`, `tickets`, `ticket_messages`, `canned_replies`,
+  `call_logs`, `webhook_events`, and `staff_users.phone`.
+- **`packages/shared`**: provider capabilities `chat_channel` (Messenger,
+  Instagram, mock) and `telephony` (generic HTTP, mock); WhatsApp drivers
+  gained session sends and webhook parsing; Meta signature verification and
+  webhook parsers; `AiDriver.chat()` (tool use) for Anthropic (official SDK),
+  OpenAI, Gemini and the mock; AI features `reply_suggestion` and
+  `chat_assistant`; new `@clothing/shared/support` (channels, statuses, SLA
+  maths, 24-hour reply window, "wants a human" detection, transcript
+  formatting, the assistant's tool schemas); 5 permissions; 9 settings in
+  `settings/definitions-m15.ts`.
+- **`apps/api`** — new `SupportModule`:
+  - Inbox: idempotent webhook ingestion (raw events stored and retried),
+    customer matching by phone, reply/notes/assign/status/assistant toggle,
+    side-panel context, AI reply suggestions, order linking, staff alerts
+    on new conversations and handoffs, Meta 24-hour window enforced.
+  - Webhooks: `GET/POST /webhooks/inbox/:instanceId` (Meta verify token +
+    `X-Hub-Signature-256` on the raw body — the API now keeps `rawBody`),
+    `POST /webhooks/telephony/:instanceId`.
+  - Chat assistant: tool loop over `AiService.chat` (budgets, fallback,
+    usage logging), five validated tools, phone-matched order lookups,
+    deterministic and model-driven handoff, inline run + recovery sweep.
+  - Tickets with first-response/resolution SLA, breach sweep and alerts;
+    canned replies with variables; click-to-call with provider or `tel:`
+    fallback, call log and outcomes; storefront live chat endpoints with a
+    per-visitor rate limit.
+- **`apps/admin`**: Support inbox (filters, thread, composer with canned
+  replies and AI suggestions, assignment, assistant toggle, side panel with
+  customer/orders/tickets, create order/ticket, channel webhook URLs, mock
+  test messages), Tickets list + detail, Canned replies, Calls; Call buttons
+  on orders, tickets and chats; manual order form pre-fills from a chat and
+  links back; `chat_channel`/`telephony` in Integrations. All strings bn + en
+  (validated as ICU messages).
+- **`apps/storefront`**: live chat widget in the floating chat stack (polls
+  while open, "talk to a person").
+- Docs: decisions (2026-11-13 M15 entries), admin guide entries.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `apps/api` (source and
+  tests), `apps/storefront`, and `apps/admin` source (only the stale
+  `.next/types/validator.ts` errors from the pending login fix remain).
+  ESLint clean on every touched file (three pre-existing warnings in the
+  order pages).
+- Unit tests: `packages/shared` 232 (was 217), `apps/api` 559 (was 533),
+  `packages/blocks` 13, `apps/storefront` 10 — all passing. Covered: Meta
+  signature checks and webhook parsing, transcript translation to all three
+  vendors' formats, the assistant loop (tools, handoff, AI failure, staff
+  takeover, last-round tool restriction), phone-matched order lookups,
+  SLA deadlines/breaches, telephony fallback and webhooks, the 24-hour
+  window, live-chat rate limiting.
+- **Booted the real API** (compiled build) with an unreachable database:
+  the DI graph resolves, all 36 support routes map, the raw-body webhook
+  path parses requests, validation returns 400, and DB-backed routes fail
+  with the database error like existing ones. `nest start` (dev watch
+  compile) ran out of the default 1.4 GB Node heap on this machine once;
+  `tsc` itself needs ~565 MB and `nest build` + `node dist/main.js`
+  worked — if dev mode hits it, set `NODE_OPTIONS=--max-old-space-size=4096`.
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database** (the dev database
+  is still at M11; M12–M15 pending): `pnpm db:generate`,
+  `pnpm db:migrate:deploy`, `pnpm db:seed` (grants the new permissions to
+  Super Admin).
+- No live Meta app, WhatsApp number, Messenger/Instagram page or telephony
+  account: the drivers follow the documented APIs but are unexercised. Use
+  the mock providers and the inbox's test message to try the flows.
+- No live AI tool-use call: the Anthropic tool-use code is typechecked
+  against the SDK and the transcript mapping is unit-tested, but no request
+  reached a real model.
+- Nothing was clicked through in a browser (inbox, tickets, calls, live
+  chat widget).
+
+### Known issues / explicitly deferred
+
+- No WhatsApp template messages: replies are only possible inside Meta's
+  24-hour window (same M7 limitation).
+- WhatsApp media is recorded by type/caption only (not downloaded).
+- SLA uses calendar minutes, not business hours/holidays.
+- Polling, not websockets (free tier): new messages appear within ~5 s in
+  the admin and ~4 s in the widget.
+- One conversation per channel + contact: two WhatsApp numbers on one store
+  would share a customer's thread.
+- No named BD telephony driver; the generic HTTP driver must be configured
+  per provider.
+- The assistant doesn't see images customers send.
+
+---
+
 ### Next up
 
-Phase 3 (§16) continues: **M15 — Support** (unified inbox for WhatsApp
-Cloud, Messenger, Instagram and live chat, create order from chat, tickets
-with SLA, canned replies, AI reply suggestions, AI chat assistant with tool
-calls and human handoff, click-to-call telephony).
+Phase 3 (§16) continues: **M16 — Loyalty extensions** (referral program,
+gift cards — buy, send, redeem — store credit wallet UI, affiliate/
+influencer tracking and commissions).
