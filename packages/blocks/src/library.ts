@@ -42,6 +42,9 @@ import { CustomHtmlBlock } from "./blocks/custom-html/Component.tsx";
 import { lookbookSchema } from "./blocks/lookbook/schema.ts";
 import { lookbookDefaults } from "./blocks/lookbook/defaults.ts";
 import { LookbookBlock } from "./blocks/lookbook/Component.tsx";
+import { forYouSchema } from "./blocks/for-you/schema.ts";
+import { forYouDefaults } from "./blocks/for-you/defaults.ts";
+import { ForYouBlock } from "./blocks/for-you/Component.tsx";
 
 registerBlock({ type: "hero", label: { bn: "হিরো", en: "Hero" }, schema: heroSchema, defaults: heroDefaults, component: HeroBlock });
 registerBlock({ type: "rich_text", label: { bn: "টেক্সট", en: "Rich text" }, schema: richTextSchema, defaults: richTextDefaults, component: RichTextBlock });
@@ -61,3 +64,4 @@ registerBlock({
   superAdminOnly: true,
 });
 registerBlock({ type: "lookbook", label: { bn: "লুকবুক হটস্পট", en: "Lookbook hotspots" }, schema: lookbookSchema, defaults: lookbookDefaults, component: LookbookBlock });
+registerBlock({ type: "for_you", label: { bn: "আপনার জন্য (পার্সোনালাইজড)", en: "For you (personalized)" }, schema: forYouSchema, defaults: forYouDefaults, component: ForYouBlock });

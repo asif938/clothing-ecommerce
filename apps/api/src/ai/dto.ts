@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AI_FEATURES } from "@clothing/shared/ai";
+import { AI_DRAFT_FEATURES, AI_FEATURES } from "@clothing/shared/ai";
 
 export const aiFeatureParamSchema = z.enum(AI_FEATURES);
 
@@ -20,7 +20,7 @@ export const restoreVersionSchema = z.object({ version: z.number().int().min(1) 
 export type RestoreVersionDto = z.infer<typeof restoreVersionSchema>;
 
 export const generateProductDraftSchema = z.object({
-  feature: z.enum(AI_FEATURES),
+  feature: z.enum(AI_DRAFT_FEATURES),
   keywords: z.string().trim().max(300).optional(),
   tone: z.string().trim().max(100).optional(),
   /** alt_text: which gallery entries (default: those with no alt text yet, max 6). */

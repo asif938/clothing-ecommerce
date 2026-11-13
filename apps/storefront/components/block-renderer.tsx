@@ -1,6 +1,7 @@
 import { deviceVisibilityClassName, getBlockDefinition, isBlockScheduledNow, isBlockVisibleForLocale, needsAudienceGate } from "@clothing/blocks";
 import type { BlockInstance } from "../lib/store-api";
 import { AudienceGate } from "./audience-gate";
+import { ExperimentSwitch } from "./experiment-switch";
 
 /**
  * Renders a page's `blocksPublished` list (docs/PROJECT_SPEC.md §9.1). An
@@ -22,9 +23,21 @@ export function BlockRenderer({ blocks, locale }: { blocks: BlockInstance[]; loc
 
         const Component = definition.component;
         const className = deviceVisibilityClassName(block.visibility);
+        // §16 M14 — a block under an A/B test renders every variant server-side; `ExperimentSwitch` shows the visitor's one.
+        const variants = block.experiment?.variants
+          .map((variant) => {
+            if (variant.props === null) return { key: variant.key, node: <Component props={parsed.data} locale={locale} /> };
+            const variantProps = definition.schema.safeParse(variant.props);
+            return variantProps.success ? { key: variant.key, node: <Component props={variantProps.data} locale={locale} /> } : null;
+          })
+          .filter((v): v is { key: string; node: React.ReactElement } => v !== null);
         const rendered = (
           <div key={block.id} className={className || undefined}>
-            <Component props={parsed.data} locale={locale} />
+            {block.experiment && variants && variants.length > 1 ? (
+              <ExperimentSwitch experimentId={block.experiment.experimentId} variants={variants} />
+            ) : (
+              <Component props={parsed.data} locale={locale} />
+            )}
           </div>
         );
         // §16 M10 — audience-targeted blocks. Gating wraps the already

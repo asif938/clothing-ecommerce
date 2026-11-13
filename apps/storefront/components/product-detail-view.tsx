@@ -16,7 +16,7 @@ import { ProductQnA } from "./product-qna";
 import { SizeRecommenderWidget } from "./size-recommender-widget";
 import { BundleSection } from "./bundle-section";
 import { trackEvent } from "../lib/analytics";
-import type { ProductDetail } from "../lib/store-api";
+import type { ProductDetail, ProductRecommendations } from "../lib/store-api";
 
 function sameCombination(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -25,7 +25,20 @@ function sameCombination(a: string[], b: string[]): boolean {
   return sortedA.every((v, i) => v === sortedB[i]);
 }
 
-export function ProductDetailView({ product, locale, whatsappNumber }: { product: ProductDetail; locale: string; whatsappNumber: string | null }) {
+/** Relation types the recommendations endpoint already folds into its two sections (hand-picked first), so they aren't shown twice. */
+const MERGED_RELATION_TYPES = new Set(["similar", "complete_the_look", "cross_sell"]);
+
+export function ProductDetailView({
+  product,
+  locale,
+  whatsappNumber,
+  recommendations = null,
+}: {
+  product: ProductDetail;
+  locale: string;
+  whatsappNumber: string | null;
+  recommendations?: ProductRecommendations | null;
+}) {
   const colorOption = product.options.find((o) => o.type === "color");
   const sizeOption = product.options.find((o) => o.type === "size");
   const otherOptions = product.options.filter((o) => o !== colorOption && o !== sizeOption);
@@ -319,8 +332,29 @@ export function ProductDetailView({ product, locale, whatsappNumber }: { product
         </section>
       )}
 
+      {recommendations && recommendations.boughtTogether.length > 0 && (
+        <section className="mt-10 border-t border-border pt-6">
+          <h2 className="mb-4 text-lg font-semibold text-surface-foreground">{relationTitle("cross_sell", locale)}</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {recommendations.boughtTogether.map((item) => (
+              <ProductCard key={item.id} product={item} locale={locale} />
+            ))}
+          </div>
+        </section>
+      )}
+      {recommendations && recommendations.similar.length > 0 && (
+        <section className="mt-10 border-t border-border pt-6">
+          <h2 className="mb-4 text-lg font-semibold text-surface-foreground">{relationTitle("similar", locale)}</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {recommendations.similar.map((item) => (
+              <ProductCard key={item.id} product={item} locale={locale} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {Object.entries(product.relations).map(([type, items]) =>
-        items.length > 0 ? (
+        items.length > 0 && !(recommendations && MERGED_RELATION_TYPES.has(type)) ? (
           <section key={type} className="mt-10 border-t border-border pt-6">
             <h2 className="mb-4 text-lg font-semibold text-surface-foreground">{relationTitle(type, locale)}</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

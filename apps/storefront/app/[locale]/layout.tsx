@@ -11,6 +11,7 @@ import { Header } from "../../components/header";
 import { PwaRegister } from "../../components/pwa-register";
 import { TrackingScripts } from "../../components/tracking-scripts";
 import { UtmCapture } from "../../components/utm-capture";
+import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
@@ -91,7 +92,8 @@ export default async function LocaleLayout({
         <UtmCapture />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
-          <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} />
+          {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
+          <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} visualSearch={config["visualSearch.enabled"] === true} />
           <main className="flex-1">{children}</main>
           <Footer
             brandName={brandName}

@@ -381,11 +381,12 @@ model Media {
   updatedAt          DateTime  @updatedAt @map("updated_at")
   deletedAt          DateTime? @map("deleted_at")
 
-  folder           MediaFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  providerInstance ProviderInstance? @relation(fields: [providerInstanceId], references: [id], onDelete: SetNull)
+  folder           MediaFolder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  providerInstance ProviderInstance?      @relation(fields: [providerInstanceId], references: [id], onDelete: SetNull)
   usages           MediaUsage[]
   staffAvatarOf    StaffUser[]
   productMedia     ProductMedia[]
+  visualFeatures   ProductVisualFeature[]
 
   @@index([folderId])
   @@index([providerInstanceId])
@@ -650,6 +651,10 @@ model Product {
   questions            ProductQuestion[]
   bundleItems          BundleItem[]            @relation("BundleItems")
   bundledIn            BundleItem[]            @relation("BundleComponentOf")
+  // §16 M14 — computed recommendations and visual search features.
+  affinitiesFrom       ProductAffinity[]       @relation("ProductAffinityFrom")
+  affinitiesTo         ProductAffinity[]       @relation("ProductAffinityTo")
+  visualFeatures       ProductVisualFeature[]
 
   @@index([categoryId])
   @@index([sizeChartId])
@@ -1763,6 +1768,9 @@ model Order {
   // stays coupons/automatic discounts only.
   pointsRedeemed            Int                @default(0) @map("points_redeemed")
   pointsDiscount            Int                @default(0) @map("points_discount")
+  // §16 M14 — the shopper's `anonymous_id` cookie at placement, so A/B test
+  // conversions and revenue can be attributed to the variant they saw.
+  visitorId                 String?            @map("visitor_id")
   createdAt                 DateTime           @default(now()) @map("created_at")
   updatedAt                 DateTime           @updatedAt @map("updated_at")
 
@@ -1781,6 +1789,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([assignedTo, status])
+  @@index([visitorId])
   @@map("orders")
 }
 
@@ -3355,4 +3364,135 @@ model LinkScanResult {
 
   @@index([scanId])
   @@map("link_scan_results")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 14 (§16 M14) — personalization and experimentation
+// ---------------------------------------------------------------------------
+
+enum ProductAffinityKind {
+  bought_together
+  viewed_together
+}
+
+/// Item-to-item recommendations computed nightly from orders and browsing
+/// (cosine of co-occurrence). Replaced wholesale per kind on each run.
+model ProductAffinity {
+  id               String              @id @default(cuid(2))
+  productId        String              @map("product_id")
+  relatedProductId String              @map("related_product_id")
+  kind             ProductAffinityKind
+  score            Float
+  support          Int
+  computedAt       DateTime            @default(now()) @map("computed_at")
+
+  product        Product @relation("ProductAffinityFrom", fields: [productId], references: [id], onDelete: Cascade)
+  relatedProduct Product @relation("ProductAffinityTo", fields: [relatedProductId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, kind, relatedProductId])
+  @@index([relatedProductId])
+  @@index([kind, computedAt])
+  @@map("product_affinities")
+}
+
+/// Visual search index: a local pixel feature vector per product image plus
+/// optional AI vision tags (§16 M14).
+model ProductVisualFeature {
+  id         String    @id @default(cuid(2))
+  productId  String    @map("product_id")
+  mediaId    String    @map("media_id")
+  version    Int
+  vector     Float[]
+  aiTags     Json?     @map("ai_tags")
+  aiTaggedAt DateTime? @map("ai_tagged_at")
+  error      String?
+  computedAt DateTime  @default(now()) @map("computed_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, mediaId])
+  @@index([mediaId])
+  @@map("product_visual_features")
+}
+
+enum ExperimentKind {
+  block
+  announcement
+  offer
+}
+
+enum ExperimentStatus {
+  draft
+  running
+  paused
+  completed
+}
+
+enum ExperimentGoal {
+  purchase
+  add_to_cart
+  click
+}
+
+/// A/B test (§9.1 block `variants`, §16 M14). `variants` is
+/// `ExperimentVariant[]` (first = control); `target` is kind-specific
+/// (`{pageId, blockId}` / `{announcementId}` / null for offers).
+model Experiment {
+  id             String           @id @default(cuid(2))
+  name           String
+  hypothesis     String?
+  kind           ExperimentKind
+  status         ExperimentStatus @default(draft)
+  goal           ExperimentGoal   @default(purchase)
+  trafficPercent Int              @default(100) @map("traffic_percent")
+  variants       Json
+  target         Json?
+  startedAt      DateTime?        @map("started_at")
+  endedAt        DateTime?        @map("ended_at")
+  winnerKey      String?          @map("winner_key")
+  createdBy      String?          @map("created_by")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  exposures   ExperimentExposure[]
+  conversions ExperimentConversion[]
+
+  @@index([status, kind])
+  @@map("experiments")
+}
+
+/// First time a visitor actually saw an experiment (one row per visitor).
+model ExperimentExposure {
+  id           String   @id @default(cuid(2))
+  experimentId String   @map("experiment_id")
+  visitorId    String   @map("visitor_id")
+  variantKey   String   @map("variant_key")
+  firstSeenAt  DateTime @default(now()) @map("first_seen_at")
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, visitorId])
+  @@index([experimentId, variantKey])
+  @@index([visitorId])
+  @@map("experiment_exposures")
+}
+
+/// A goal reached after exposure. `reference` is the order id for purchases
+/// (so revenue sums every order) and "" otherwise (one row per visitor).
+model ExperimentConversion {
+  id           String         @id @default(cuid(2))
+  experimentId String         @map("experiment_id")
+  visitorId    String         @map("visitor_id")
+  variantKey   String         @map("variant_key")
+  goal         ExperimentGoal
+  reference    String         @default("")
+  value        Int            @default(0)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, visitorId, goal, reference])
+  @@index([experimentId, variantKey, goal])
+  @@map("experiment_conversions")
 }

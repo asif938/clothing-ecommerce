@@ -6,6 +6,7 @@ import { Link } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { useCart } from "../lib/use-cart";
 import { setCartCodes } from "../lib/cart-api";
+import { CartRecommendations } from "./cart-recommendations";
 
 /** Cart page (docs/PROJECT_SPEC.md §7.5) — line items, coupon field, free-delivery progress, totals breakdown. The drawer variant named in the spec isn't built separately; this same component is the one surface, reachable from the header's cart link. */
 export function CartView() {
@@ -146,6 +147,8 @@ export function CartView() {
       <Link href="/checkout" className="mt-6 block rounded-theme bg-brand px-6 py-3 text-center text-sm font-medium text-brand-foreground">
         {locale === "bn" ? "চেকআউট" : "Checkout"}
       </Link>
+
+      <CartRecommendations productIds={pricing.lines.map((line) => line.productId)} locale={locale} />
     </div>
   );
 }

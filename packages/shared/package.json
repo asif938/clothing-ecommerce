@@ -17,7 +17,8 @@
     "./notifications": "./src/notifications/index.ts",
     "./automation": "./src/automation/index.ts",
     "./marketing": "./src/marketing/index.ts",
-    "./ai": "./src/ai/index.ts"
+    "./ai": "./src/ai/index.ts",
+    "./personalization": "./src/personalization/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

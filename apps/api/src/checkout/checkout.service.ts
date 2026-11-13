@@ -96,6 +96,7 @@ export class CheckoutService {
       isFirstOrder,
       channel: "web",
       paymentMethod: dto.paymentMethod,
+      visitorId: requestContext.identity.anonymousId,
     });
     const priceableLines = quote.lines.filter((l) => l.quantity > 0);
     if (priceableLines.length === 0) throw new BadRequestException({ code: "EMPTY_CART", message: "Nothing in your cart is currently available." });
@@ -202,6 +203,8 @@ export class CheckoutService {
           utmContent: dto.utmContent ?? null,
           pointsRedeemed: quote.loyalty?.pointsApplied ?? 0,
           pointsDiscount: quote.loyalty?.discount ?? 0,
+          // §16 M14 — attributes A/B test conversions to the variant this visitor saw.
+          visitorId: requestContext.identity.anonymousId,
           ip: requestContext.ip,
           userAgent: requestContext.userAgent,
           deviceId: dto.deviceId ?? null,

@@ -173,6 +173,11 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "settings.loyalty.write", group: "settings", label: { bn: "লয়্যালটি সেটিংস পরিবর্তন করুন", en: "Edit loyalty settings" } },
   { key: "settings.ai.write", group: "settings", label: { bn: "AI সেটিংস পরিবর্তন করুন", en: "Edit AI settings" } },
   { key: "settings.crm.write", group: "settings", label: { bn: "CRM সেটিংস পরিবর্তন করুন", en: "Edit CRM settings" } },
+  // §16 M14 — personalization and experimentation.
+  { key: "personalization.manage", group: "personalization", label: { bn: "রেকমেন্ডেশন ও ভিজ্যুয়াল সার্চ পরিচালনা করুন", en: "Manage recommendations & visual search" } },
+  { key: "experiments.read", group: "personalization", label: { bn: "A/B টেস্ট ও ফলাফল দেখুন", en: "View A/B tests & results" } },
+  { key: "experiments.manage", group: "personalization", label: { bn: "A/B টেস্ট তৈরি, চালু ও বন্ধ করুন", en: "Create, start & stop A/B tests" } },
+  { key: "settings.personalization.write", group: "settings", label: { bn: "পার্সোনালাইজেশন সেটিংস পরিবর্তন করুন", en: "Edit personalization settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

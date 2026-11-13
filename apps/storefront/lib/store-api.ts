@@ -37,6 +37,8 @@ export interface BlockInstance {
   props: Record<string, unknown>;
   visibility?: { devices?: ("mobile" | "tablet" | "desktop")[]; locales?: string[]; audience?: { mode: "all" | "guest" | "customer"; segmentIds?: string[] } };
   schedule?: { startsAt?: string | null; endsAt?: string | null };
+  /** §9.1 `variants` / §16 M14 — present while the block is under a running A/B test; control first, `props: null` = the block's own. */
+  experiment?: { experimentId: string; variants: { key: string; props: Record<string, unknown> | null }[] };
 }
 
 export interface PageData {
@@ -105,6 +107,8 @@ export interface AnnouncementBar {
   message: { bn?: string; en?: string };
   linkUrl: string | null;
   linkText: { bn?: string; en?: string } | null;
+  /** §16 M14 — present while the bar is under a running A/B test; control first with `payload: null`. */
+  experiment?: { experimentId: string; variants: { key: string; payload: { message: { bn?: string; en?: string }; linkText?: { bn?: string; en?: string } | null; linkUrl?: string | null } | null }[] };
 }
 
 export async function getAnnouncements(): Promise<AnnouncementBar[]> {
@@ -340,6 +344,16 @@ export interface ProductDetail {
 
 export async function getProduct(slug: string): Promise<ProductDetail | null> {
   return await storeGet<ProductDetail>(`/store/catalog/products/${slug}`, [`product:${slug}`, "products"]);
+}
+
+/** §16 M14 — hand-picked relations first, then computed "bought together" and look-alike "similar" products. Not personal, so it's ISR-cached like the PDP. */
+export interface ProductRecommendations {
+  boughtTogether: ProductCard[];
+  similar: ProductCard[];
+}
+
+export async function getProductRecommendations(productId: string): Promise<ProductRecommendations | null> {
+  return await storeGet<ProductRecommendations>(`/store/recommendations/products/${productId}`, ["recommendations", "products"]);
 }
 
 export interface SuggestResult {

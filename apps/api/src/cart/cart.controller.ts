@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { CustomerContextGuard } from "../customer-auth/customer-context.guard";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { CustomersService } from "../customers/customers.service";
+import { ExperimentAssignmentsService } from "../experiments/experiment-assignments.service";
 import { CartService, type CartIdentity } from "./cart.service";
 import { CartPricingService, type CartPricingContext } from "./cart-pricing.service";
 import {
@@ -34,6 +35,7 @@ export class CartController {
     private readonly cart: CartService,
     private readonly pricing: CartPricingService,
     private readonly customers: CustomersService,
+    private readonly experiments: ExperimentAssignmentsService,
   ) {}
 
   private identity(req: Request): CartIdentity {
@@ -49,6 +51,7 @@ export class CartController {
       isFirstOrder: !customer || customer.ordersCount === 0,
       channel: "web",
       paymentMethod: paymentMethod ?? null,
+      visitorId: req.customerContext!.anonymousId,
     };
   }
 
@@ -65,6 +68,8 @@ export class CartController {
   @Post("items")
   async addItem(@Body(new ZodValidationPipe(addItemSchema)) body: AddItemDto, @Req() req: Request) {
     const cart = await this.cart.addItem(this.identity(req), body.variantId, body.quantity);
+    // §16 M14 — "add to cart" goal for A/B tests this visitor has seen.
+    this.experiments.recordGoalQuietly(req.customerContext!.anonymousId, "add_to_cart");
     return await this.respond(req, cart);
   }
 
@@ -72,6 +77,7 @@ export class CartController {
   @Post("bundles/:bundleProductId")
   async addBundle(@Param("bundleProductId") bundleProductId: string, @Req() req: Request) {
     const cart = await this.cart.addBundle(this.identity(req), bundleProductId);
+    this.experiments.recordGoalQuietly(req.customerContext!.anonymousId, "add_to_cart");
     return await this.respond(req, cart);
   }
 

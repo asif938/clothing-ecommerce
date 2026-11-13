@@ -2383,3 +2383,47 @@ Postgres computes it. No migration is needed (the DB column was already generate
 **Context.** Journeys/broadcasts need birthday and per-channel marketing consent; no storefront endpoint could set them.
 
 **Decision.** `GET/PATCH /store/account/profile` (name, email, birthday stored as UTC-midnight date, locale, three consent flags), plus `/store/account/loyalty`. Storefront copy follows the existing inline-bilingual pattern of the account screens.
+
+## 2026-11-13 — M14: recommendations are nightly item-to-item affinities, hand-picked first
+
+**Context.** §16 M14 asks for "for you" and "frequently bought together from order data" on the free-tier stack (no ML service, no Redis).
+
+**Decision.** A nightly pass (after 03:00 Dhaka, once per day) builds `product_affinities` from two kinds of baskets: products in the same order over `recommendations.windowDays` (cancelled/expired/unpaid excluded) and products one browser viewed over `recommendations.viewWindowDays` (first-party `view_item` events; visitors with more than 60 distinct products are skipped as likely crawlers). Pairs are scored by cosine of co-occurrence (not raw counts, so best sellers don't pair with everything; not lift, so tiny counts don't explode), need `recommendations.minSupport` co-occurrences, and are capped at 20 per product. Storefront reads are an indexed lookup plus in-memory ranking: hand-picked `product_relations` always come first (complete-the-look/cross-sell → "bought together", similar → "similar"); "similar" then uses the visual index and finally same-category products with shared title/tag words. "For you" seeds are the browser's recently-viewed ids (sent as plain product ids — nothing personal leaves the browser) plus, when logged in, the last year's purchases; viewed-together counts 0.6 of bought-together; best sellers fill in. With `recommendations.enabled` off only hand-picked relations show. Baskets are per order, not per customer — per-customer baskets would help tiny shops but mix unrelated purchases months apart.
+
+**Alternatives.** Matrix factorisation / an external recommender (rejected: not free-tier, opaque to staff); computing on request (rejected: a self-join over orders per page view).
+
+## 2026-11-13 — M14: "for you" and A/B variants are chosen in the browser so pages stay cached
+
+**Decision.** Same rule as M10 audience-targeted blocks: pages are ISR-cached HTML shared by everyone, so anything per-visitor happens client-side after load. The `for_you` block fetches its products in the browser; an A/B-tested block or announcement bar is server-rendered once per variant inside `ExperimentSwitch`, which shows the visitor's variant. While the assignment loads the control holds its space invisibly for at most 800 ms (no layout shift; a slow network just shows the control). Crawlers and no-JS visitors see the control.
+
+**Alternatives.** Varying the cache by visitor (rejected: defeats ISR on the free tier); edge middleware rewriting (rejected: ties the storefront to a host feature).
+
+## 2026-11-13 — M14: A/B assignment is a hash of the API's anonymous_id cookie
+
+**Decision.** The visitor id is the API's own httpOnly `anonymous_id` cookie (already used for guest carts), never a client-supplied value. `assignVariant` = FNV-1a of (experiment id, visitor id): one salt decides traffic inclusion, another the variant, so raising traffic only adds visitors and nobody changes variant mid-test; lowering traffic of a started test is refused for the same reason. The API recomputes the variant on every call (exposures, offer pricing), so the browser can say which experiments it rendered but never pick a variant. Exposure = first time the browser reports rendering it; goals are credited under the variant recorded at exposure: clicks (links inside the tested element), add-to-cart (cart controller) and purchases (a per-minute set-based sweep joining orders by the new `orders.visitor_id` to exposures, so checkout isn't coupled to experiments). Revenue is tracked for every test as a secondary metric. Logging in on another device is a different visitor — accepted.
+
+## 2026-11-13 — M14: results use a two-proportion z-test with Bonferroni correction
+
+**Decision.** Conversion rate = visitors who reached the goal / exposed visitors. Each challenger is compared with the control by a two-sided two-proportion z-test; with several challengers alpha is divided by their number. No verdict until every variant has `experiments.minVisitorsPerVariant` (default 100) — this is the guard against peeking; the admin also shows the sample size needed to detect a 10% uplift. Confidence level is a setting (default 95%).
+
+**Alternatives.** Bayesian "probability to beat control" (rejected for now: harder to explain to non-technical staff and needs priors); sequential testing (deferred).
+
+## 2026-11-13 — M14: what A/B tests can target, and what is frozen
+
+**Decision.** Three kinds: a block on a *published* page (variants are replacement props validated against the block type's schema, stored on the experiment — the page builder is untouched and the public page payload carries the variants), an announcement bar (per-variant message/link), and an offer (per-variant discount or none). Popups aren't testable: the storefront doesn't render popups yet. One running/paused test per block or bar; a discount can belong to only one offer test. Variants, target and goal freeze at start. "Apply winner" writes a block's props into the page *draft* (staff publish through the normal flow), writes a bar's text, or disables the losing offer discounts.
+
+## 2026-11-13 — M14: offer tests gate discounts in the engine, and pausing doesn't leak them
+
+**Decision.** `DiscountsService.evaluate` asks `ExperimentAssignmentsService.offerGate(visitorId)`: a discount referenced by an offer test applies only to visitors whose variant names it (automatic ones are skipped, codes rejected as "not active"). Paused tests, and every test while `experiments.enabled` is off, keep gating and give everyone the control's offer — otherwise pausing would hand every variant's discount to every shopper at once. Completing a test lifts the gate, which is why the admin defaults "switch off the other variants' discounts" to on and warns about it. Pricing gets the visitor from the cart/checkout request's cookie; an order created without one (admin manual orders) gets the control.
+
+## 2026-11-13 — M14: visual search is a local pixel feature vector, AI vision optional
+
+**Context.** "Image upload → similar products via AI embeddings/vision". Anthropic has no embeddings endpoint, image embeddings differ per vendor, and a vector database isn't free-tier.
+
+**Decision.** Every product's first 3 gallery images get a 100-number vector computed locally with sharp (`computeVisualVector`): a 52-bin colour histogram of the garment — the background is estimated from the image border and ignored — plus a 6×8 silhouette grid; similarity = 70% histogram intersection + 30% silhouette agreement. It costs nothing, works with every provider (including none) and fits in memory (the index is cached 5 minutes). AI is layered on top through the M13 AI framework as a new `visual_tags` feature (its own prompt, budget and provider): the shopper's photo (and optionally each product's main image, once) is read into garment/colours/pattern/keywords, and text agreement gets 40% of the score. Any AI failure — off, no provider, budget exhausted — falls back to pixels only. A sweep indexes 12 images per minute; failed images are retried after a day; `VISUAL_VECTOR_VERSION` forces re-indexing if the vector layout changes. Uploads are sniffed (no SVG/markup), limited to 8 MB, rate-limited per visitor per hour (in-memory, like other free-tier caches) and never stored. The admin can test it while it's still off for shoppers.
+
+**Alternatives.** Vendor image embeddings + pgvector (rejected: not available on every provider and adds an extension requirement; the vector column could be added later behind the same service); AI-only tagging (rejected: costs per search and fails closed).
+
+## 2026-11-13 — M14: "for you" is a block, recommendations are existing PDP/cart sections
+
+**Decision.** "For you" is the `for_you` CMS block (§9.1 phase 2) with optional headings for personalised and fallback (best sellers) states, so staff place it like any other block. The PDP shows "Frequently bought together" and "Similar products" from `/store/recommendations/products/:id` (ISR-cached, not personal) in place of the hand-picked similar/complete-the-look/cross-sell sections, which they already include; upsell relations still show as before. The cart page gets a "Frequently bought together" slot. Storefront copy follows the existing inline-bilingual pattern.

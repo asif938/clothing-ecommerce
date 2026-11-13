@@ -30,6 +30,8 @@ import { customHtmlSchema } from "./blocks/custom-html/schema.ts";
 import { customHtmlDefaults } from "./blocks/custom-html/defaults.ts";
 import { lookbookSchema } from "./blocks/lookbook/schema.ts";
 import { lookbookDefaults } from "./blocks/lookbook/defaults.ts";
+import { forYouSchema } from "./blocks/for-you/schema.ts";
+import { forYouDefaults } from "./blocks/for-you/defaults.ts";
 
 export interface BlockSchemaEntry {
   type: string;
@@ -50,6 +52,7 @@ export const BLOCK_SCHEMAS: Record<string, BlockSchemaEntry> = {
   spacer: { type: "spacer", schema: spacerSchema, defaults: spacerDefaults },
   custom_html: { type: "custom_html", schema: customHtmlSchema, defaults: customHtmlDefaults, superAdminOnly: true },
   lookbook: { type: "lookbook", schema: lookbookSchema, defaults: lookbookDefaults },
+  for_you: { type: "for_you", schema: forYouSchema, defaults: forYouDefaults },
 };
 
 export interface BlockInstanceLike {

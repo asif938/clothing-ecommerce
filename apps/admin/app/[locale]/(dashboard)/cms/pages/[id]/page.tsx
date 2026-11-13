@@ -17,6 +17,7 @@ const BLOCK_TYPES = [
   "faq_accordion",
   "newsletter_signup",
   "spacer",
+  "for_you",
   "custom_html",
 ] as const;
 

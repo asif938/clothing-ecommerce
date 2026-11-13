@@ -4,6 +4,7 @@ import { Prisma, type Discount, type DiscountValueType } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { SettingsService } from "../settings/settings.service";
+import { ExperimentAssignmentsService } from "../experiments/experiment-assignments.service";
 import type { AuthenticatedStaff } from "../common/types";
 import {
   allocateProportionally,
@@ -61,6 +62,7 @@ export class DiscountsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
+    private readonly experiments: ExperimentAssignmentsService,
   ) {}
 
   list() {
@@ -126,14 +128,25 @@ export class DiscountsService {
   }
 
   /** §6.3 steps 3-4-5 — automatic discounts, then entered codes, then the margin guard. Lines must carry `unitPrice`/`costPrice` for the guard to run. */
-  async evaluate(lines: CartLineForPricing[], context: DiscountContext, enteredCodes: string[], customerId: string | null, phone: string | null): Promise<EvaluateResult> {
+  async evaluate(
+    lines: CartLineForPricing[],
+    context: DiscountContext,
+    enteredCodes: string[],
+    customerId: string | null,
+    phone: string | null,
+    visitorId: string | null = null,
+  ): Promise<EvaluateResult> {
     const now = new Date();
     const applied: AppliedDiscount[] = [];
     const rejectedCodes: RejectedCode[] = [];
+    // §16 M14 offer A/B tests: a discount owned by a running offer experiment only applies to visitors in its variant.
+    const offerGate = await this.experiments.offerGate(visitorId);
+    const blockedByExperiment = (discountId: string) => offerGate.gated.has(discountId) && !offerGate.allowed.has(discountId);
 
     const automaticCandidates = await this.prisma.discount.findMany({ where: { type: "automatic" }, orderBy: { priority: "desc" } });
     for (const discount of automaticCandidates) {
       if (!this.isWithinSchedule(discount, now)) continue;
+      if (blockedByExperiment(discount.id)) continue;
       const conditions = (discount.conditions as DiscountConditions | null) ?? {};
       if (!conditionsMatchCart(conditions, context)) continue;
       if (!(await this.withinLimits(discount, customerId, phone))) continue;
@@ -176,7 +189,7 @@ export class DiscountsService {
         rejectedCodes.push({ code, reasonCode: "NOT_YOURS", message: customerId ? "This code belongs to another customer." : "Log in to use this personal code." });
         continue;
       }
-      if (!this.isWithinSchedule(discount, now)) {
+      if (!this.isWithinSchedule(discount, now) || blockedByExperiment(discount.id)) {
         rejectedCodes.push({ code, reasonCode: "NOT_ACTIVE", message: "This code is not currently active." });
         continue;
       }

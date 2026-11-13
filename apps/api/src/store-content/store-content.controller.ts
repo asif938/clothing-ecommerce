@@ -6,6 +6,7 @@ import { MenusService } from "../cms/menus.service";
 import { PagesService } from "../cms/pages.service";
 import { PopupsService } from "../cms/popups.service";
 import { RedirectsService } from "../cms/redirects.service";
+import { ExperimentAssignmentsService } from "../experiments/experiment-assignments.service";
 
 /** Public CMS reads (docs/PROJECT_SPEC.md §9, §7.2) — the storefront's own data source for pages, menus, announcement bars, popups and redirects. */
 @ApiTags("store")
@@ -18,13 +19,21 @@ export class StoreContentController {
     private readonly announcements: AnnouncementsService,
     private readonly popups: PopupsService,
     private readonly redirects: RedirectsService,
+    private readonly experiments: ExperimentAssignmentsService,
   ) {}
 
   @Get("pages/:slug")
   async getPage(@Param("slug") slug: string) {
     const page = await this.pages.getPublishedBySlug(slug);
     if (!page) throw new NotFoundException("Page not found");
-    return page;
+    // §9.1 `variants` / §16 M14 — a block under a running A/B test carries every variant so each can be server-rendered; the browser shows the visitor's one.
+    const attachments = await this.experiments.blockExperimentsForPage(page.id);
+    if (attachments.size === 0 || !Array.isArray(page.blocksPublished)) return page;
+    const blocks = (page.blocksPublished as { id?: string }[]).map((block) => {
+      const experiment = block.id ? attachments.get(block.id) : undefined;
+      return experiment ? { ...block, experiment } : block;
+    });
+    return { ...page, blocksPublished: blocks };
   }
 
   @Get("menus/:key")
@@ -35,8 +44,12 @@ export class StoreContentController {
   }
 
   @Get("announcements")
-  listAnnouncements() {
-    return this.announcements.listActiveNow();
+  async listAnnouncements() {
+    const [bars, attachments] = await Promise.all([this.announcements.listActiveNow(), this.experiments.announcementExperiments()]);
+    return bars.map((bar) => {
+      const experiment = attachments.get(bar.id);
+      return experiment ? { ...bar, experiment } : bar;
+    });
   }
 
   @Get("popups")

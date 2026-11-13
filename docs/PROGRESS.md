@@ -4,25 +4,26 @@ Updated after every milestone. See `docs/PROJECT_SPEC.md` §16 for the full
 milestone plan and acceptance criteria, and `docs/DECISIONS.md` for the
 reasoning behind choices made along the way.
 
-## Current status (2026-11-12)
+## Current status (2026-11-13)
 
 | Phase (§16) | Milestones | State |
 | --- | --- | --- |
 | Phase 1 — MVP | M0–M9 | Complete |
 | Phase 2 — Growth and operations automation | M10–M13 | Complete |
-| Phase 3 — Advanced and intelligence | M14–M17 | Not started — **M14 is next** |
+| Phase 3 — Advanced and intelligence | M14–M17 | M14 complete — **M15 is next** |
 
-- Latest milestone commit: `f8386d9` (M13). The repository has no git
+- Latest milestone: M14 (personalization and experimentation). The repository has no git
   remote, so milestone commits are local only.
-- Unit tests: `packages/shared` 194, `apps/api` 503 — all passing.
-- Database: migrations up to `20261113090000_crm_marketing_ai` (M13) are
-  committed, but the configured dev database is still at M11; run
-  `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
-  using M12/M13 features.
+- Unit tests: `packages/shared` 217, `packages/blocks` 13, `apps/api` 533,
+  `apps/storefront` 10 — all passing.
+- Database: migrations up to `20261114090000_personalization_experiments`
+  (M14) are committed, but the configured dev database is still at M11;
+  run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
+  using M12–M14 features.
 - Cross-cutting caveat: no milestone has been clicked through in a
   browser or run against live third-party providers here — each section's
   "Not verified" list says what remains.
-- Remaining plan: M14 personalization and experimentation, M15 support
+- Remaining plan: M15 support
   inbox and AI assistant, M16 loyalty extensions (referrals, gift cards,
   store credit, affiliates), M17 advanced analytics and procurement.
 
@@ -2322,8 +2323,122 @@ link checker.
 
 ---
 
+## Milestone 14 — Personalization and experimentation
+
+Status: complete (§16 M14) at the code/test level, with the same caveat as
+every prior milestone: nothing was run against a real database or in a
+browser here — see "Not verified in this environment". Scope per §16:
+personalized recommendations ("for you", frequently bought together from
+order data), visual search (image upload → similar products via AI
+embeddings/vision), A/B testing framework for blocks/banners/offers.
+
+### Built
+
+- **`packages/db`**: migration `20261114090000_personalization_experiments`
+  (generated with `prisma migrate diff` against the committed schema —
+  purely additive): `product_affinities`, `product_visual_features`,
+  `experiments`, `experiment_exposures`, `experiment_conversions`, and
+  `orders.visitor_id`.
+- **`packages/shared`**: 4 permissions (`personalization.manage`,
+  `experiments.read`, `experiments.manage`,
+  `settings.personalization.write`); 13 settings in
+  `settings/definitions-m14.ts` (recommendations, visual search, A/B
+  tests); new `@clothing/shared/personalization` — co-occurrence scoring,
+  "for you" ranking, cart aggregation, deterministic variant assignment,
+  z-test/Bonferroni/sample-size maths, variant validation, and the local
+  image feature vector + similarity; AI feature `visual_tags` (product
+  drafts are restricted to the four draft features).
+- **`packages/blocks`**: `for_you` block (client-side, like
+  `AudienceGate`), registered in the page builder.
+- **`apps/api`** — new modules:
+  - `PersonalizationModule`: nightly affinity computation (orders →
+    bought together, `view_item` events → viewed together), product /
+    cart / "for you" endpoints (hand-picked relations first), visual
+    search index sweep (sharp → feature vector, optional AI tags within
+    budget), photo search (sniffed, size- and rate-limited, never stored),
+    look-alike "similar", admin stats / recompute / preview / reindex /
+    test upload.
+  - `ExperimentsModule` + `ExperimentsCoreModule`: A/B tests for page
+    blocks, announcement bars and offers — CRUD with per-kind validation
+    (block props against the block schema), start/pause/resume/complete,
+    conflict checks, results with significance, "apply winner" (page
+    draft / bar text / disable losing discounts), storefront assignments,
+    exposures and click goals; add-to-cart goal from the cart; purchase
+    conversions by a per-minute set-based sweep over `orders.visitor_id`.
+  - The discount engine gates discounts owned by offer tests to their
+    variant (paused tests keep the gate); store pages and announcement bars
+    carry running variants; checkout stores the visitor id; `AiService`
+    accepts system calls (no staff actor).
+- **`apps/admin`**: *Personalization* page (recommendation coverage,
+  recompute, per-product preview with scores, visual index status,
+  rebuild, test a photo), *A/B tests* list and editor/results page (kind,
+  target, variants with weights and per-kind payload editors, goal,
+  traffic, lifecycle actions, results table, end test + apply winner),
+  `for_you` in the page builder. All strings bn + en (validated as ICU
+  messages).
+- **`apps/storefront`**: "Frequently bought together" and "Similar
+  products" on the PDP (merged with hand-picked relations), "Frequently
+  bought together" in the cart, `/search/photo` with a camera shortcut in
+  the header (only when enabled), `ExperimentSwitch` for tested blocks and
+  bars (anti-flicker, click goals, batched exposures), offer message strip.
+- Docs: decisions (2026-11-13 M14 entries), admin guide entries.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `packages/blocks`,
+  `apps/api` (source and tests), `apps/storefront`, and `apps/admin`
+  source (only the stale `.next/types/validator.ts` errors from the
+  pending login fix remain). ESLint clean on every touched file.
+- Unit tests: `packages/shared` 217 (was 194), `packages/blocks` 13 (was
+  12), `apps/api` 533 (was 503), `apps/storefront` 10 — all passing. The
+  API specs include a real-image visual search test (sharp-generated
+  photos: the matching garment ranks first) and the discount engine
+  applying an offer test's discount only to its variant.
+- Writing the tests caught a real bug: the tag tokenizer split Bangla words
+  at vowel signs (combining marks), so Bangla tags never matched — fixed.
+- **Booted the real API** with an unreachable database: the DI graph
+  resolves, all 23 new routes map, validation returns 400, and DB-backed
+  routes fail with the database error like existing ones.
+- `prisma validate` passes; the migration SQL was reviewed (only CREATE /
+  ADD COLUMN / indexes / foreign keys).
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database.** The dev database
+  is still at M11 (M12–M14 pending): `pnpm db:generate`,
+  `pnpm db:migrate:deploy`, `pnpm db:seed` (grants the new permissions to
+  Super Admin).
+- Nothing was clicked through in a browser: the new admin pages, the
+  storefront sections, photo search, variant switching and flicker.
+- The raw SQL (affinity baskets, visual index queue, purchase-conversion
+  sweep with `gen_random_uuid()` — Postgres 13+) has only been
+  typechecked, not executed.
+- Visual search quality on real catalog photos (models, busy backgrounds)
+  is untested; the pixel features were checked on synthetic images only.
+  AI vision tags were exercised with the mock driver contract only.
+
+### Known issues / explicitly deferred
+
+- Popups can't be A/B tested — the storefront doesn't render popups yet.
+- Variant choice happens client-side: a slow network shows the control
+  for up to 800 ms, and crawlers/no-JS visitors always see the control.
+- A visitor is one `anonymous_id` cookie: another device or a cleared
+  cookie is a new visitor (and could see another offer variant).
+- Recommendations don't check stock; out-of-stock products can appear.
+- Recently viewed is still browser-only (M4), so "for you" on a new device
+  starts from purchases only.
+- Visual index and "for you" snapshot load all active products into
+  memory (cached 5 min) — fine for the target catalog size, revisit for
+  very large catalogs (a pgvector column could sit behind the same
+  service).
+- No sequential/Bayesian testing; the minimum-visitors rule is the only
+  guard against stopping early.
+
+---
+
 ### Next up
 
-Phase 3 (§16): **M14 — Personalization and experimentation**
-(personalized recommendations, visual search, A/B testing for
-blocks/banners/offers).
+Phase 3 (§16) continues: **M15 — Support** (unified inbox for WhatsApp
+Cloud, Messenger, Instagram and live chat, create order from chat, tickets
+with SLA, canned replies, AI reply suggestions, AI chat assistant with tool
+calls and human handoff, click-to-call telephony).

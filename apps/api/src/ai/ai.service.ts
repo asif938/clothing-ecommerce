@@ -46,7 +46,8 @@ export interface GenerateRequest<F extends AiFeature> {
   feature: F;
   variables: Record<string, string>;
   images?: AiImageInput[];
-  actor: AuthenticatedStaff;
+  /** null for system/storefront calls (e.g. visual search, §16 M14). */
+  actor: AuthenticatedStaff | null;
   entity?: { type: string; id: string };
 }
 
@@ -317,7 +318,7 @@ export class AiService {
         latencyMs,
         status,
         error: error?.slice(0, 1000) ?? null,
-        actorId: request.actor.id,
+        actorId: request.actor?.id ?? null,
         entityType: request.entity?.type ?? null,
         entityId: request.entity?.id ?? null,
       },

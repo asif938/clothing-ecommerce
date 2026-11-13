@@ -38,4 +38,11 @@ describe("validateBlocks", () => {
     expect(valid).toHaveLength(1);
     expect(errors).toHaveLength(1);
   });
+
+  it("accepts an empty for_you block (all defaults) and rejects an out-of-range limit", () => {
+    const ok = validateBlocks([{ id: "b1", type: "for_you", props: {} }], false);
+    expect(ok.errors).toEqual([]);
+    expect(ok.valid[0]!.props).toEqual({ limit: 8 });
+    expect(validateBlocks([{ id: "b2", type: "for_you", props: { limit: 100 } }], false).errors).toHaveLength(1);
+  });
 });

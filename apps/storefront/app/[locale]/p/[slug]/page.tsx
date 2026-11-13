@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProductDetailView } from "../../../../components/product-detail-view";
-import { getProduct, getStoreConfig } from "../../../../lib/store-api";
+import { getProduct, getProductRecommendations, getStoreConfig } from "../../../../lib/store-api";
 
 function localized(value: { bn?: string; en?: string } | null, locale: string): string | undefined {
   if (!value) return undefined;
@@ -62,6 +62,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug, locale } = await params;
   const [product, config] = await Promise.all([getProduct(slug), getStoreConfig()]);
   if (!product) notFound();
+  const recommendations = await getProductRecommendations(product.id);
 
   const whatsappEnabled = config["chat.whatsappEnabled"] === true;
   const whatsappNumber = whatsappEnabled && typeof config["chat.whatsappNumber"] === "string" ? (config["chat.whatsappNumber"] as string) : null;
@@ -71,7 +72,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       {buildStructuredData(product, locale).map((data, index) => (
         <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
       ))}
-      <ProductDetailView product={product} locale={locale} whatsappNumber={whatsappNumber} />
+      <ProductDetailView product={product} locale={locale} whatsappNumber={whatsappNumber} recommendations={recommendations} />
     </>
   );
 }

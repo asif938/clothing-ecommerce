@@ -53,6 +53,8 @@ const NAV_ITEMS = [
   { href: "/search", labelKey: "navSearch" },
   { href: "/seo", labelKey: "navSeo" },
   { href: "/ai", labelKey: "navAi" },
+  { href: "/personalization", labelKey: "navPersonalization" },
+  { href: "/experiments", labelKey: "navExperiments" },
   { href: "/settings", labelKey: "navSettings" },
   { href: "/staff", labelKey: "navStaff" },
   { href: "/staff/field-access", labelKey: "navFieldAccess" },

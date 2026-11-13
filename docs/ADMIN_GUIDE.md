@@ -809,3 +809,89 @@ Settings → seo).
 noindex দিয়ে স্কোর করে। *এখনই স্ক্যান* পেজ, ব্লগ, মেনু, ব্যানার, পপআপ, পণ্য/ক্যাটাগরির
 বিবরণ ও রিডাইরেক্টের প্রতিটি লিংক যাচাই করে এবং যেগুলো না-থাকা, লুকানো বা অপ্রকাশিত
 কনটেন্টে যায় তা দেখায় (সেটিংস → seo-তে চালু থাকলে বাইরের সাইটও)।
+
+## Recommendations (`personalization.manage`, Settings → personalization)
+
+**EN** — Product pages show *Frequently bought together* and *Similar
+products*, the cart shows *Frequently bought together*, and the *For you*
+page block (add it in the page builder) shows each shopper picks based on
+what they viewed and bought. Related products you pick by hand on a product
+always come first; the rest is computed every night after 03:00 from orders
+("bought together") and browsing ("viewed together"). On *Personalization*
+you see how many products have data, can *Recompute now*, and can preview
+what any product page will show with the scores behind it. Settings →
+personalization: switch it off (only hand-picked products show), the history
+windows, the minimum times a pair must appear (raise it as orders grow), and
+whether *For you* hides products the shopper already bought.
+
+**BN** — পণ্যের পেজে *একসাথে প্রায়ই কেনা হয়* ও *একই রকম পণ্য*, কার্টে *একসাথে
+প্রায়ই কেনা হয়*, আর *আপনার জন্য* পেজ ব্লক (পেজ বিল্ডারে যোগ করুন) প্রতিটি ক্রেতার
+দেখা ও কেনা অনুযায়ী পণ্য দেখায়। পণ্যে হাতে বাছাই করা রিলেটেড প্রোডাক্ট সবসময় আগে
+থাকে; বাকিটা প্রতি রাতে ০৩:০০-র পর অর্ডার ("একসাথে কেনা") ও ব্রাউজিং ("একসাথে
+দেখা") থেকে হিসাব হয়। *পার্সোনালাইজেশন* পেজে কতগুলো পণ্যের ডেটা আছে দেখুন, *এখনই
+আবার হিসাব করুন*, এবং যেকোনো পণ্যের পেজে কী দেখাবে তা স্কোরসহ প্রিভিউ করুন। সেটিংস →
+personalization: বন্ধ করুন (শুধু হাতে বাছাই করা পণ্য দেখাবে), ইতিহাসের সময়সীমা, একটি
+জোড়া কমপক্ষে কতবার আসতে হবে (অর্ডার বাড়লে বাড়ান), এবং *আপনার জন্য*-তে আগে কেনা
+পণ্য লুকানো হবে কিনা।
+
+## Search by photo (`personalization.manage`, Settings → personalization)
+
+**EN** — Shoppers tap the camera icon next to search, take or choose a
+photo, and see the products that look most like it. The first 3 photos of
+every active product are indexed in the background by colour and shape (no
+AI cost, works with any setup); the photo a shopper uploads is never saved.
+Optionally turn on *Use AI vision* (needs Settings → ai and a provider) so
+the garment type, colours and pattern are read too — each search then spends
+AI budget (the *Visual search tags* feature on the *AI* page has its own
+budget); *Also AI-tag catalog images* tags each product's main photo once.
+If AI is unavailable or over budget, search still works on colour and shape.
+On *Personalization* check how much is indexed, try a photo before turning it
+on for shoppers, or rebuild the index. Shoppers are limited to a number of
+photo searches per hour (setting).
+
+**BN** — ক্রেতা সার্চের পাশের ক্যামেরা আইকনে চাপ দিয়ে ছবি তোলেন বা বেছে নেন, এবং
+সবচেয়ে মিল আছে এমন পণ্য দেখেন। প্রতিটি সক্রিয় পণ্যের প্রথম ৩টি ছবি রং ও আকার দিয়ে
+ব্যাকগ্রাউন্ডে ইনডেক্স হয় (AI খরচ নেই, যেকোনো সেটআপে চলে); ক্রেতার আপলোড করা ছবি
+কখনো সংরক্ষণ হয় না। চাইলে *AI ভিশন ব্যবহার* চালু করুন (সেটিংস → ai ও একটি
+প্রোভাইডার লাগবে) যাতে পোশাকের ধরন, রং ও প্যাটার্নও পড়া হয় — তখন প্রতিটি খোঁজে AI
+বাজেট খরচ হয় (*AI* পেজে *ভিজ্যুয়াল সার্চ ট্যাগ* ফিচারের নিজস্ব বাজেট আছে); *ক্যাটালগের
+ছবিতেও AI ট্যাগ* প্রতিটি পণ্যের প্রধান ছবি একবার ট্যাগ করে। AI না থাকলে বা বাজেট শেষ
+হলেও রং ও আকার দিয়ে খোঁজা চলে। *পার্সোনালাইজেশন* পেজে কতটা ইনডেক্স হয়েছে দেখুন,
+ক্রেতাদের জন্য চালুর আগে একটি ছবি দিয়ে পরীক্ষা করুন, বা ইনডেক্স নতুন করে তৈরি করুন।
+প্রতি ঘণ্টায় ক্রেতা কতবার ছবি দিয়ে খুঁজতে পারবেন তা সেটিংসে ঠিক করা যায়।
+
+## A/B tests (`experiments.read`, `experiments.manage`, Settings → personalization)
+
+**EN** — *A/B tests* → *New test*. Choose what to test: a **page block**
+(pick a published page and one of its blocks, then change the settings JSON
+of each variant — it starts as a copy of the current block), an
+**announcement bar** (a different message/link per variant) or an **offer**
+(each variant gets a different discount, or none; a discount used in a
+running test only applies to visitors of its own variant). Pick the goal
+(order, add to cart, or clicking a link inside), how many visitors take part
+and each variant's share, then *Start test*. Each visitor keeps the same
+variant. *Results* shows visitors, conversions, the rate versus the control,
+the p-value, orders and revenue per visitor; a winner is only called once
+every variant has the minimum number of visitors and the difference is
+significant at the confidence level in Settings → personalization (both
+editable). Once started, what's tested can't change — only the name and a
+higher traffic share. *Pause* shows everyone the control (offer discounts
+stay limited to the control). *End test* can apply the winner: a block's
+winning settings go into the page draft for you to publish, a bar gets the
+winning text, an offer test switches off the losing discounts. Switching A/B
+testing off in Settings shows everyone the control.
+
+**BN** — *A/B টেস্ট* → *নতুন টেস্ট*। কী পরীক্ষা করবেন বাছুন: **পেজের ব্লক** (একটি
+প্রকাশিত পেজ ও এর একটি ব্লক বাছুন, তারপর প্রতিটি সংস্করণের সেটিংস JSON বদলান — শুরুতে
+বর্তমান ব্লকের কপি থাকে), **ঘোষণা বার** (প্রতিটি সংস্করণে আলাদা বার্তা/লিংক) বা
+**অফার** (প্রতিটি সংস্করণে আলাদা ডিসকাউন্ট, বা কোনোটিই না; চলমান টেস্টের ডিসকাউন্ট শুধু
+নিজের সংস্করণের ভিজিটরদের জন্য কাজ করে)। লক্ষ্য (অর্ডার, কার্টে যোগ, বা ভেতরের লিংকে
+ক্লিক), কত ভিজিটর অংশ নেবেন ও প্রতিটি সংস্করণের ভাগ ঠিক করে *টেস্ট শুরু করুন*। প্রতিটি
+ভিজিটর সবসময় একই সংস্করণ দেখেন। *ফলাফল*-এ ভিজিটর, কনভার্শন, কন্ট্রোলের তুলনায় হার,
+p-value, অর্ডার ও প্রতি ভিজিটরে আয় দেখায়; প্রতিটি সংস্করণে ন্যূনতম ভিজিটর হলে এবং
+সেটিংস → personalization-এর আস্থা স্তরে পার্থক্য উল্লেখযোগ্য হলেই বিজয়ী ঘোষণা হয় (দুটোই
+বদলানো যায়)। শুরুর পর কী পরীক্ষা হচ্ছে তা বদলানো যায় না — শুধু নাম ও বেশি ট্রাফিক।
+*বিরতি* দিলে সবাই কন্ট্রোল দেখেন (অফারের ডিসকাউন্ট কন্ট্রোলেই সীমিত থাকে)। *টেস্ট শেষ*
+করার সময় বিজয়ী প্রয়োগ করা যায়: ব্লকের বিজয়ী সেটিংস পেজের ড্রাফটে যায় (আপনি প্রকাশ
+করবেন), বারে বিজয়ী লেখা বসে, অফার টেস্টে হেরে যাওয়া ডিসকাউন্ট বন্ধ হয়। সেটিংসে A/B
+টেস্ট বন্ধ করলে সবাই কন্ট্রোল দেখেন।

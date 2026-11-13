@@ -55,6 +55,8 @@ export interface CartPricingContext {
   isFirstOrder: boolean;
   channel: string;
   paymentMethod: string | null;
+  /** §16 M14 — the shopper's `anonymous_id`; gates discounts that belong to a running offer A/B test. */
+  visitorId?: string | null;
 }
 
 /** §6.3 step 9 — loyalty points on this cart (only for a logged-in customer while the program is enabled). */
@@ -231,6 +233,7 @@ export class CartPricingService {
       cart.couponCodes,
       context.customerId,
       context.phone,
+      context.visitorId ?? null,
     );
     const subtotalAfterDiscounts = Math.max(0, subtotal - discountResult.totalDiscount);
 

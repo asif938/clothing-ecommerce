@@ -84,4 +84,11 @@ export type {
   AdPlatform,
   AiDraftStatus,
   LinkScanStatus,
+  ProductAffinity,
+  ProductAffinityKind,
+  ProductVisualFeature,
+  Experiment,
+  ExperimentKind,
+  ExperimentStatus,
+  ExperimentGoal,
 } from "@prisma/client";

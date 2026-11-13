@@ -14,8 +14,12 @@ import type { LocalizedText } from "../i18n/localized-text.ts";
  * milestone lands (M14/M15).
  */
 
-export const AI_FEATURES = ["product_description", "seo_meta", "alt_text", "translation"] as const;
+export const AI_FEATURES = ["product_description", "seo_meta", "alt_text", "translation", "visual_tags"] as const;
 export type AiFeature = (typeof AI_FEATURES)[number];
+
+/** Features that produce a reviewable product draft (the rest feed other systems, e.g. `visual_tags` → visual search, §16 M14). */
+export const AI_DRAFT_FEATURES = ["product_description", "seo_meta", "alt_text", "translation"] as const satisfies readonly AiFeature[];
+export type AiDraftFeature = (typeof AI_DRAFT_FEATURES)[number];
 
 const localizedOut = z.object({ bn: z.string().trim().min(1).max(5000), en: z.string().trim().min(1).max(5000) });
 
@@ -24,6 +28,13 @@ export const AI_OUTPUT_SCHEMAS = {
   seo_meta: z.object({ seoTitle: localizedOut, seoDescription: localizedOut }),
   alt_text: z.object({ alt: localizedOut }),
   translation: z.object({ fields: z.record(z.string(), z.string().max(10_000)) }),
+  visual_tags: z.object({
+    garment: z.string().trim().max(80),
+    colors: z.array(z.string().trim().max(40)).max(8),
+    pattern: z.string().trim().max(60).optional(),
+    style: z.array(z.string().trim().max(40)).max(8).optional(),
+    keywords: z.array(z.string().trim().max(40)).max(16),
+  }),
 } satisfies Record<AiFeature, z.ZodType>;
 
 export type AiOutput<F extends AiFeature> = z.infer<(typeof AI_OUTPUT_SCHEMAS)[F]>;
@@ -89,6 +100,23 @@ export const AI_FEATURE_DEFINITIONS: Record<AiFeature, AiFeatureDefinition> = {
     defaultPrompt:
       "Translate each field of this clothing store's content from {source_language} to {target_language}. Keep HTML tags, product names, sizes and numbers unchanged. Use natural, everyday {target_language} that a shopper in Bangladesh would write, not a literal translation.\n\nFields (JSON): {fields_json}",
     outputContract: 'Respond with only a JSON object with the same keys, no markdown fences:\n<example>{"fields":{"title":"…","description":"…"}}</example>',
+  },
+  visual_tags: {
+    key: "visual_tags",
+    label: { bn: "ভিজ্যুয়াল সার্চ ট্যাগ", en: "Visual search tags" },
+    help: {
+      bn: "ছবি দেখে পোশাকের ধরন, রং ও প্যাটার্ন — ছবি দিয়ে খোঁজায় ব্যবহার হয়",
+      en: "Garment type, colours and pattern read from a photo — used by visual search",
+    },
+    variables: ["brand_name"],
+    usesImages: true,
+    defaultPrompt:
+      "You help a Bangladeshi clothing store ({brand_name}) find products that look like a shopper's photo. Look at the main garment in the image " +
+      "(ignore background, people's faces and accessories unless the accessory is the main item). Name the garment type the way a Bangladeshi shop would " +
+      "(e.g. panjabi, saree, kurti, three-piece, salwar kameez, t-shirt, polo shirt, shirt, jeans, hoodie), its main colours in plain English words, " +
+      "its pattern (solid, striped, checked, floral, printed, embroidered…), a few style words, and up to 16 short English search keywords.",
+    outputContract:
+      'Respond with only a JSON object, no markdown fences:\n<example>{"garment":"panjabi","colors":["navy","white"],"pattern":"embroidered","style":["festive","straight cut"],"keywords":["panjabi","navy","embroidered","cotton","eid"]}</example>',
   },
 };
 

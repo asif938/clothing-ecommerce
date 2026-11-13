@@ -27,10 +27,12 @@ interface HeaderProps {
   headerVariant: "centered" | "left" | "mega" | "minimal";
   menu: MenuData | null;
   locale: string;
+  /** §16 M14 — shows the "search by photo" shortcut when `visualSearch.enabled`. */
+  visualSearch?: boolean;
 }
 
 /** Layout variant selected in admin (docs/PROJECT_SPEC.md §4.4.3) — same nav data, different arrangement. */
-export function Header({ brandName, logoUrl, headerVariant, menu, locale }: HeaderProps) {
+export function Header({ brandName, logoUrl, headerVariant, menu, locale, visualSearch = false }: HeaderProps) {
   const logo = (
     <Link href="/" className="text-lg font-semibold text-surface-foreground">
       {logoUrl ? (
@@ -69,6 +71,19 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale }: Head
         {nav}
         <div className="flex items-center gap-4">
           <SearchBox locale={locale} />
+          {visualSearch && (
+            <Link
+              href="/search/photo"
+              className="flex h-9 w-9 items-center justify-center rounded-theme border border-border text-surface-foreground"
+              aria-label={locale === "bn" ? "ছবি দিয়ে খুঁজুন" : "Search by photo"}
+              title={locale === "bn" ? "ছবি দিয়ে খুঁজুন" : "Search by photo"}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+            </Link>
+          )}
           <CartLink locale={locale} />
         </div>
       </div>

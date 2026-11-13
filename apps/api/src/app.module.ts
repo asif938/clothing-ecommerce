@@ -76,6 +76,8 @@ import { CrmModule } from "./crm/crm.module";
 import { MarketingModule } from "./marketing/marketing.module";
 import { AiModule } from "./ai/ai.module";
 import { SeoAuditModule } from "./seo-audit/seo-audit.module";
+import { ExperimentsModule } from "./experiments/experiments.module";
+import { PersonalizationModule } from "./personalization/personalization.module";
 
 @Module({
   imports: [
@@ -182,6 +184,9 @@ import { SeoAuditModule } from "./seo-audit/seo-audit.module";
     MarketingModule,
     AiModule,
     SeoAuditModule,
+    // §16 M14 — personalization and experimentation.
+    PersonalizationModule,
+    ExperimentsModule,
     AutomationModule,
     // Milestone 12 (§16 M12): inventory and finance.
     ProcurementModule,
