@@ -7,6 +7,7 @@ import { Link } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
 import { CustomerLoyaltyCard } from "../../../../../components/customer-loyalty-card";
+import { CustomerStoreCreditCard } from "../../../../../components/customer-store-credit-card";
 
 interface CustomerProfile {
   customer: {
@@ -188,6 +189,7 @@ export default function CustomerProfilePage() {
         </Card>
       </div>
       <CustomerLoyaltyCard customerId={id} />
+      <CustomerStoreCreditCard customerId={id} />
     </div>
   );
 }

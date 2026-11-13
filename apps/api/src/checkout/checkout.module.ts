@@ -19,6 +19,9 @@ import { StockReservationModule } from "./stock-reservation.module";
 import { OrdersLifecycleModule } from "./orders-lifecycle.module";
 import { OrderNumberModule } from "./order-number.module";
 import { LoyaltyModule } from "../loyalty/loyalty.module";
+import { ReferralsModule } from "../referrals/referrals.module";
+import { AffiliatesModule } from "../affiliates/affiliates.module";
+import { RewardsCoreModule } from "../rewards-core/rewards-core.module";
 import { OrderExpiryService } from "./order-expiry.service";
 import { OrdersService } from "./orders.service";
 import { OrdersController } from "./orders.controller";
@@ -27,6 +30,9 @@ import { OrdersController } from "./orders.controller";
   imports: [
     CartModule,
     LoyaltyModule,
+    ReferralsModule,
+    AffiliatesModule,
+    RewardsCoreModule,
     DiscountsModule,
     RiskModule,
     BlocklistModule,

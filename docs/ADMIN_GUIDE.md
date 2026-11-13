@@ -1005,3 +1005,122 @@ PBX/কল-সেন্টার সার্ভিস দিয়ে কল �
 webhook URL আপনার API-তে `/api/v1/webhooks/telephony/<provider id>`), তারপর *কল*
 পেজে *আমার ফোন নম্বর* দিন: সার্ভিস আগে আপনাকে রিং দেয়, তারপর গ্রাহককে যুক্ত করে,
 আর তালিকায় অবস্থা, সময় ও রেকর্ডিং আসে।
+
+## Store credit wallet (`customers.manage`, `store_credit.manage`, Settings → rewards)
+
+**EN** — Store credit is money a customer holds with you. It is added
+automatically when a return is resolved as store credit, when you complete a
+refund whose method is *store credit*, when a customer moves a gift card into
+their wallet, and as a referral reward; you can also add or deduct it by hand
+on the customer's profile (with a reason, audited). Turn on *Store credit
+wallet* in Settings → rewards to let customers pay with it: logged-in
+shoppers then tick "Use store credit" at checkout, and see their balance and
+history under *Store credit & gift cards* in their account. Store credit pays
+for the whole order, delivery included. If the order is cancelled or expires
+unpaid, the credit goes straight back to the wallet — no refund to process.
+Marketing → *Store credit* shows how much you owe customers in total and the
+latest movements.
+
+**BN** — স্টোর ক্রেডিট হলো গ্রাহকের কাছে আপনার জমা টাকা। রিটার্ন "স্টোর ক্রেডিট"
+হিসেবে সম্পন্ন হলে, *স্টোর ক্রেডিট* পদ্ধতির রিফান্ড সম্পন্ন করলে, গ্রাহক গিফট কার্ড
+ওয়ালেটে যোগ করলে এবং রেফারেল পুরস্কারে এটি নিজে থেকে যোগ হয়; গ্রাহকের প্রোফাইল
+থেকে কারণসহ হাতেও যোগ/বিয়োগ করা যায় (অডিট হয়)। গ্রাহক যেন এটি দিয়ে পরিশোধ করতে
+পারেন, সেটিংস → rewards-এ *স্টোর ক্রেডিট ওয়ালেট* চালু করুন: তখন লগইন করা গ্রাহক
+চেকআউটে "স্টোর ক্রেডিট ব্যবহার করুন" বেছে নেন এবং অ্যাকাউন্টের *স্টোর ক্রেডিট ও
+গিফট কার্ড*-এ ব্যালান্স ও ইতিহাস দেখেন। ডেলিভারি চার্জসহ পুরো অর্ডারেই ক্রেডিট
+ব্যবহার করা যায়। অর্ডার বাতিল হলে বা পরিশোধ না হয়ে মেয়াদ শেষ হলে ক্রেডিট সরাসরি
+ওয়ালেটে ফেরত যায় — আলাদা রিফান্ড লাগে না। মার্কেটিং → *স্টোর ক্রেডিট*-এ গ্রাহকদের
+মোট পাওনা ও সাম্প্রতিক লেনদেন দেখুন।
+
+## Gift cards (`gift_cards.manage`, Settings → rewards)
+
+**EN** — Turn on *Gift cards* in Settings → rewards and choose the preset
+amounts, whether shoppers may type their own amount (and its range), how long
+cards are valid, and whether cards are sold on the storefront. Shoppers buy a
+card at `/gift-cards`, pay online (bKash, Nagad, card — never COD), and the
+code goes to the recipient by SMS/email as soon as the payment is confirmed;
+the buyer gets a receipt without the code. Anyone holding a code can apply it
+at checkout or check its balance; logged-in customers can move a card's whole
+balance into their wallet. Marketing → *Gift cards* lists every card (find
+one by its last 4 characters or a phone number) and lets you issue a card by
+hand — the code is shown to you once and can be sent to the recipient. On a
+card you can disable/enable it, add or deduct balance with a reason, and
+issue a *new code* when the old one is lost or leaked (the old code stops
+working). Codes are stored only in a scrambled form, so nobody — staff
+included — can look one up later. Unpaid purchases are cancelled after the
+payment timeout; a cancelled order gives the card its money back.
+
+**BN** — সেটিংস → rewards-এ *গিফট কার্ড* চালু করে নির্ধারিত মূল্যগুলো, ক্রেতা নিজে
+মূল্য লিখতে পারবেন কি না (এবং তার সীমা), কার্ডের মেয়াদ ও ওয়েবসাইটে বিক্রি হবে কি
+না ঠিক করুন। ক্রেতা `/gift-cards` থেকে কার্ড কেনেন, অনলাইনে পরিশোধ করেন (বিকাশ,
+নগদ, কার্ড — ক্যাশ অন ডেলিভারি নয়), এবং পেমেন্ট নিশ্চিত হলেই কোডটি প্রাপকের কাছে
+SMS/ইমেইলে যায়; ক্রেতা কোড ছাড়া একটি রসিদ পান। কোড যার কাছে আছে তিনি চেকআউটে
+ব্যবহার করতে বা ব্যালান্স দেখতে পারেন; লগইন করা গ্রাহক কার্ডের পুরো ব্যালান্স
+ওয়ালেটে নিতে পারেন। মার্কেটিং → *গিফট কার্ড*-এ সব কার্ডের তালিকা (শেষ ৪ অক্ষর বা
+ফোন নম্বর দিয়ে খুঁজুন) এবং হাতে কার্ড ইস্যু করার সুযোগ আছে — কোডটি আপনাকে একবারই
+দেখানো হয় এবং প্রাপককে পাঠানো যায়। কার্ড খুলে বন্ধ/চালু করুন, কারণসহ ব্যালান্স
+যোগ/বিয়োগ করুন, আর কোড হারালে বা ফাঁস হলে *নতুন কোড* দিন (পুরোনোটি আর কাজ করবে
+না)। কোড এলোমেলো রূপে সংরক্ষিত থাকে, তাই কর্মীসহ কেউ পরে তা দেখতে পারেন না।
+পরিশোধ না হওয়া কেনাকাটা পেমেন্টের সময়সীমা শেষে বাতিল হয়; অর্ডার বাতিল হলে কার্ডে
+টাকা ফেরত যায়।
+
+## Referral program (`referrals.manage`, Settings → rewards)
+
+**EN** — Turn on *Referral program* in Settings → rewards and set what the
+friend gets on their first order (a percent with an optional cap, or a fixed
+amount; optional minimum order; whether it stacks with coupons) and what the
+referrer gets once that order completes (store credit or loyalty points, at
+most N rewards per referrer per month). Each customer finds their code, a
+share link and a WhatsApp button under *Refer friends* in their account. A
+friend opening the link — or typing the code in the coupon box — gets the
+discount at checkout if it's their first order and their phone has never
+been referred before; nobody can refer themselves. The referrer is rewarded
+automatically when the friend's order is *completed* (delivered and past the
+return window); if it's cancelled, refused or returned, the referral earns
+nothing. Marketing → *Referrals* shows the rules, totals, top referrers and
+every referral with its order; you can void a pending one (e.g. the same
+person on two numbers).
+
+**BN** — সেটিংস → rewards-এ *রেফারেল প্রোগ্রাম* চালু করে ঠিক করুন বন্ধু প্রথম
+অর্ডারে কী পাবেন (শতাংশ ও চাইলে সর্বোচ্চ সীমা, অথবা নির্দিষ্ট টাকা; চাইলে সর্বনিম্ন
+অর্ডার; কুপনের সাথে একসাথে হবে কি না) এবং সেই অর্ডার সম্পন্ন হলে রেফারকারী কী
+পাবেন (স্টোর ক্রেডিট বা লয়্যালটি পয়েন্ট, একজন মাসে সর্বোচ্চ N বার)। প্রত্যেক
+গ্রাহক অ্যাকাউন্টের *বন্ধুদের রেফার করুন*-এ নিজের কোড, শেয়ার লিংক ও হোয়াটসঅ্যাপ
+বোতাম পান। বন্ধু লিংকটি খুললে — বা কুপনের ঘরে কোডটি লিখলে — প্রথম অর্ডার হলে এবং
+তাঁর ফোন নম্বর আগে কখনো রেফার না হলে চেকআউটে ছাড় পান; কেউ নিজেকে রেফার করতে
+পারেন না। বন্ধুর অর্ডার *সম্পন্ন* হলে (ডেলিভারি ও রিটার্ন সময় শেষ) রেফারকারী নিজে
+থেকে পুরস্কার পান; বাতিল, দরজায় ফেরত বা রিটার্ন হলে কিছু পান না। মার্কেটিং →
+*রেফারেল*-এ নিয়ম, মোট হিসাব, শীর্ষ রেফারকারী ও প্রতিটি রেফারেল তার অর্ডারসহ
+দেখুন; অপেক্ষমাণ রেফারেল বাতিল করা যায় (যেমন একই ব্যক্তি দুই নম্বরে)।
+
+## Affiliates & influencers (`affiliates.manage`, `affiliates.payouts`, Settings → rewards)
+
+**EN** — Turn on *Affiliate / influencer tracking* in Settings → rewards and
+set how many days after a link click an order still counts (default 30).
+Marketing → *Affiliates* → *Add affiliate*: give the partner a name, a link
+code (e.g. `NUSRAT10`), their commission (percent of sales or a fixed amount
+per order) and, optionally, one of your coupon codes — orders using that
+coupon count for them even without the link. Their tracking link is the
+storefront address with `?aff=CODE`. An order is credited to the coupon's
+affiliate first, otherwise to the last link clicked within the window; the
+partner's own purchases earn nothing. Commission is *pending* until the
+order completes, then *approved* (reduced if items were returned), or
+*rejected* if the order is cancelled, refused or returned. To pay, send the
+money yourself (bKash, bank…) and press *Record payout* with the transaction
+ID — every approved commission becomes *paid*. Each affiliate has a private
+*partner page* link showing their clicks and commission (no customer
+details); make a new link if it leaks.
+
+**BN** — সেটিংস → rewards-এ *অ্যাফিলিয়েট / ইনফ্লুয়েন্সার ট্র্যাকিং* চালু করে ঠিক
+করুন লিংকে ক্লিকের কত দিন পর পর্যন্ত অর্ডার গণ্য হবে (ডিফল্ট ৩০)। মার্কেটিং →
+*অ্যাফিলিয়েট* → *অ্যাফিলিয়েট যোগ করুন*: পার্টনারের নাম, লিংক কোড (যেমন
+`NUSRAT10`), কমিশন (বিক্রির শতাংশ বা প্রতি অর্ডারে নির্দিষ্ট টাকা) এবং চাইলে আপনার
+একটি কুপন কোড দিন — সেই কুপনে করা অর্ডার লিংক ছাড়াও তাঁর হিসাবে যায়। ট্র্যাকিং
+লিংক হলো আপনার ওয়েবসাইটের ঠিকানা + `?aff=CODE`। অর্ডার আগে কুপনের অ্যাফিলিয়েটের,
+না হলে নির্ধারিত সময়ের মধ্যে শেষ ক্লিক করা লিংকের হিসাবে যায়; পার্টনারের নিজের
+কেনাকাটায় কমিশন হয় না। অর্ডার সম্পন্ন না হওয়া পর্যন্ত কমিশন *অপেক্ষমাণ*, তারপর
+*অনুমোদিত* (রিটার্ন হলে কমে), আর বাতিল, দরজায় ফেরত বা রিটার্ন হলে *বাতিল*। পরিশোধ
+করতে নিজে টাকা পাঠান (বিকাশ, ব্যাংক…) এবং ট্রানজেকশন আইডিসহ *পেআউট রেকর্ড করুন*
+চাপুন — সব অনুমোদিত কমিশন *পরিশোধিত* হয়ে যায়। প্রতিটি অ্যাফিলিয়েটের একটি ব্যক্তিগত
+*পার্টনার পেজ* লিংক আছে যেখানে তিনি নিজের ক্লিক ও কমিশন দেখেন (গ্রাহকের তথ্য নয়);
+লিংক ফাঁস হলে নতুন লিংক তৈরি করুন।

@@ -68,6 +68,11 @@ interface OrderDetail {
   subtotal: number;
   discountTotal: number;
   shippingFee: number;
+  // §16 M13/M16 — order-level reductions and credit tenders.
+  pointsDiscount: number;
+  referralDiscount: number;
+  giftCardUsed: number;
+  storeCreditUsed: number;
   total: number;
   paidTotal: number;
   codAmount: number;
@@ -251,8 +256,12 @@ export default function OrderDetailPage() {
             <div className="flex justify-between"><span>{t("subtotal")}</span><span>{money(order.subtotal)}</span></div>
             <div className="flex justify-between"><span>{t("discount")}</span><span>-{money(order.discountTotal)}</span></div>
             <div className="flex justify-between"><span>{t("shippingFee")}</span><span>{money(order.shippingFee)}</span></div>
+            {order.pointsDiscount > 0 && <div className="flex justify-between"><span>{t("pointsDiscount")}</span><span>-{money(order.pointsDiscount)}</span></div>}
+            {order.referralDiscount > 0 && <div className="flex justify-between"><span>{t("referralDiscount")}</span><span>-{money(order.referralDiscount)}</span></div>}
             <div className="flex justify-between font-semibold text-surface-foreground"><span>{t("total")}</span><span>{money(order.total)}</span></div>
             <div className="flex justify-between"><span>{t("paid")}</span><span>{money(order.paidTotal)}</span></div>
+            {order.giftCardUsed > 0 && <div className="flex justify-between pl-3 text-xs"><span>{t("paidByGiftCard")}</span><span>{money(order.giftCardUsed)}</span></div>}
+            {order.storeCreditUsed > 0 && <div className="flex justify-between pl-3 text-xs"><span>{t("paidByStoreCredit")}</span><span>{money(order.storeCreditUsed)}</span></div>}
             <div className="flex justify-between"><span>{t("cod")}</span><span>{money(order.codAmount)}</span></div>
           </div>
         </Card>

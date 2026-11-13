@@ -19,7 +19,8 @@
     "./marketing": "./src/marketing/index.ts",
     "./ai": "./src/ai/index.ts",
     "./personalization": "./src/personalization/index.ts",
-    "./support": "./src/support/index.ts"
+    "./support": "./src/support/index.ts",
+    "./rewards": "./src/rewards/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

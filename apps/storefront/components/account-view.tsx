@@ -64,6 +64,12 @@ export function AccountView() {
         <Link href="/account/points" className="block text-sm text-brand underline">
           {locale === "bn" ? "আমার পয়েন্ট" : "My points"}
         </Link>
+        <Link href="/account/credit" className="block text-sm text-brand underline">
+          {locale === "bn" ? "স্টোর ক্রেডিট ও গিফট কার্ড" : "Store credit & gift cards"}
+        </Link>
+        <Link href="/account/referrals" className="block text-sm text-brand underline">
+          {locale === "bn" ? "বন্ধুদের রেফার করুন" : "Refer friends"}
+        </Link>
       </div>
 
       <AccountProfileForm bn={locale === "bn"} />

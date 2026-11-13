@@ -22,6 +22,9 @@ import { CaptchaProvidersService } from "./captcha-providers.service";
 import { StockReservationService } from "./stock-reservation.service";
 import { OrderNumberService } from "./order-number.service";
 import { LoyaltyService } from "../loyalty/loyalty.service";
+import { ReferralsService } from "../referrals/referrals.service";
+import { AffiliatesService } from "../affiliates/affiliates.service";
+import { OrderTendersService } from "../rewards-core/order-tenders.service";
 import type { PlaceOrderDto } from "./dto";
 
 const ORDER_WITH_PAYMENTS_INCLUDE = { items: true, payments: true } as const;
@@ -69,6 +72,9 @@ export class CheckoutService {
     private readonly tracking: TrackingService,
     private readonly automationOutbox: AutomationOutboxService,
     private readonly loyalty: LoyaltyService,
+    private readonly referrals: ReferralsService,
+    private readonly affiliates: AffiliatesService,
+    private readonly tenders: OrderTendersService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -83,6 +89,7 @@ export class CheckoutService {
     if (!cartRow.contactName || !cartRow.contactPhone) {
       throw new BadRequestException({ code: "CONTACT_REQUIRED", message: "Please add a contact name and phone number." });
     }
+    const contactPhone: string = cartRow.contactPhone;
 
     const termsRequired = await this.settings.getValue<boolean>("checkout.termsCheckboxEnabled");
     if (termsRequired && !dto.termsAccepted) throw new BadRequestException({ code: "TERMS_NOT_ACCEPTED", message: "Please accept the terms to continue." });
@@ -139,11 +146,17 @@ export class CheckoutService {
       if (!result.success) throw new BadRequestException({ code: "CAPTCHA_FAILED", message: "Captcha verification failed, please try again." });
     }
 
-    const advanceAmount = CartPricingService.computeAdvanceAmount(outcome.advanceRequired, quote.total, quote.shippingFee);
-    const needsOnlinePayment = dto.paymentMethod !== "cod" || advanceAmount > 0;
+    // §16 M16 — gift card / store credit already paid part (or all) of the order: an advance or online payment is only ever for what's left.
+    const giftCardUsed = quote.giftCard?.applied ?? 0;
+    const storeCreditUsed = quote.storeCredit?.applied ?? 0;
+    const creditTenders = giftCardUsed + storeCreditUsed;
+    const amountDue = quote.amountDue;
+    const advanceAmount = Math.min(amountDue, CartPricingService.computeAdvanceAmount(outcome.advanceRequired, quote.total, quote.shippingFee));
+    const needsOnlinePayment = (dto.paymentMethod !== "cod" && amountDue > 0) || advanceAmount > 0;
     const paymentPurpose: "full" | "advance" = dto.paymentMethod === "cod" ? "advance" : "full";
     const onlineMethodForPayment: OnlinePaymentMethod = dto.paymentMethod === "cod" ? (dto.advanceMethod as OnlinePaymentMethod) : (dto.paymentMethod as OnlinePaymentMethod);
-    const onlineAmount = paymentPurpose === "advance" ? advanceAmount : quote.total;
+    const onlineAmount = paymentPurpose === "advance" ? advanceAmount : amountDue;
+    const referralDiscount = quote.referral && !quote.referral.rejection ? quote.referral.discount : 0;
 
     const timeoutMinutes = await this.settings.getValue<number>("payment.timeoutMinutes");
     const initialStatus = needsOnlinePayment ? "pending_payment" : "pending";
@@ -179,7 +192,14 @@ export class CheckoutService {
           shippingDiscount: quote.shippingDiscount,
           advanceRequired: advanceAmount,
           total: quote.total,
-          codAmount: dto.paymentMethod === "cod" ? Math.max(0, quote.total - advanceAmount) : 0,
+          codAmount: dto.paymentMethod === "cod" ? Math.max(0, amountDue - advanceAmount) : 0,
+          // §16 M16 — tenders are payments: recorded as succeeded `payments` rows by `OrderTendersService.spendInTx` below.
+          giftCardUsed,
+          giftCardId: giftCardUsed > 0 ? (quote.giftCard?.giftCardId ?? null) : null,
+          storeCreditUsed,
+          referralDiscount,
+          paidTotal: creditTenders,
+          paymentStatus: creditTenders === 0 ? "unpaid" : creditTenders >= quote.total ? "paid" : "partially_paid",
           totalWeightGrams: quote.totalWeightGrams,
           shippingAddress: toJson({
             recipientName: cartRow.contactName,
@@ -240,6 +260,22 @@ export class CheckoutService {
       if (quote.loyalty && quote.loyalty.pointsApplied > 0 && requestContext.identity.customerId) {
         await this.loyalty.redeemInTx(tx, requestContext.identity.customerId, created.id, quote.loyalty.pointsApplied);
       }
+
+      // §16 M16 — spend gift card / store credit, record the referral and the affiliate attribution, all or nothing with the order.
+      await this.tenders.spendInTx(tx, { id: created.id, customerId: created.customerId, giftCardId: created.giftCardId, giftCardUsed, storeCreditUsed });
+      if (referralDiscount > 0 && quote.referral) {
+        await this.referrals.createInTx(tx, { orderId: created.id, code: quote.referral.code, refereeCustomerId: requestContext.identity.customerId, refereePhone: contactPhone, discount: referralDiscount });
+      }
+      await this.affiliates.attributeInTx(tx, {
+        orderId: created.id,
+        discountIds: quote.discounts.applied.map((a) => a.discountId),
+        cartAffiliateCode: cartRow.affiliateCode,
+        cartAffiliateClickedAt: cartRow.affiliateClickedAt,
+        phone: cartRow.contactPhone,
+        customerId: requestContext.identity.customerId,
+        lines: created.items.map((i) => ({ lineTotal: i.lineTotal, discountAllocated: i.discountAllocated, quantity: i.quantity })),
+        orderLevelDiscounts: referralDiscount + (quote.loyalty?.discount ?? 0),
+      });
 
       for (const line of priceableLines) {
         if (line.flashSaleItemId) await this.flashSales.recordSold(line.flashSaleItemId, line.quantity);

@@ -7,6 +7,7 @@ import type { AuthenticatedStaff } from "../common/types";
 import { StockReservationService } from "../checkout/stock-reservation.service";
 import { OrderNumberService } from "../checkout/order-number.service";
 import type { ApproveReturnDto, CreateReturnRequestDto, InspectReturnDto, RejectReturnDto } from "./dto";
+import { StoreCreditLedgerService } from "../rewards-core/store-credit-ledger.service";
 
 interface ReturnItemRecord {
   orderItemId: string;
@@ -26,8 +27,8 @@ function toJsonInput(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbNu
  * §6.10 returns & exchanges. Scope kept deliberately tight for M6 (see
  * docs/DECISIONS.md): reverse pickup is staff bookkeeping only (no courier
  * API implements it against real docs, §10.2's table doesn't list one),
- * store credit just increments `Customer.storeCreditBalance` (a full ledger
- * is M8/M13's job per §5.8), and refunds always land in the existing
+ * store credit goes through the wallet ledger (`StoreCreditLedgerService`,
+ * §16 M16), and refunds always land in the existing
  * `refunds` queue for a human to action — nothing here disburses money
  * automatically.
  */
@@ -39,6 +40,7 @@ export class ReturnsService {
     private readonly audit: AuditService,
     private readonly stock: StockReservationService,
     private readonly orderNumbers: OrderNumberService,
+    private readonly storeCredit: StoreCreditLedgerService,
   ) {}
 
   async list(status?: string) {
@@ -258,7 +260,8 @@ export class ReturnsService {
         await tx.refund.create({ data: { orderId: record.orderId, returnId: record.id, amount, method: "original", status: "pending", reason: "Return approved" } });
       }
       if (record.type === "store_credit" && amount > 0 && record.customerId) {
-        await tx.customer.update({ where: { id: record.customerId }, data: { storeCreditBalance: { increment: amount } } });
+        // §16 M16 — through the wallet ledger, idempotent per return.
+        await this.storeCredit.creditInTx(tx, record.customerId, amount, { reason: "return", reference: record.id, orderId: record.orderId, note: "Return resolved as store credit", createdBy: actor.id });
       }
       await tx.return.update({ where: { id }, data: { status: "completed", completedAt: new Date(), resolution: toJsonInput({ type: record.type, amount }) as Prisma.InputJsonValue } });
       await tx.orderEvent.create({ data: { orderId: record.orderId, type: "return", data: { returnId: id, status: "completed", type: record.type, amount } } });

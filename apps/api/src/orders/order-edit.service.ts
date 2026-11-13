@@ -125,8 +125,8 @@ export class OrderEditService {
       shippingFee = quote.fee;
     }
 
-    // §16 M13 — points paid stay paid: the edit keeps the original points discount.
-    const total = Math.max(0, subtotal - order.discountTotal - order.pointsDiscount + shippingFee);
+    // §16 M13/M16 — points and the referral discount stay as given; gift card / store credit are in `paidTotal`, so `codAmount` below already nets them off.
+    const total = Math.max(0, subtotal - order.discountTotal - order.pointsDiscount - order.referralDiscount + shippingFee);
     const codAmount = Math.max(0, total - order.paidTotal);
 
     await this.prisma.$transaction(async (tx) => {

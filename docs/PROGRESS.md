@@ -10,21 +10,21 @@ reasoning behind choices made along the way.
 | --- | --- | --- |
 | Phase 1 — MVP | M0–M9 | Complete |
 | Phase 2 — Growth and operations automation | M10–M13 | Complete |
-| Phase 3 — Advanced and intelligence | M14–M17 | M14–M15 complete — **M16 is next** |
+| Phase 3 — Advanced and intelligence | M14–M17 | M14–M16 complete — **M17 is next** |
 
-- Latest milestone: M15 (support). The repository has no git
+- Latest milestone: M16 (loyalty extensions). The repository has no git
   remote, so milestone commits are local only.
-- Unit tests: `packages/shared` 232, `packages/blocks` 13, `apps/api` 559,
+- Unit tests: `packages/shared` 258, `packages/blocks` 13, `apps/api` 598,
   `apps/storefront` 10 — all passing.
-- Database: migrations up to `20261115090000_support` (M15) are
-  committed, but the configured dev database is still at M11; run
-  `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
-  using M12–M15 features.
+- Database: migrations up to `20261116090000_loyalty_extensions` (M16)
+  are committed, but the configured dev database was last known at M11;
+  run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
+  using M12–M16 features (code from M16 on needs the new cart/order
+  columns to serve carts at all).
 - Cross-cutting caveat: no milestone has been clicked through in a
   browser or run against live third-party providers here — each section's
   "Not verified" list says what remains.
-- Remaining plan: M16 loyalty extensions (referrals, gift cards,
-  store credit, affiliates), M17 advanced analytics and procurement.
+- Remaining plan: M17 advanced analytics and procurement.
 
 ---
 
@@ -2540,8 +2540,130 @@ click-to-call telephony integration (generic provider).
 
 ---
 
+## Milestone 16 — Loyalty extensions
+
+Status: complete (§16 M16) at the code/test level, with the same caveat as
+every prior milestone: the migration wasn't applied to a database and nothing
+was clicked through in a browser here — see "Not verified in this
+environment". Scope per §16: referral program, gift cards (buy, send,
+redeem), store credit wallet UI, affiliate/influencer tracking and
+commissions.
+
+### Built
+
+- **`packages/db`**: migration `20261116090000_loyalty_extensions`
+  (generated with `prisma migrate diff` against the committed schema —
+  purely additive): `store_credit_transactions`, `gift_cards`,
+  `gift_card_transactions`, `referrals`, `affiliates`,
+  `affiliate_click_days`, `affiliate_conversions`, `affiliate_payouts`;
+  `carts.gift_card_id/use_store_credit/referral_code/affiliate_code/
+  affiliate_clicked_at`; `orders.gift_card_used/gift_card_id/
+  store_credit_used/referral_discount`; payment method `gift_card`;
+  notification events `gift_card_received`, `gift_card_purchased`,
+  `referral_reward` (seeded bn/en templates).
+- **`packages/shared`**: new `@clothing/shared/rewards` (gift card code
+  generation/normalisation, amount rules, usability, tender allocation,
+  referee discount, referral eligibility, affiliate commission base and
+  maths, attribution window); 6 permissions; 23 settings in
+  `settings/definitions-m16.ts` (group `rewards`, every feature off by
+  default).
+- **`apps/api`**:
+  - `RewardsCoreModule` (Prisma-only): store credit and gift card ledgers
+    with guarded debits and idempotent credits, HMAC'd gift card codes, and
+    `OrderTendersService` (spend at placement, restore on cancel/expiry).
+  - Cart pricing: referral discount step after coupons; gift card then
+    store credit as tenders against the whole order (`amountDue`). New cart
+    endpoints `PUT gift-card`, `PUT store-credit`, `PUT referral`,
+    `POST affiliate`; a referral code typed as a coupon becomes a referral.
+  - Checkout: tenders recorded as succeeded payments in the order
+    transaction, referral row and affiliate conversion written atomically;
+    advance/online/COD amounts use what's left. Cancellation and expiry
+    restore tenders and refund only cash; refunds with method store credit
+    and returns resolved as store credit credit the wallet ledger; order
+    edit keeps the referral discount.
+  - `StoreCreditModule` (admin wallet + adjust + stats, storefront wallet),
+    `GiftCardsModule` (admin issue/disable/adjust/new code, storefront
+    purchase via standalone payments with callback handler + reconciliation
+    sweep, balance check, add to wallet, expiry sweep, per-visitor lookup
+    limit), `ReferralsModule` (quote, placement, reward/void sweep with
+    monthly cap, admin list/stats/void, storefront account page + public
+    code check), `AffiliatesModule` (CRUD, click counting, attribution,
+    approval sweep, payouts, partner portal with rotatable token).
+  - `PaymentsService.initiateStandalone/verifyStandalone` and standalone
+    callback handlers.
+- **`apps/admin`**: Marketing tabs *Gift cards* (stats, issue, list, card
+  detail with ledger and actions), *Store credit* (liability + recent
+  movements), *Referrals* (rules, stats, top referrers, list, void),
+  *Affiliates* (list, create, detail with links, balances, payouts,
+  attributed orders, reject, edit); store credit card on the customer
+  profile; points/referral/tender lines on the order detail; nav entries.
+  All strings bn + en (validated as ICU messages).
+- **`apps/storefront`**: checkout block for referral, gift card code and
+  store credit with the new totals ("To pay"); `?ref=`/`?aff=` capture;
+  `/account/credit` (wallet, ledger, check balance, add gift card to
+  wallet), `/account/referrals` (code, link, WhatsApp share, referrals),
+  `/gift-cards` (buy) and `/gift-cards/result`, `/affiliate/[token]`
+  partner page (noindex, no-referrer).
+- Docs: decisions (2026-11-13 M16 entries), admin guide entries.
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `packages/db`, `apps/api`
+  (source and tests), `apps/storefront`, and `apps/admin` source (only the
+  stale `.next/types/validator.ts` errors from the pending login fix
+  remain). ESLint clean on every touched file (pre-existing warnings in
+  the customer and order pages only).
+- Unit tests: `packages/shared` 258 (was 232), `apps/api` 598 (was 559),
+  `packages/blocks` 13, `apps/storefront` 10 — all passing. Covered: code
+  generation and hashing, tender allocation, ledger idempotency and
+  overdraw guards, tender spend/restore, cancellation refunding only cash,
+  gift card purchase → payment → issue (duplicate and late callbacks),
+  issuing without leaking the code to the audit log, expiry, referral
+  eligibility and reward/void/cap sweep, affiliate coupon-vs-link
+  attribution, window, self-purchase, approval recompute, payouts.
+- The **real API** (the running `nest start --watch` build) booted with the
+  new code: the DI graph resolves, `/health` is 200 and Swagger lists all
+  33 new routes.
+- `prisma validate` passes; the migration SQL was reviewed (only CREATE /
+  ADD COLUMN / ADD VALUE / indexes / foreign keys).
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database** (M12–M16 pending
+  on the dev database): `pnpm db:generate`, `pnpm db:migrate:deploy`,
+  `pnpm db:seed` (grants the new permissions to Super Admin and seeds the
+  three new message templates). Until it's applied, a server running this
+  code fails on cart/order queries (new columns).
+- Nothing was clicked through in a browser: checkout credits, wallet,
+  referral and gift card pages, partner page, the admin screens.
+- No real gateway payment for a gift card purchase: the standalone flow
+  was tested against mocks only; with the mock payment provider the whole
+  buy → pay → code-sent flow can be tried locally.
+- The raw ledger maths ran only against mocked Prisma, not Postgres.
+
+### Known issues / explicitly deferred
+
+- Gift card purchases have no `payments` row, so they don't show in M12
+  gateway settlement matching or the profit report's gateway fees.
+- Doorstep rejection and return refunds on orders partly paid by gift
+  card/store credit still create a refund record for the computed amount;
+  staff choose the method (e.g. store credit) — they aren't split by
+  tender automatically.
+- The gift card lookup limit is per API instance (in-memory), fine for the
+  single-instance free tier.
+- A guest's gift card applied before logging in carries over on cart merge;
+  store credit needs an account.
+- No cashback rules yet (the `cashback` ledger reason exists for manual
+  use); store credit never expires.
+- Referral fraud checks are phone/account based only (no device/IP
+  matching); staff can void suspicious referrals.
+- Affiliate clicks are counted per day, not per unique visitor.
+
+---
+
 ### Next up
 
-Phase 3 (§16) continues: **M16 — Loyalty extensions** (referral program,
-gift cards — buy, send, redeem — store credit wallet UI, affiliate/
-influencer tracking and commissions).
+Phase 3 (§16) continues: **M17 — Advanced analytics and procurement**
+(demand forecasting and reorder suggestions, materials & BOM, cohort/LTV
+reports, report builder, expenses and P&L, public API keys and outbound
+webhooks, config bundle export/import polish).

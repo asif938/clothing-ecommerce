@@ -184,6 +184,14 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "support.tickets", group: "support", label: { bn: "টিকিট তৈরি ও পরিচালনা করুন", en: "Create & manage tickets" } },
   { key: "support.calls", group: "support", label: { bn: "ক্লিক-টু-কল ও কল লগ", en: "Click-to-call & call log" } },
   { key: "settings.support.write", group: "settings", label: { bn: "সাপোর্ট সেটিংস পরিবর্তন করুন", en: "Edit support settings" } },
+  // §16 M16 — loyalty extensions. Issuing gift cards, adjusting wallets and
+  // recording affiliate payouts all move money, so each is its own key.
+  { key: "gift_cards.manage", group: "rewards", label: { bn: "গিফট কার্ড ইস্যু, বন্ধ ও সমন্বয় করুন", en: "Issue, disable & adjust gift cards" } },
+  { key: "store_credit.manage", group: "rewards", label: { bn: "গ্রাহকের স্টোর ক্রেডিট সমন্বয় করুন", en: "Adjust customer store credit" } },
+  { key: "referrals.manage", group: "rewards", label: { bn: "রেফারেল দেখুন ও বাতিল করুন", en: "View & void referrals" } },
+  { key: "affiliates.manage", group: "rewards", label: { bn: "অ্যাফিলিয়েট ও কমিশন পরিচালনা করুন", en: "Manage affiliates & commissions" } },
+  { key: "affiliates.payouts", group: "rewards", label: { bn: "অ্যাফিলিয়েট পেআউট রেকর্ড করুন", en: "Record affiliate payouts" } },
+  { key: "settings.rewards.write", group: "settings", label: { bn: "গিফট কার্ড, রেফারেল ও অ্যাফিলিয়েট সেটিংস পরিবর্তন করুন", en: "Edit gift card, referral & affiliate settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

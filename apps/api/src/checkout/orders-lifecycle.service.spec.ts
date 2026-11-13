@@ -39,8 +39,9 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const tracking = { recordPurchase: vi.fn(() => Promise.resolve()) };
   const automationOutbox = { enqueue: vi.fn(() => Promise.resolve()) };
   const staffNotifications = { notifyPaymentFailed: vi.fn(() => Promise.resolve()) };
-  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never, automationOutbox as never, staffNotifications as never);
-  return { service, tx, prisma, audit, stock, notifications, tracking, automationOutbox };
+  const tenders = { restoreInTx: vi.fn(() => Promise.resolve(0)) };
+  const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never, automationOutbox as never, staffNotifications as never, tenders as never);
+  return { service, tx, prisma, audit, stock, notifications, tracking, automationOutbox, tenders };
 }
 
 function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
@@ -138,6 +139,24 @@ describe("OrdersLifecycleService.transition", () => {
     const { service, tx } = makeService(order({ status: "confirmed", paidTotal: 50000, payments: [{ id: "pay-1", status: "succeeded" }] }));
     await service.transition({ orderId: "o1", to: "cancelled", actor: { type: "staff", id: "staff-1" }, reason: "Out of stock" });
     expect(tx.refund.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ orderId: "o1", paymentId: "pay-1", amount: 50000, status: "pending" }) }));
+  });
+
+  it("returns gift card / store credit tenders directly and only refunds the cash part (§16 M16)", async () => {
+    const { service, tx, tenders } = makeService(
+      order({ status: "confirmed", paidTotal: 80000, payments: [{ id: "pay-gc", status: "succeeded", method: "gift_card" } as never, { id: "pay-1", status: "succeeded", method: "bkash" } as never] }),
+    );
+    tenders.restoreInTx.mockResolvedValue(30000);
+    await service.transition({ orderId: "o1", to: "cancelled", actor: { type: "staff", id: "staff-1" }, reason: "Out of stock" });
+    expect(tenders.restoreInTx).toHaveBeenCalled();
+    expect(tx.refund.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ paymentId: "pay-1", amount: 50000 }) }));
+    expect(tx.order.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "cancelled", paidTotal: 50000 }) }));
+  });
+
+  it("creates no refund record when the whole order was paid with credit", async () => {
+    const { service, tx, tenders } = makeService(order({ status: "confirmed", paidTotal: 30000, payments: [{ id: "pay-sc", status: "succeeded", method: "store_credit" } as never] }));
+    tenders.restoreInTx.mockResolvedValue(30000);
+    await service.transition({ orderId: "o1", to: "cancelled", actor: { type: "staff", id: "staff-1" }, reason: "Changed mind" });
+    expect(tx.refund.create).not.toHaveBeenCalled();
   });
 
   it("creates no refund when nothing was paid", async () => {

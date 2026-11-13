@@ -10,6 +10,7 @@ import { StaffNotificationsService } from "../notifications/staff-notifications.
 import { TrackingService } from "../tracking/tracking.service";
 import { STATUS_TO_TRIGGER } from "@clothing/shared/automation";
 import { AutomationOutboxService } from "../automation/automation-outbox.service";
+import { OrderTendersService } from "../rewards-core/order-tenders.service";
 
 export type TransitionActor = { type: "staff"; id: string } | { type: "customer"; id: string } | { type: "system" };
 
@@ -97,6 +98,7 @@ export class OrdersLifecycleService {
     private readonly tracking: TrackingService,
     private readonly automationOutbox: AutomationOutboxService,
     private readonly staffNotifications: StaffNotificationsService,
+    private readonly tenders: OrderTendersService,
   ) {}
 
   async transition(input: TransitionInput, tx?: Prisma.TransactionClient): Promise<void> {
@@ -131,19 +133,23 @@ export class OrdersLifecycleService {
         data.reservationReleasedAt = new Date();
       }
 
-      if (order.paidTotal > 0) {
-        const lastSucceeded = order.payments.filter((p) => p.status === "succeeded").at(-1) ?? null;
+      // §16 M16 — gift card and store credit go straight back to the card/wallet; only cash/online money becomes a refund record.
+      const restored = await this.tenders.restoreInTx(tx, order, `Order cancelled: ${input.reason ?? "no reason given"}`);
+      const cashPaid = Math.max(0, order.paidTotal - restored);
+      if (restored > 0) data.paidTotal = cashPaid;
+      if (cashPaid > 0) {
+        const lastSucceeded = order.payments.filter((p) => p.status === "succeeded" && p.method !== "gift_card" && p.method !== "store_credit").at(-1) ?? null;
         await tx.refund.create({
           data: {
             orderId: order.id,
             paymentId: lastSucceeded?.id ?? null,
-            amount: order.paidTotal,
+            amount: cashPaid,
             method: "original",
             status: "pending",
             reason: `Order cancelled: ${input.reason ?? "no reason given"}`,
           },
         });
-        await tx.orderEvent.create({ data: { orderId: order.id, type: "refund", data: { reason: "cancelled", amount: order.paidTotal } } });
+        await tx.orderEvent.create({ data: { orderId: order.id, type: "refund", data: { reason: "cancelled", amount: cashPaid } } });
       }
 
       const releaseCouponUsage = await this.settings.getValue<boolean>("orders.releaseCouponUsageOnCancel");
@@ -242,7 +248,8 @@ export class OrdersLifecycleService {
 
     const advancePaid = purpose === "advance" ? order.advancePaid + amount : order.advancePaid;
     const paidTotal = order.paidTotal + amount;
-    const codAmount = purpose === "advance" ? Math.max(0, order.total - advancePaid) : order.codAmount;
+    // `paidTotal` (not just the advance) so gift card / store credit tenders paid at placement (§16 M16) aren't collected twice at the door.
+    const codAmount = purpose === "advance" ? Math.max(0, order.total - paidTotal) : order.codAmount;
     const paymentStatus = purpose === "full" || paidTotal >= order.total ? "paid" : "partially_paid";
 
     await this.prisma.$transaction([

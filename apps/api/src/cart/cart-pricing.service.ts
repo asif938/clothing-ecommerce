@@ -14,6 +14,8 @@ import type { AdvanceRequirement, PaymentRulesOutcome, RuleContext } from "../pa
 import { LocationsService } from "../locations/locations.service";
 import { computeRedemption, type RedemptionRejection } from "@clothing/shared/marketing";
 import { LoyaltyService } from "../loyalty/loyalty.service";
+import { allocateCredits, giftCardUnusableReason, type GiftCardUnusableReason } from "@clothing/shared/rewards";
+import { ReferralsService, type CartReferralQuote } from "../referrals/referrals.service";
 
 const CART_IMAGE_WIDTH = 300;
 
@@ -72,6 +74,22 @@ export interface CartLoyaltyQuote {
   rejection: RedemptionRejection | null;
 }
 
+/** §16 M16 — a gift card applied to the cart (a tender, not a discount). */
+export interface CartGiftCardQuote {
+  giftCardId: string;
+  last4: string;
+  balance: number;
+  applied: number;
+  rejection: GiftCardUnusableReason | null;
+}
+
+/** §16 M16 — the customer's wallet on this cart (logged-in customers while store credit is enabled). */
+export interface CartStoreCreditQuote {
+  balance: number;
+  use: boolean;
+  applied: number;
+}
+
 export interface CartPricingResult {
   lines: PricedLine[];
   subtotal: number;
@@ -87,8 +105,15 @@ export interface CartPricingResult {
   shippingDiscount: number;
   giftWrapFee: number;
   loyalty: CartLoyaltyQuote | null;
+  /** §16 M16 — the referee's first-order discount (subtracted from `total`). */
+  referral: CartReferralQuote | null;
+  giftCard: CartGiftCardQuote | null;
+  storeCredit: CartStoreCreditQuote | null;
   paymentRules: PaymentRulesOutcome;
+  /** The order's value: goods after discounts + shipping − points. Gift card and store credit don't change it — they pay it. */
   total: number;
+  /** What's left to pay by COD or online after gift card and store credit. */
+  amountDue: number;
   codAmount: number;
   freeDeliveryRemaining: number | null;
   warnings: string[];
@@ -118,6 +143,7 @@ export class CartPricingService {
     private readonly paymentRules: PaymentRulesService,
     private readonly locations: LocationsService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   private async resolveImageUrl(media: Media | null): Promise<string | null> {
@@ -269,8 +295,19 @@ export class CartPricingService {
 
     const shippingDiscount = discountResult.freeShipping ? shippingFee : 0;
     const giftWrapFee = cart.giftWrap ? await this.settings.getValue<number>("checkout.giftWrapFee") : 0;
-    const loyalty = await this.quoteLoyalty(cart.redeemPoints, context.customerId, subtotalAfterDiscounts);
-    const total = subtotalAfterDiscounts + shippingFee - shippingDiscount + giftWrapFee - (loyalty?.discount ?? 0);
+    const referral = await this.referrals.quote(cart.referralCode, {
+      customerId: context.customerId,
+      phone: cart.contactPhone ?? context.phone,
+      goodsTotal: subtotalAfterDiscounts,
+      couponApplied: discountResult.applied.some((a) => a.code !== null),
+    });
+    const referralDiscount = referral && !referral.rejection ? referral.discount : 0;
+    const goodsTotal = Math.max(0, subtotalAfterDiscounts - referralDiscount);
+    const loyalty = await this.quoteLoyalty(cart.redeemPoints, context.customerId, goodsTotal);
+    const total = goodsTotal + shippingFee - shippingDiscount + giftWrapFee - (loyalty?.discount ?? 0);
+    const { giftCard, storeCredit, amountDue } = await this.quoteTenders(cart.giftCardId, cart.useStoreCredit, context.customerId, total);
+    if (referral?.rejection) warnings.push(referralMessage(referral.rejection));
+    if (giftCard?.rejection) warnings.push(giftCard.rejection === "EXPIRED" ? "Your gift card has expired and was not applied." : "Your gift card can no longer be used and was not applied.");
 
     const ruleContextBase: Omit<RuleContext, "riskLevel" | "riskScore" | "phoneBlocked"> = {
       total,
@@ -317,13 +354,36 @@ export class CartPricingService {
       shippingDiscount,
       giftWrapFee,
       loyalty,
+      referral,
+      giftCard,
+      storeCredit,
       paymentRules: paymentRulesOutcome,
       total,
-      codAmount: total,
+      amountDue,
+      codAmount: amountDue,
       freeDeliveryRemaining,
       warnings,
       appliedBundles,
       ruleContextBase,
+    };
+  }
+
+  /** §6.3 step 9 / §16 M16 — gift card first, then the wallet, against the whole order (shipping included). */
+  private async quoteTenders(giftCardId: string | null, useStoreCredit: boolean, customerId: string | null, total: number): Promise<{ giftCard: CartGiftCardQuote | null; storeCredit: CartStoreCreditQuote | null; amountDue: number }> {
+    const [giftCardsOn, storeCreditOn] = await Promise.all([this.settings.getValue<boolean>("giftCards.enabled"), this.settings.getValue<boolean>("storeCredit.enabled")]);
+    const card = giftCardsOn && giftCardId ? await this.prisma.giftCard.findUnique({ where: { id: giftCardId }, select: { id: true, last4: true, balance: true, status: true, expiresAt: true } }) : null;
+    const rejection = card ? giftCardUnusableReason(card, new Date()) : null;
+    const customer = storeCreditOn && customerId ? await this.prisma.customer.findUnique({ where: { id: customerId }, select: { storeCreditBalance: true } }) : null;
+    const allocation = allocateCredits({
+      amountDue: total,
+      giftCardBalance: card && !rejection ? card.balance : 0,
+      storeCreditBalance: customer?.storeCreditBalance ?? 0,
+      useStoreCredit: useStoreCredit && customer !== null,
+    });
+    return {
+      giftCard: card ? { giftCardId: card.id, last4: card.last4, balance: card.balance, applied: allocation.giftCard, rejection } : null,
+      storeCredit: customer ? { balance: customer.storeCreditBalance, use: useStoreCredit, applied: allocation.storeCredit } : null,
+      amountDue: allocation.remaining,
     };
   }
 
@@ -422,6 +482,22 @@ export class CartPricingService {
     if (productIds.length === 0) return new Map();
     const products = await this.prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, tags: true } });
     return new Map(products.map((p) => [p.id, p.tags]));
+  }
+}
+
+function referralMessage(rejection: NonNullable<CartReferralQuote["rejection"]>): string {
+  switch (rejection) {
+    case "NOT_FIRST_ORDER":
+    case "ALREADY_REFERRED":
+      return "The referral discount is only for a first order.";
+    case "SELF_REFERRAL":
+      return "You can't use your own referral code.";
+    case "COUPON_IN_USE":
+      return "The referral discount can't be combined with a coupon.";
+    case "BELOW_MINIMUM":
+      return "Add a little more to your cart to get the referral discount.";
+    default:
+      return "That referral code isn't valid.";
   }
 }
 

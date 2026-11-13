@@ -26,7 +26,7 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const audit = { record: vi.fn() };
   const stock = {};
   const orderNumbers = {};
-  const service = new ReturnsService(prisma as never, settingsService as never, audit as never, stock as never, orderNumbers as never);
+  const service = new ReturnsService(prisma as never, settingsService as never, audit as never, stock as never, orderNumbers as never, { creditInTx: vi.fn(() => Promise.resolve(true)) } as never);
   return { service, prisma };
 }
 

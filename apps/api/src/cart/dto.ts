@@ -42,3 +42,16 @@ export const setRedeemPointsSchema = z.object({ points: z.number().int().min(0).
 export type SetRedeemPointsDto = z.infer<typeof setRedeemPointsSchema>;
 
 export type SetCustomerNoteDto = z.infer<typeof setCustomerNoteSchema>;
+
+/** §16 M16 — null removes the gift card. */
+export const setGiftCardSchema = z.object({ code: z.string().trim().min(4).max(40).nullable() });
+export type SetGiftCardDto = z.infer<typeof setGiftCardSchema>;
+
+export const setUseStoreCreditSchema = z.object({ use: z.boolean() });
+export type SetUseStoreCreditDto = z.infer<typeof setUseStoreCreditSchema>;
+
+export const setReferralCodeSchema = z.object({ code: z.string().trim().min(4).max(20).nullable() });
+export type SetReferralCodeDto = z.infer<typeof setReferralCodeSchema>;
+
+export const setAffiliateSchema = z.object({ code: z.string().trim().min(1).max(40) });
+export type SetAffiliateDto = z.infer<typeof setAffiliateSchema>;

@@ -8,4 +8,6 @@ import "./definitions-m13.ts";
 import "./definitions-m14.ts";
 // Milestone 15 (§16 M15) - support settings.
 import "./definitions-m15.ts";
+// Milestone 16 (§16 M16) - store credit, gift cards, referrals, affiliates.
+import "./definitions-m16.ts";
 export { AD_PLATFORMS, type AdPlatform, type AdSpendSourceMap } from "./definitions-m13.ts";

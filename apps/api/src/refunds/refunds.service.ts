@@ -4,6 +4,7 @@ import { AuditService } from "../audit/audit.service";
 import type { AuthenticatedStaff } from "../common/types";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { SettingsService } from "../settings/settings.service";
+import { StoreCreditLedgerService } from "../rewards-core/store-credit-ledger.service";
 import type { CompleteRefundDto, RejectRefundDto } from "./dto";
 
 export interface RefundApprovalPending {
@@ -19,6 +20,7 @@ export class RefundsService {
     private readonly audit: AuditService,
     private readonly approvals: ApprovalsService,
     private readonly settings: SettingsService,
+    private readonly storeCredit: StoreCreditLedgerService,
   ) {}
 
   async list(status?: string) {
@@ -33,6 +35,9 @@ export class RefundsService {
     const refund = await this.prisma.refund.findUnique({ where: { id }, include: { order: true } });
     if (!refund) throw new NotFoundException("Refund not found");
     if (refund.status !== "pending" && refund.status !== "processing") throw new BadRequestException({ code: "INVALID_STATE", message: "This refund is already closed." });
+    if (refund.method === "store_credit" && !refund.order.customerId) {
+      throw new BadRequestException({ code: "GUEST_ORDER", message: "This order has no customer account, so it can't be refunded to store credit. Change the refund method first." });
+    }
 
     // Approval workflow (M11): refunds above the configured amount need a second approver.
     if (!opts.approved && !actor.permissions.has("approvals.bypass")) {
@@ -48,6 +53,10 @@ export class RefundsService {
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const result = await tx.refund.update({ where: { id }, data: { status: "completed", approvedBy: actor.id, externalRef: dto.externalRef } });
+      // §16 M16 — a store-credit refund is paid out by crediting the customer's wallet, nothing to transfer by hand.
+      if (refund.method === "store_credit" && refund.order.customerId) {
+        await this.storeCredit.creditInTx(tx, refund.order.customerId, refund.amount, { reason: "refund", reference: refund.id, orderId: refund.orderId, note: refund.reason, createdBy: actor.id });
+      }
       const refundedTotal = refund.order.refundedTotal + refund.amount;
       await tx.order.update({
         where: { id: refund.orderId },

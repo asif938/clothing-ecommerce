@@ -1302,9 +1302,14 @@ model Customer {
   updatedAt                DateTime       @updatedAt @map("updated_at")
   deletedAt                DateTime?      @map("deleted_at")
 
-  tier                LoyaltyTier?         @relation(fields: [tierId], references: [id], onDelete: SetNull)
-  loyaltyTransactions LoyaltyTransaction[]
-  journeyEnrollments  JourneyEnrollment[]
+  tier                    LoyaltyTier?             @relation(fields: [tierId], references: [id], onDelete: SetNull)
+  loyaltyTransactions     LoyaltyTransaction[]
+  journeyEnrollments      JourneyEnrollment[]
+  // §16 M16 — store credit ledger, gift cards bought, referrals made/received.
+  storeCreditTransactions StoreCreditTransaction[]
+  giftCardsPurchased      GiftCard[]               @relation("GiftCardPurchaser")
+  referralsMade           Referral[]               @relation("Referrer")
+  referralsReceived       Referral[]               @relation("Referee")
 
   sessions          CustomerSession[]
   addresses         Address[]
@@ -1435,6 +1440,13 @@ model Cart {
   // §16 M13 — loyalty points the (logged-in) customer asked to use; the
   // pricing pipeline decides how many actually apply (§6.3 step 9).
   redeemPoints           Int        @default(0) @map("redeem_points")
+  // §16 M16 — tenders and attribution chosen before placement. The gift card
+  // is stored by id (validated when applied), never as its plaintext code.
+  giftCardId             String?    @map("gift_card_id")
+  useStoreCredit         Boolean    @default(false) @map("use_store_credit")
+  referralCode           String?    @map("referral_code")
+  affiliateCode          String?    @map("affiliate_code")
+  affiliateClickedAt     DateTime?  @map("affiliate_clicked_at")
   createdAt              DateTime   @default(now()) @map("created_at")
   updatedAt              DateTime   @updatedAt @map("updated_at")
 
@@ -1773,6 +1785,16 @@ model Order {
   // §16 M14 — the shopper's `anonymous_id` cookie at placement, so A/B test
   // conversions and revenue can be attributed to the variant they saw.
   visitorId                 String?            @map("visitor_id")
+  // §16 M16 — tenders applied at placement. Unlike points (a discount), gift
+  // cards and store credit are payments: `total` keeps the full order value,
+  // a succeeded `payments` row records each tender and `paidTotal` includes
+  // them. `referralDiscount` is the referee's first-order discount; like
+  // `pointsDiscount` it is kept apart from `discountTotal` and subtracted
+  // from `total`.
+  giftCardUsed              Int                @default(0) @map("gift_card_used")
+  giftCardId                String?            @map("gift_card_id")
+  storeCreditUsed           Int                @default(0) @map("store_credit_used")
+  referralDiscount          Int                @default(0) @map("referral_discount")
   createdAt                 DateTime           @default(now()) @map("created_at")
   updatedAt                 DateTime           @updatedAt @map("updated_at")
 
@@ -1920,6 +1942,10 @@ enum NotificationEvent {
   // (broadcast/journey bodies live on those rows, not in message_templates).
   marketing_broadcast
   journey_message
+  // Milestone 16 (§16 M16) — gift card delivery/receipt and referral rewards.
+  gift_card_received
+  gift_card_purchased
+  referral_reward
 }
 
 enum NotificationRecipientType {
@@ -2144,6 +2170,7 @@ enum PaymentMethod {
   bkash
   nagad
   store_credit
+  gift_card
 }
 
 enum PaymentPurpose {
@@ -3745,4 +3772,262 @@ model WebhookEvent {
 
   @@index([status, receivedAt])
   @@map("webhook_events")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 16 (docs/PROJECT_SPEC.md §5.8, §6.12, §16 M16) — loyalty
+// extensions: store credit wallet, gift cards, referral program, affiliates.
+// ---------------------------------------------------------------------------
+
+enum StoreCreditReason {
+  refund
+  return
+  gift_card
+  referral
+  cashback
+  adjust
+  order_payment
+  order_reversal
+}
+
+// §5.8 `store_credit_transactions` — the wallet ledger. `Customer.storeCreditBalance`
+// is the sum of `amount`, changed only in the same transaction as the row that
+// explains it. `(reason, reference)` is unique so automatic credits are idempotent.
+model StoreCreditTransaction {
+  id           String            @id @default(cuid(2))
+  customerId   String            @map("customer_id")
+  amount       Int
+  reason       StoreCreditReason
+  reference    String?
+  orderId      String?           @map("order_id")
+  balanceAfter Int               @map("balance_after")
+  note         String?
+  createdBy    String?           @map("created_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([reason, reference])
+  @@index([customerId, createdAt])
+  @@index([orderId])
+  @@map("store_credit_transactions")
+}
+
+enum GiftCardStatus {
+  // Bought on the storefront, payment not yet confirmed: not usable.
+  pending
+  active
+  disabled
+  // Balance fully used (or moved to a wallet).
+  redeemed
+  expired
+  // Purchase never paid (timed out or failed).
+  cancelled
+}
+
+enum GiftCardSource {
+  admin
+  purchase
+}
+
+// §5.8 `gift_cards` — the code is stored only as an HMAC (`code_hash`) plus its
+// last 4 characters; the plaintext exists once, in the message that delivers it.
+model GiftCard {
+  id                  String         @id @default(cuid(2))
+  codeHash            String         @unique @map("code_hash")
+  last4               String
+  initialAmount       Int            @map("initial_amount")
+  balance             Int
+  currency            String         @default("BDT")
+  status              GiftCardStatus @default(active)
+  source              GiftCardSource @default(admin)
+  expiresAt           DateTime?      @map("expires_at")
+  purchaserCustomerId String?        @map("purchaser_customer_id")
+  purchaserName       String?        @map("purchaser_name")
+  purchaserPhone      String?        @map("purchaser_phone")
+  purchaserEmail      String?        @map("purchaser_email")
+  recipientName       String?        @map("recipient_name")
+  recipientPhone      String?        @map("recipient_phone")
+  recipientEmail      String?        @map("recipient_email")
+  message             String?
+  locale              String         @default("bn")
+  deliveredAt         DateTime?      @map("delivered_at")
+  // Storefront purchases are paid through the normal payment drivers but have
+  // no order, so the gateway reference lives here (see GiftCardPurchaseService).
+  paymentMethod       String?        @map("payment_method")
+  providerInstanceId  String?        @map("provider_instance_id")
+  paymentExternalRef  String?        @map("payment_external_ref")
+  paidAt              DateTime?      @map("paid_at")
+  paymentTimeoutAt    DateTime?      @map("payment_timeout_at")
+  // Unguessable id for the buyer's payment-result page; never the code.
+  purchaseToken       String?        @unique @map("purchase_token")
+  note                String?
+  createdBy           String?        @map("created_by")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  purchaser    Customer?             @relation("GiftCardPurchaser", fields: [purchaserCustomerId], references: [id], onDelete: SetNull)
+  transactions GiftCardTransaction[]
+
+  @@index([status, createdAt])
+  @@index([paymentExternalRef])
+  @@index([last4])
+  @@map("gift_cards")
+}
+
+enum GiftCardTransactionReason {
+  issue
+  redeem
+  reversal
+  adjust
+  wallet_transfer
+  expire
+}
+
+model GiftCardTransaction {
+  id           String                    @id @default(cuid(2))
+  giftCardId   String                    @map("gift_card_id")
+  amount       Int
+  reason       GiftCardTransactionReason
+  reference    String?
+  orderId      String?                   @map("order_id")
+  balanceAfter Int                       @map("balance_after")
+  note         String?
+  createdBy    String?                   @map("created_by")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+
+  @@unique([reason, reference])
+  @@index([giftCardId, createdAt])
+  @@index([orderId])
+  @@map("gift_card_transactions")
+}
+
+enum ReferralStatus {
+  pending
+  rewarded
+  void
+}
+
+// §5.8 `referrals` — one row per referee phone (a person can only ever be
+// referred once), created when their first order is placed with a referral
+// code; the referrer is rewarded once that order completes (§6.12).
+model Referral {
+  id                 String         @id @default(cuid(2))
+  referrerCustomerId String         @map("referrer_customer_id")
+  refereeCustomerId  String?        @map("referee_customer_id")
+  refereePhone       String         @unique @map("referee_phone")
+  code               String
+  orderId            String         @unique @map("order_id")
+  status             ReferralStatus @default(pending)
+  refereeDiscount    Int            @default(0) @map("referee_discount")
+  rewardType         String?        @map("reward_type")
+  rewardAmount       Int?           @map("reward_amount")
+  rewardedAt         DateTime?      @map("rewarded_at")
+  voidReason         String?        @map("void_reason")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  referrer Customer  @relation("Referrer", fields: [referrerCustomerId], references: [id], onDelete: Cascade)
+  referee  Customer? @relation("Referee", fields: [refereeCustomerId], references: [id], onDelete: SetNull)
+
+  @@index([referrerCustomerId, createdAt])
+  @@index([status])
+  @@map("referrals")
+}
+
+enum AffiliateStatus {
+  active
+  paused
+}
+
+enum AffiliateCommissionType {
+  percent
+  fixed
+}
+
+// §5.8 `affiliates` — influencers/partners. Orders are attributed by the
+// affiliate's link (`?aff=CODE`, within the attribution window) or by the
+// coupon linked to them; commission is percent (basis points) or fixed poisha.
+model Affiliate {
+  id              String                  @id @default(cuid(2))
+  name            String
+  code            String                  @unique
+  phone           String?
+  email           String?
+  discountId      String?                 @unique @map("discount_id")
+  commissionType  AffiliateCommissionType @default(percent) @map("commission_type")
+  commissionValue Int                     @map("commission_value")
+  attributionDays Int?                    @map("attribution_days")
+  status          AffiliateStatus         @default(active)
+  payoutMethod    String?                 @map("payout_method")
+  payoutDetails   String?                 @map("payout_details")
+  notes           String?
+  portalToken     String                  @unique @map("portal_token")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  clickDays   AffiliateClickDay[]
+  conversions AffiliateConversion[]
+  payouts     AffiliatePayout[]
+
+  @@map("affiliates")
+}
+
+model AffiliateClickDay {
+  affiliateId String   @map("affiliate_id")
+  day         DateTime @db.Date
+  clicks      Int      @default(0)
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@id([affiliateId, day])
+  @@map("affiliate_click_days")
+}
+
+enum AffiliateConversionStatus {
+  pending
+  approved
+  rejected
+  paid
+}
+
+model AffiliateConversion {
+  id             String                    @id @default(cuid(2))
+  affiliateId    String                    @map("affiliate_id")
+  orderId        String                    @unique @map("order_id")
+  source         String
+  orderAmount    Int                       @map("order_amount")
+  commission     Int
+  status         AffiliateConversionStatus @default(pending)
+  approvedAt     DateTime?                 @map("approved_at")
+  rejectedReason String?                   @map("rejected_reason")
+  payoutId       String?                   @map("payout_id")
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+
+  affiliate Affiliate        @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  payout    AffiliatePayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([affiliateId, status])
+  @@index([status, createdAt])
+  @@map("affiliate_conversions")
+}
+
+model AffiliatePayout {
+  id          String   @id @default(cuid(2))
+  affiliateId String   @map("affiliate_id")
+  amount      Int
+  method      String
+  externalRef String?  @map("external_ref")
+  note        String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  affiliate   Affiliate             @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  conversions AffiliateConversion[]
+
+  @@index([affiliateId, createdAt])
+  @@map("affiliate_payouts")
 }

@@ -325,6 +325,25 @@ const NOTIFICATION_TEMPLATE_CONTENT: Record<string, { subjectBn: string; subject
     bodyBn: "আপনি যে পণ্যটির জন্য অপেক্ষা করছিলেন তা স্টকে এসেছে: {product_title}। দেখুন: {product_url} — {brand_name}",
     bodyEn: "The item you were waiting for is back: {product_title}. Check it out: {product_url} — {brand_name}",
   },
+  // Milestone 16 (§16 M16) — gift cards and referrals.
+  gift_card_received: {
+    subjectBn: "{sender_name} আপনাকে {gift_card_amount} এর গিফট কার্ড পাঠিয়েছেন",
+    subjectEn: "{sender_name} sent you a {gift_card_amount} gift card",
+    bodyBn: "{recipient_name}, {sender_name} আপনাকে {brand_name} এর {gift_card_amount} গিফট কার্ড পাঠিয়েছেন। কোড: {gift_card_code} (মেয়াদ: {gift_card_expires})। {gift_message} কেনাকাটা করুন: {shop_url}",
+    bodyEn: "{recipient_name}, {sender_name} sent you a {gift_card_amount} {brand_name} gift card. Code: {gift_card_code} (valid until {gift_card_expires}). {gift_message} Shop: {shop_url}",
+  },
+  gift_card_purchased: {
+    subjectBn: "আপনার গিফট কার্ড পাঠানো হয়েছে",
+    subjectEn: "Your gift card has been sent",
+    bodyBn: "{customer_name}, আপনার {gift_card_amount} গিফট কার্ড (••{gift_card_last4}) {recipient_name} এর কাছে পাঠানো হয়েছে। ধন্যবাদ — {brand_name}",
+    bodyEn: "{customer_name}, your {gift_card_amount} gift card (••{gift_card_last4}) has been sent to {recipient_name}. Thank you — {brand_name}",
+  },
+  referral_reward: {
+    subjectBn: "রেফারেলের পুরস্কার পেয়েছেন",
+    subjectEn: "You earned a referral reward",
+    bodyBn: "{customer_name}, আপনার বন্ধুর প্রথম অর্ডার সম্পন্ন হয়েছে — আপনি পেয়েছেন {reward}। ধন্যবাদ — {brand_name}",
+    bodyEn: "{customer_name}, your friend's first order is complete — you earned {reward}. Thank you — {brand_name}",
+  },
 };
 
 async function seedNotificationTemplates() {

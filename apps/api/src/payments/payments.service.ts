@@ -21,10 +21,23 @@ import { OrdersLifecycleService } from "../checkout/orders-lifecycle.service";
 const ONLINE_METHODS = ["mock", "sslcommerz", "bkash", "nagad"] as const;
 export type OnlinePaymentMethod = (typeof ONLINE_METHODS)[number];
 
+export function isOnlinePaymentMethod(value: string): value is OnlinePaymentMethod {
+  return (ONLINE_METHODS as readonly string[]).includes(value);
+}
+
+/**
+ * §16 M16 — a payment that belongs to something other than an order (a gift
+ * card purchase). Its owner keeps the gateway reference itself and is asked
+ * to settle it when a callback arrives for a reference no `payments` row
+ * knows. Returns true when it recognised the reference.
+ */
+export type StandalonePaymentHandler = (method: OnlinePaymentMethod, externalRef: string, callbackPayload?: Record<string, unknown>) => Promise<boolean>;
+
 /** Payment drivers behind one interface (docs/PROJECT_SPEC.md §10.1) — COD is handled directly by checkout (no driver); this resolves and drives the online methods. */
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private readonly standaloneHandlers: StandalonePaymentHandler[] = [];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -84,10 +97,34 @@ export class PaymentsService {
     }
   }
 
+  /** §16 M16 — lets another module (gift card purchases) settle its own standalone payments when their callbacks arrive. */
+  registerStandaloneHandler(handler: StandalonePaymentHandler): void {
+    this.standaloneHandlers.push(handler);
+  }
+
+  /** Starts a hosted-page payment that isn't for an order: no `payments` row, the caller stores the returned reference (§16 M16 gift card purchases). */
+  async initiateStandalone(method: OnlinePaymentMethod, amount: number, reference: string, returnUrls: { success: string; fail: string; cancel: string }, customer: { name?: string; phone?: string; email?: string }) {
+    const { driver, providerInstanceId } = await this.resolveDriver(method);
+    const result = await driver.initiate({ amount, currency: "BDT", orderNumber: reference, customerName: customer.name, customerPhone: customer.phone, customerEmail: customer.email, returnUrls });
+    const redirectUrl = result.redirectUrl.startsWith("/") ? `${this.config.get("API_URL", { infer: true })}${result.redirectUrl}` : result.redirectUrl;
+    return { externalRef: result.externalRef, redirectUrl, providerInstanceId };
+  }
+
+  /** Asks the provider what happened to a standalone payment. */
+  async verifyStandalone(method: OnlinePaymentMethod, providerInstanceId: string | null, externalRef: string, callbackPayload?: Record<string, unknown>) {
+    const { driver } = await this.resolveDriver(method, providerInstanceId ?? undefined);
+    return driver.verify(externalRef, callbackPayload);
+  }
+
   /** Called from a provider's callback/IPN/redirect route, or the reconciliation job re-querying a `pending` payment — idempotent (§10.1). */
   async confirmByExternalRef(method: OnlinePaymentMethod, externalRef: string, callbackPayload?: Record<string, unknown>): Promise<void> {
     const payment = await this.prisma.payment.findFirst({ where: { externalRef, method: method as PaymentMethod } });
-    if (!payment) throw new NotFoundException("Payment not found");
+    if (!payment) {
+      for (const handler of this.standaloneHandlers) {
+        if (await handler(method, externalRef, callbackPayload)) return;
+      }
+      throw new NotFoundException("Payment not found");
+    }
     if (payment.status === "succeeded" || payment.status === "failed" || payment.status === "cancelled") return; // already settled — idempotent no-op
 
     const { driver } = await this.resolveDriver(method, payment.providerInstanceId ?? undefined);

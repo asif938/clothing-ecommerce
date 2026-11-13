@@ -118,6 +118,34 @@ export class CartService {
     return this.getOrCreateActiveCart(identity);
   }
 
+  /** §16 M16 — a gift card the shopper applied (already validated by the controller) or null to remove it. */
+  async setGiftCard(identity: CartIdentity, giftCardId: string | null) {
+    const cart = await this.getOrCreateActiveCart(identity);
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { giftCardId } });
+    return await this.assertAccess(cart.id, identity);
+  }
+
+  /** §16 M16 — pay with the wallet; only a logged-in customer has one. */
+  async setUseStoreCredit(identity: CartIdentity, use: boolean) {
+    if (!identity.customerId) throw new ForbiddenException({ code: "LOGIN_REQUIRED", message: "Log in to use your store credit." });
+    const cart = await this.getOrCreateActiveCart(identity);
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { useStoreCredit: use } });
+    return await this.assertAccess(cart.id, identity);
+  }
+
+  /** §16 M16 — the friend's referral code from a `?ref=` link or typed at checkout; pricing decides whether it applies. */
+  async setReferralCode(identity: CartIdentity, code: string | null) {
+    const cart = await this.getOrCreateActiveCart(identity);
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { referralCode: code } });
+    return await this.assertAccess(cart.id, identity);
+  }
+
+  /** §16 M16 — last affiliate link clicked (last click wins) and when, for the attribution window. */
+  async setAffiliate(identity: CartIdentity, code: string) {
+    const cart = await this.getOrCreateActiveCart(identity);
+    await this.prisma.cart.update({ where: { id: cart.id }, data: { affiliateCode: code, affiliateClickedAt: new Date() } });
+  }
+
   async setCustomerNote(identity: CartIdentity, note: string | null) {
     const cart = await this.getOrCreateActiveCart(identity);
     await this.prisma.cart.update({ where: { id: cart.id }, data: { customerNote: note } });
@@ -140,6 +168,17 @@ export class CartService {
         await this.prisma.cartItem.create({ data: { cartId: customerCart.id, variantId: guestItem.variantId, quantity: guestItem.quantity, addedPrice: guestItem.addedPrice } });
       }
     }
+    // §16 M16 — keep what the shopper chose as a guest (gift card, referral and affiliate attribution) unless the account cart already has its own.
+    await this.prisma.cart.update({
+      where: { id: customerCart.id },
+      data: {
+        giftCardId: customerCart.giftCardId ?? guestCart.giftCardId,
+        referralCode: customerCart.referralCode ?? guestCart.referralCode,
+        ...(guestCart.affiliateCode && (!customerCart.affiliateClickedAt || (guestCart.affiliateClickedAt && guestCart.affiliateClickedAt > customerCart.affiliateClickedAt))
+          ? { affiliateCode: guestCart.affiliateCode, affiliateClickedAt: guestCart.affiliateClickedAt }
+          : {}),
+      },
+    });
     await this.prisma.cart.update({ where: { id: guestCart.id }, data: { status: "converted" } });
   }
 

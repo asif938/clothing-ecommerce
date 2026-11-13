@@ -79,6 +79,10 @@ import { SeoAuditModule } from "./seo-audit/seo-audit.module";
 import { ExperimentsModule } from "./experiments/experiments.module";
 import { PersonalizationModule } from "./personalization/personalization.module";
 import { SupportModule } from "./support/support.module";
+import { StoreCreditModule } from "./store-credit/store-credit.module";
+import { GiftCardsModule } from "./gift-cards/gift-cards.module";
+import { ReferralsModule } from "./referrals/referrals.module";
+import { AffiliatesModule } from "./affiliates/affiliates.module";
 
 @Module({
   imports: [
@@ -190,6 +194,11 @@ import { SupportModule } from "./support/support.module";
     ExperimentsModule,
     // §16 M15 — support.
     SupportModule,
+    // §16 M16 — loyalty extensions.
+    StoreCreditModule,
+    GiftCardsModule,
+    ReferralsModule,
+    AffiliatesModule,
     AutomationModule,
     // Milestone 12 (§16 M12): inventory and finance.
     ProcurementModule,

@@ -11,6 +11,7 @@ import { Header } from "../../components/header";
 import { PwaRegister } from "../../components/pwa-register";
 import { TrackingScripts } from "../../components/tracking-scripts";
 import { UtmCapture } from "../../components/utm-capture";
+import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
@@ -90,6 +91,7 @@ export default async function LocaleLayout({
         />
         <PwaRegister enabled={config["pwa.enabled"] === true} />
         <UtmCapture />
+        <RewardsCapture />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}

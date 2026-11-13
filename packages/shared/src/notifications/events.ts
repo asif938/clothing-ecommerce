@@ -133,6 +133,30 @@ export const NOTIFICATION_EVENTS: NotificationEventDefinition[] = [
     variables: [...COMMON_VARS, "product_title", "product_url"],
     defaultChannelOrder: ["push", "whatsapp", "sms", "email"],
   },
+  // Milestone 16 (§16 M16) — gift cards and referrals. `gift_card_received`
+  // carries the plaintext code: it is the only place the code ever exists
+  // outside the moment it is generated (only its hash is stored).
+  {
+    key: "gift_card_received",
+    label: { bn: "গিফট কার্ড পেয়েছেন", en: "Gift card received" },
+    help: { bn: "প্রাপককে গিফট কার্ডের কোড পাঠানো হয়", en: "Sends the gift card code to its recipient" },
+    variables: [...COMMON_VARS, "recipient_name", "sender_name", "gift_card_code", "gift_card_amount", "gift_card_expires", "gift_message", "shop_url"],
+    defaultChannelOrder: ["sms", "email", "whatsapp"],
+  },
+  {
+    key: "gift_card_purchased",
+    label: { bn: "গিফট কার্ড কেনার রসিদ", en: "Gift card purchase receipt" },
+    help: { bn: "ক্রেতাকে জানানো হয় যে কার্ডটি পাঠানো হয়েছে (কোড ছাড়া)", en: "Tells the buyer the card was sent (without the code)" },
+    variables: [...COMMON_VARS, "customer_name", "recipient_name", "gift_card_amount", "gift_card_last4"],
+    defaultChannelOrder: ["sms", "email"],
+  },
+  {
+    key: "referral_reward",
+    label: { bn: "রেফারেল পুরস্কার", en: "Referral reward" },
+    help: { bn: "বন্ধুর অর্ডার সম্পন্ন হলে রেফারকারীকে জানানো হয়", en: "Tells the referrer their friend's order completed and they were rewarded" },
+    variables: [...COMMON_VARS, "customer_name", "reward"],
+    defaultChannelOrder: ["push", "sms", "email"],
+  },
 ];
 
 export function getNotificationEventDefinition(key: string): NotificationEventDefinition | undefined {

@@ -16,7 +16,7 @@ describe("OrderExpiryService.runSweep", () => {
   it("releases stock and marks the order expired", async () => {
     const prisma = makePrisma([{ id: "o1", orderNumber: "DEM2601050001", items: [{ variantId: "v1", locationId: "loc-1", quantity: 2 }] }]);
     const release = vi.fn(() => Promise.resolve());
-    const service = new OrderExpiryService(prisma as never, { release } as never);
+    const service = new OrderExpiryService(prisma as never, { release } as never, { restoreInTx: vi.fn().mockResolvedValue(0) } as never);
 
     const result = await service.runSweep();
 
@@ -31,7 +31,7 @@ describe("OrderExpiryService.runSweep", () => {
       { id: "o1", orderNumber: "DEM2601050001", items: [{ variantId: "v1", locationId: "loc-1", quantity: 1 }, { variantId: "v2", locationId: "loc-1", quantity: 3 }] },
     ]);
     const release = vi.fn(() => Promise.resolve());
-    const service = new OrderExpiryService(prisma as never, { release } as never);
+    const service = new OrderExpiryService(prisma as never, { release } as never, { restoreInTx: vi.fn().mockResolvedValue(0) } as never);
 
     await service.runSweep();
 
@@ -42,7 +42,7 @@ describe("OrderExpiryService.runSweep", () => {
   it("does nothing when there are no expired orders", async () => {
     const prisma = makePrisma([]);
     const release = vi.fn();
-    const service = new OrderExpiryService(prisma as never, { release } as never);
+    const service = new OrderExpiryService(prisma as never, { release } as never, { restoreInTx: vi.fn().mockResolvedValue(0) } as never);
 
     const result = await service.runSweep();
 

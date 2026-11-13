@@ -7,6 +7,7 @@ import { formatBdt } from "../lib/money";
 import { readCookie } from "../lib/analytics";
 import { useCart } from "../lib/use-cart";
 import { readUtm } from "../lib/utm";
+import { CheckoutCredits, CreditTotals } from "./checkout-credits";
 import {
   availablePaymentMethods,
   areas as fetchAreas,
@@ -265,6 +266,8 @@ export function CheckoutView() {
         </section>
       )}
 
+      {pricing && <CheckoutCredits pricing={pricing} locale={locale} onCart={cart.setCart} />}
+
       <section className="mb-6 flex items-center gap-2">
         <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} id="terms" />
         <label htmlFor="terms" className="text-sm">
@@ -288,9 +291,10 @@ export function CheckoutView() {
               <span>−{formatBdt(pricing.loyalty.discount)}</span>
             </div>
           )}
+          <CreditTotals pricing={pricing} locale={locale} />
           <div className="flex justify-between font-semibold text-surface-foreground">
-            <span>{locale === "bn" ? "সর্বমোট" : "Total"}</span>
-            <span>{formatBdt(pricing.total)}</span>
+            <span>{pricing.amountDue !== pricing.total ? (locale === "bn" ? "পরিশোধ বাকি" : "To pay") : locale === "bn" ? "সর্বমোট" : "Total"}</span>
+            <span>{formatBdt(pricing.amountDue)}</span>
           </div>
         </div>
       )}

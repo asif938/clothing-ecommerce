@@ -2469,3 +2469,41 @@ Postgres computes it. No migration is needed (the DB column was already generate
 ## 2026-11-13 — M15: create order from chat reuses the manual order screen
 
 **Decision.** "Create order" in the inbox opens the existing manual order form (§8.2) pre-filled with channel, phone and name; on save the order is linked to the conversation (`conversations.order_ids` + a system note) and staff return to the thread. No second order-entry path.
+
+## 2026-11-13 — M16: gift cards and store credit are payments, not discounts
+
+**Context.** §6.3 step 9 groups gift card / store credit / points redemption, and step 11 writes `total = … − credits`. But §5.6 lists `store_credit` and `gift_card` as payment methods, a gift card's money was already received when it was sold, and M12's profit report already treats `store_credit` as a non-gateway payment. M13 implemented points as a discount (`orders.points_discount`, subtracted from `total`).
+
+**Decision.** Points stay a discount (M13, unchanged). Gift cards and store credit are tenders: `total` keeps the order's value; placement records a succeeded `payments` row per tender (`method` `gift_card`/`store_credit`), `paid_total` includes them, and `cod_amount`/advance/online amounts are taken from the new `amount_due` (what's left). The order keeps `gift_card_used`, `gift_card_id`, `store_credit_used` for display and reversal. Payment rules still see the order value. Gift card is spent first (it can expire), then the wallet; both may pay for delivery. A cancelled or expired order gives the tenders straight back to the card/wallet inside the same transaction (idempotent ledger rows, payment rows marked `cancelled`) and only the cash part becomes a refund record. `onPaymentSucceeded` now derives an advance-paid order's COD amount from `paid_total`, so tenders aren't collected twice.
+
+**Alternatives.** Subtracting credits from `total` like points (rejected: understates revenue and makes refunds of mixed-tender orders ambiguous).
+
+## 2026-11-13 — M16: ledgers for store credit and gift cards, in a dependency-free core module
+
+**Decision.** `store_credit_transactions` and `gift_card_transactions` are append-only ledgers with `balance_after`; `customers.store_credit_balance` and `gift_cards.balance` change only in the same transaction as their row, debits use a guarded `updateMany` (balance ≥ amount) so concurrent spends can't overdraw, and `(reason, reference)` is unique so automatic credits (refund id, return id, order id, referral id) are idempotent. In-transaction credits check for an existing row first because a unique violation would abort the caller's whole transaction. Both ledgers and the tender spend/restore live in `RewardsCoreModule` (Prisma + config only) so order lifecycle, checkout, refunds and returns use them without module cycles. Returns resolved as store credit and refunds completed with method `store_credit` now credit the wallet through the ledger (M6 incremented the balance directly); a store-credit refund on a guest order is refused with a clear message. Store credit has no expiry (the spec sets none).
+
+## 2026-11-13 — M16: gift card codes are hashed, delivered once, re-issued rather than recovered
+
+**Context.** §5.8: "code (hashed + last4)".
+
+**Decision.** 16 characters from a 30-letter alphabet without look-alikes (0/O/1/I/L/U), ~78 bits, generated with rejection sampling from `crypto.randomBytes`; stored as HMAC-SHA256 keyed with `APP_ENCRYPTION_KEY` plus `last4`. The plaintext exists only in the delivery message (`gift_card_received`, so also in that notification log row — unavoidable for a queued SMS) and, for staff-issued cards, in the one API response that shows it to the issuer. Lost code → *new code*: a fresh code replaces the hash and is sent again; there is no "show code". Lookups (apply at checkout, balance check, add to wallet) share an hourly per-visitor limit (`giftCards.checksPerHour`, in-process like M15's live-chat limiter) and answer unknown codes with one generic message.
+
+## 2026-11-13 — M16: storefront gift card purchases use the payment drivers without an order
+
+**Context.** A digital gift card has nothing to ship, but `payments` rows belong to orders and checkout requires an address.
+
+**Decision.** A purchase is a `gift_cards` row in status `pending` (placeholder hash, zero balance) paid through `PaymentsService.initiateStandalone`, which runs the same drivers but stores the gateway reference on the card. Gateway callbacks for a reference no `payments` row knows are offered to registered standalone handlers (the gift card module registers one), and a sweep re-verifies pending purchases and cancels them after `payment.timeoutMinutes`. On success the card gets its code and balance, the code is sent to the recipient and a receipt (last 4 only) to the buyer. A payment confirmed after the timeout still issues the card — the money was taken. COD isn't offered. The result page polls by an unguessable purchase token and never shows the code.
+
+**Alternatives.** A `gift_card` catalog product sold through the normal checkout (rejected: needs address-less, shipping-less orders through fulfilment); making `payments.order_id` nullable (rejected: touches every payment consumer). Known gap: these payments don't appear in M12 gateway settlement matching.
+
+## 2026-11-13 — M16: referral rules
+
+**Decision.** Each customer's existing `referral_code` (M5) is their code; links are `?ref=CODE`, and a referral code typed into the coupon box is moved to the cart's referral slot. The referee discount (percent with cap, or fixed; minimum order; doesn't stack with coupons unless allowed) is a pricing step after coupon discounts, kept in `orders.referral_discount` beside `points_discount`, and points are capped on the goods total after it. It applies only to a first order (no orders by that account or phone), never to the referrer themself (account or phone), and once per referee phone (`referrals.referee_phone` unique — a lost race rolls back the order instead of double-discounting). The referrer's reward (store credit or points) is granted by a sweep when the order reaches `completed` (after the return window, matching loyalty and affiliate approval); cancelled/refused/returned orders void it, as does exceeding `referral.maxRewardsPerMonth` (Dhaka calendar month). Points rewards wait while loyalty is switched off. Staff can void a pending referral.
+
+## 2026-11-13 — M16: affiliate attribution and commission
+
+**Decision.** An affiliate has a link code (`?aff=CODE`, stored on the cart with the click time, last click wins) and optionally one coupon. At placement the coupon's affiliate wins; otherwise a link click within the window (`affiliates.attributionDays`, overridable per affiliate). No commission on the affiliate's own phone. Commission is percent (basis points) or fixed per order on kept goods after coupon, referral and points discounts (never shipping or gift wrap), created `pending`; a sweep approves it when the order completes — recomputed for returned items, never above the original — or rejects it if the order failed. Payouts happen outside the system: *Record payout* marks every approved commission paid in one payout row with the transaction id (`affiliates.payouts` permission). Clicks are counted per Dhaka day (no per-click rows, free-tier friendly). Partners get a private read-only page (`/affiliate/:token`, noindex, no customer data) whose token staff can rotate.
+
+## 2026-11-13 — M16: what the feature toggles switch off
+
+**Decision.** Per §4.2, storefront endpoints for a disabled feature answer `FEATURE_DISABLED` (applying a gift card, using store credit, setting a referral code, balance check, purchase); admin screens stay usable so staff can prepare first. A customer can always see their wallet balance and history even while store credit payment is off, and refunds/returns keep crediting it. Affiliate clicks and attribution simply stop while affiliates are off.

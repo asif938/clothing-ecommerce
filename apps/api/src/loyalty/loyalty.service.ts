@@ -325,7 +325,7 @@ export class LoyaltyService {
     return { reversed };
   }
 
-  /** Photo-review and birthday bonuses (§6.12 "Bonus points: review with photo, birthday"). Referral bonuses arrive with the referral program (M16). */
+  /** Photo-review and birthday bonuses (§6.12 "Bonus points: review with photo, birthday"). Referral rewards are granted by `ReferralsService` (§16 M16). */
   async bonusSweep(now = new Date()): Promise<{ granted: number }> {
     const settings = await this.getSettings();
     if (!settings.enabled) return { granted: 0 };

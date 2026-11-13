@@ -1,12 +1,13 @@
 import { Module, type OnModuleInit } from "@nestjs/common";
 import { ApprovalsModule } from "../approvals/approvals.module";
+import { RewardsCoreModule } from "../rewards-core/rewards-core.module";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { RefundsController } from "./refunds.controller";
 import { RefundsService } from "./refunds.service";
 import type { CompleteRefundDto } from "./dto";
 
 @Module({
-  imports: [ApprovalsModule],
+  imports: [ApprovalsModule, RewardsCoreModule],
   controllers: [RefundsController],
   providers: [RefundsService],
   exports: [RefundsService],

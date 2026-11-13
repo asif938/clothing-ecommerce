@@ -53,6 +53,12 @@ export interface CartPricing {
   warnings: string[];
   /** §16 M13 — present only for a logged-in customer while the loyalty program is on. */
   loyalty: { enabled: boolean; balance: number; requestedPoints: number; pointsApplied: number; discount: number; maxUsablePoints: number; pointValue: number; minRedeemPoints: number; rejection: string | null } | null;
+  /** §16 M16 — a friend's referral code on this cart and the first-order discount it gives (0 with a rejection when it doesn't apply). */
+  referral: { code: string; referrerName: string | null; discount: number; rejection: string | null } | null;
+  /** §16 M16 — tenders: they pay `total`, leaving `amountDue` for COD/online. */
+  giftCard: { giftCardId: string; last4: string; balance: number; applied: number; rejection: string | null } | null;
+  storeCredit: { balance: number; use: boolean; applied: number } | null;
+  amountDue: number;
 }
 
 export interface CartItem {
@@ -108,6 +114,10 @@ export const setCartAddress = (address: { divisionId: string; districtId: string
   callApi<CartResponse>("/store/cart/address", { method: "PATCH", body: JSON.stringify(address) });
 export const selectCartShippingRate = (rateId: string) => callApi<CartResponse>("/store/cart/shipping-rate", { method: "PATCH", body: JSON.stringify({ rateId }) });
 export const setCartPoints = (points: number) => callApi<CartResponse>("/store/cart/points", { method: "PUT", body: JSON.stringify({ points }) });
+export const setCartGiftCard = (code: string | null) => callApi<CartResponse>("/store/cart/gift-card", { method: "PUT", body: JSON.stringify({ code }) });
+export const setCartStoreCredit = (use: boolean) => callApi<CartResponse>("/store/cart/store-credit", { method: "PUT", body: JSON.stringify({ use }) });
+export const setCartReferral = (code: string | null) => callApi<CartResponse>("/store/cart/referral", { method: "PUT", body: JSON.stringify({ code }) });
+export const trackAffiliateClick = (code: string) => callApi<{ tracked: boolean }>("/store/cart/affiliate", { method: "POST", body: JSON.stringify({ code }) });
 export const setCartGiftWrap = (giftWrap: boolean) => callApi<CartResponse>("/store/cart/gift-wrap", { method: "PATCH", body: JSON.stringify({ giftWrap }) });
 
 export interface PlaceOrderInput {
