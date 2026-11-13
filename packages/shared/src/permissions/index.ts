@@ -192,6 +192,18 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: "affiliates.manage", group: "rewards", label: { bn: "অ্যাফিলিয়েট ও কমিশন পরিচালনা করুন", en: "Manage affiliates & commissions" } },
   { key: "affiliates.payouts", group: "rewards", label: { bn: "অ্যাফিলিয়েট পেআউট রেকর্ড করুন", en: "Record affiliate payouts" } },
   { key: "settings.rewards.write", group: "settings", label: { bn: "গিফট কার্ড, রেফারেল ও অ্যাফিলিয়েট সেটিংস পরিবর্তন করুন", en: "Edit gift card, referral & affiliate settings" } },
+  // §16 M17 — advanced analytics, procurement and platform. API keys and
+  // config bundles can expose or overwrite the whole store, so each is its
+  // own key and none is implied by a broader one.
+  { key: "expenses.manage", group: "finance", label: { bn: "খরচ রেকর্ড ও সম্পাদনা করুন", en: "Record & edit expenses" } },
+  { key: "finance.pnl.read", group: "finance", label: { bn: "লাভ-ক্ষতির (P&L) বিবরণী দেখুন", en: "View the profit & loss statement" } },
+  { key: "materials.manage", group: "procurement", label: { bn: "কাঁচামাল ও BOM পরিচালনা করুন", en: "Manage materials & bills of materials" } },
+  { key: "reports.builder.manage", group: "reports", label: { bn: "কাস্টম রিপোর্ট তৈরি ও সম্পাদনা করুন", en: "Build & edit custom reports" } },
+  { key: "api_keys.manage", group: "platform", label: { bn: "API কী তৈরি ও বাতিল করুন", en: "Create & revoke API keys" } },
+  { key: "webhooks.manage", group: "platform", label: { bn: "আউটবাউন্ড ওয়েবহুক পরিচালনা করুন", en: "Manage outbound webhooks" } },
+  { key: "config_bundle.export", group: "platform", label: { bn: "কনফিগ বান্ডেল এক্সপোর্ট করুন", en: "Export the config bundle" } },
+  { key: "config_bundle.import", group: "platform", label: { bn: "কনফিগ বান্ডেল ইমপোর্ট করুন", en: "Import a config bundle" } },
+  { key: "settings.platform.write", group: "settings", label: { bn: "API, ওয়েবহুক ও অ্যানালিটিক্স সেটিংস পরিবর্তন করুন", en: "Edit API, webhook & analytics settings" } },
 ];
 
 const PERMISSION_KEYS = new Set(PERMISSIONS.map((p) => p.key));

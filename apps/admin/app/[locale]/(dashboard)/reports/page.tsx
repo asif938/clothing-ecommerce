@@ -50,6 +50,12 @@ export default function ReportsPage() {
           <Link href="/finance/profit" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
             {t("profitLink")}
           </Link>
+          <Link href="/reports/builder" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
+            {t("builderLink")}
+          </Link>
+          <Link href="/reports/cohorts" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
+            {t("cohortsLink")}
+          </Link>
           <Link href="/reports/scheduled" className="rounded-theme bg-muted px-3 py-1.5 text-sm text-surface-foreground hover:opacity-80">
             {t("scheduledLink")}
           </Link>

@@ -75,3 +75,40 @@ export const profitQuerySchema = z.object({
   format: z.enum(["json", "csv"]).default("json"),
 });
 export type ProfitQueryDto = z.infer<typeof profitQuerySchema>;
+
+// ---------------------------------------------------------------------------
+// §16 M17 — expenses and P&L
+// ---------------------------------------------------------------------------
+
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+
+export const expenseSchema = z.object({
+  /** The shop's calendar day the cost belongs to (Asia/Dhaka). */
+  date: dateOnly,
+  category: z.string().trim().min(1).max(40),
+  // Poisha (golden rule 3); a refund from a supplier is recorded as a note, not a negative expense.
+  amount: z.number().int().min(1).max(100_000_000_000),
+  note: z.string().trim().max(500).nullable().optional(),
+  attachmentUrl: z.string().trim().max(500).nullable().optional(),
+  supplierId: z.string().min(1).nullable().optional(),
+});
+export type ExpenseDto = z.infer<typeof expenseSchema>;
+export const updateExpenseSchema = expenseSchema.partial();
+export type UpdateExpenseDto = z.infer<typeof updateExpenseSchema>;
+
+export const listExpensesQuerySchema = z.object({
+  from: dateOnly.optional(),
+  to: dateOnly.optional(),
+  category: z.string().trim().max(40).optional(),
+  format: z.enum(["json", "csv"]).default("json"),
+});
+export type ListExpensesQueryDto = z.infer<typeof listExpensesQuerySchema>;
+
+export const pnlQuerySchema = z.object({
+  from: z.coerce.date(),
+  to: z.coerce.date(),
+  /** `month` adds one statement per Dhaka calendar month in the range (max 12). */
+  groupBy: z.enum(["total", "month"]).default("total"),
+  format: z.enum(["json", "csv"]).default("json"),
+});
+export type PnlQueryDto = z.infer<typeof pnlQuerySchema>;

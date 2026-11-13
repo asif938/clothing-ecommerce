@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import cookieParser from "cookie-parser";
+import { json } from "express";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -10,6 +11,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(Logger));
   app.use(cookieParser());
+
+  // §16 M17 config bundles carry whole CMS pages and UI string tables, well over
+  // the 100 kb default. Parsed here, ahead of Nest's default parser (which skips
+  // an already-parsed body), and only for that one route.
+  app.use("/api/v1/admin/config-bundle/import", json({ limit: "10mb" }));
 
   // §12 baseline security headers. No CSP here — this is a JSON API
   // consumed server-side by the storefront/admin's own proxy routes, not an

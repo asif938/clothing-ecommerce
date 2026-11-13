@@ -23,8 +23,9 @@ function makeService(po: Record<string, unknown> | null, opts: { costPrice?: num
     applyMovementTx: vi.fn((_tx: unknown, input: { variantId: string }) => Promise.resolve({ variantId: input.variantId, onHandBefore: 0, onHandAfter: 1, becameAvailable: false })),
     afterMovementsCommitted: vi.fn(() => Promise.resolve()),
   };
-  const service = new PurchaseOrdersService(prisma as never, audit as never, settings as never, inventory as never);
-  return { service, tx, prisma, inventory, audit };
+  const bom = { consumeForProductionTx: vi.fn(() => Promise.resolve({ consumed: [{ materialId: "m1", quantity: 10 }], shortages: [], withoutBom: [] })) };
+  const service = new PurchaseOrdersService(prisma as never, audit as never, settings as never, inventory as never, bom as never);
+  return { service, tx, prisma, inventory, audit, bom, settings };
 }
 
 const sentPo = {
@@ -41,7 +42,7 @@ const sentPo = {
 describe("PurchaseOrdersService.receive", () => {
   it("books stock, blends the cost price and marks the order partially received", async () => {
     const { service, tx, inventory } = makeService(structuredClone(sentPo));
-    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 30 }], allowOverReceipt: false }, actor);
+    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 30 }], allowOverReceipt: false, allowMaterialShortage: false }, actor);
 
     expect(inventory.applyMovementTx).toHaveBeenCalledWith(tx, expect.objectContaining({ variantId: "v1", locationId: "loc1", quantity: 30, reason: "purchase_receive", referenceType: "purchase_order", referenceId: "po1" }));
     // 10 on hand @ ৳500 + 30 @ ৳600 → ৳575
@@ -53,29 +54,29 @@ describe("PurchaseOrdersService.receive", () => {
 
   it("marks the order received once every line is in", async () => {
     const { service, tx } = makeService(structuredClone(sentPo));
-    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 30 }, { variantId: "v2", quantity: 5 }], allowOverReceipt: false }, actor);
+    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 30 }, { variantId: "v2", quantity: 5 }], allowOverReceipt: false, allowMaterialShortage: false }, actor);
     expect(tx.purchaseOrder.update).toHaveBeenCalledWith({ where: { id: "po1" }, data: expect.objectContaining({ status: "received", receivedAt: expect.any(Date) }) });
   });
 
   it("leaves the cost alone when the method is 'none'", async () => {
     const { service, tx } = makeService(structuredClone(sentPo), { costMethod: "none" });
-    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 1 }], allowOverReceipt: false }, actor);
+    await service.receive("po1", { lines: [{ variantId: "v1", quantity: 1 }], allowOverReceipt: false, allowMaterialShortage: false }, actor);
     expect(tx.productVariant.update).not.toHaveBeenCalled();
   });
 
   it("refuses an over-receipt unless explicitly allowed", async () => {
     const { service } = makeService(structuredClone(sentPo));
-    await expect(service.receive("po1", { lines: [{ variantId: "v2", quantity: 6 }], allowOverReceipt: false }, actor)).rejects.toMatchObject({ response: { code: "OVER_RECEIPT" } });
+    await expect(service.receive("po1", { lines: [{ variantId: "v2", quantity: 6 }], allowOverReceipt: false, allowMaterialShortage: false }, actor)).rejects.toMatchObject({ response: { code: "OVER_RECEIPT" } });
     const ok = makeService(structuredClone(sentPo));
-    await ok.service.receive("po1", { lines: [{ variantId: "v2", quantity: 6 }], allowOverReceipt: true }, actor);
+    await ok.service.receive("po1", { lines: [{ variantId: "v2", quantity: 6 }], allowOverReceipt: true, allowMaterialShortage: false }, actor);
     expect(ok.tx.purchaseOrder.update).toHaveBeenCalledWith({ where: { id: "po1" }, data: expect.objectContaining({ status: "partially_received" }) });
   });
 
   it("refuses to receive a draft or a variant not on the order", async () => {
     const { service } = makeService({ ...structuredClone(sentPo), status: "draft" });
-    await expect(service.receive("po1", { lines: [{ variantId: "v1", quantity: 1 }], allowOverReceipt: false }, actor)).rejects.toMatchObject({ response: { code: "PURCHASE_ORDER_NOT_RECEIVABLE" } });
+    await expect(service.receive("po1", { lines: [{ variantId: "v1", quantity: 1 }], allowOverReceipt: false, allowMaterialShortage: false }, actor)).rejects.toMatchObject({ response: { code: "PURCHASE_ORDER_NOT_RECEIVABLE" } });
     const other = makeService(structuredClone(sentPo));
-    await expect(other.service.receive("po1", { lines: [{ variantId: "v9", quantity: 1 }], allowOverReceipt: false }, actor)).rejects.toMatchObject({ response: { code: "NOT_ON_PURCHASE_ORDER" } });
+    await expect(other.service.receive("po1", { lines: [{ variantId: "v9", quantity: 1 }], allowOverReceipt: false, allowMaterialShortage: false }, actor)).rejects.toMatchObject({ response: { code: "NOT_ON_PURCHASE_ORDER" } });
   });
 });
 
@@ -90,5 +91,44 @@ describe("PurchaseOrdersService.send/cancel", () => {
     await service.cancel("po1", actor);
     expect(prisma.purchaseOrder.updateMany).toHaveBeenCalledWith({ where: { id: "po1", status: { in: ["draft", "sent", "partially_received"] } }, data: expect.objectContaining({ status: "cancelled" }) });
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: "purchase_order.cancel" }));
+  });
+});
+
+describe("PurchaseOrdersService.receive — production orders consume materials (M17)", () => {
+  const productionPo = { ...sentPo, type: "production" };
+  const line = { variantId: "v1", quantity: 10 };
+
+  function withAutoConsume(po: Record<string, unknown>, autoConsume: boolean) {
+    const made = makeService(structuredClone(po));
+    made.settings.getValue.mockImplementation(((key: string) => Promise.resolve(key === "procurement.materials.autoConsume" ? autoConsume : "weighted_average")) as never);
+    return made;
+  }
+
+  it("deducts the BOM's materials inside the receiving transaction", async () => {
+    const { service, tx, bom } = withAutoConsume(productionPo, true);
+    await service.receive("po1", { lines: [line], allowOverReceipt: false, allowMaterialShortage: false }, actor);
+    expect(bom.consumeForProductionTx).toHaveBeenCalledWith(tx, expect.objectContaining({ lines: [line], purchaseOrderId: "po1", allowShortage: false, actor: "staff-1" }));
+  });
+
+  it("passes the shortage override through", async () => {
+    const { service, bom } = withAutoConsume(productionPo, true);
+    await service.receive("po1", { lines: [line], allowOverReceipt: false, allowMaterialShortage: true }, actor);
+    expect(bom.consumeForProductionTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ allowShortage: true }));
+  });
+
+  it("does nothing when auto-consume is off, and never for ordinary purchase orders", async () => {
+    const off = withAutoConsume(productionPo, false);
+    await off.service.receive("po1", { lines: [line], allowOverReceipt: false, allowMaterialShortage: false }, actor);
+    expect(off.bom.consumeForProductionTx).not.toHaveBeenCalled();
+
+    const purchase = withAutoConsume({ ...sentPo, type: "purchase" }, true);
+    await purchase.service.receive("po1", { lines: [line], allowOverReceipt: false, allowMaterialShortage: false }, actor);
+    expect(purchase.bom.consumeForProductionTx).not.toHaveBeenCalled();
+  });
+
+  it("aborts the whole receipt when materials are short", async () => {
+    const { service, bom } = withAutoConsume(productionPo, true);
+    bom.consumeForProductionTx.mockRejectedValueOnce(Object.assign(new Error("short"), { response: { code: "MATERIAL_SHORTAGE" } }));
+    await expect(service.receive("po1", { lines: [line], allowOverReceipt: false, allowMaterialShortage: false }, actor)).rejects.toMatchObject({ response: { code: "MATERIAL_SHORTAGE" } });
   });
 });

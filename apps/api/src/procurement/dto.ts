@@ -10,6 +10,8 @@ export const supplierSchema = z.object({
   address: optionalText,
   notes: optionalText,
   isActive: z.boolean().optional(),
+  /** Days from ordering to receiving; null falls back to `procurement.leadTimeDays`. */
+  leadTimeDays: z.number().int().min(0).max(365).nullable().optional(),
 });
 export type SupplierDto = z.infer<typeof supplierSchema>;
 export const updateSupplierSchema = supplierSchema.partial();
@@ -50,6 +52,8 @@ export const receivePurchaseOrderSchema = z.object({
     .min(1)
     .refine(uniqueVariants, "Each variant may appear only once"),
   allowOverReceipt: z.boolean().default(false),
+  /** Production orders only: consume the materials that are available instead of failing on a shortage. */
+  allowMaterialShortage: z.boolean().default(false),
   note: z.string().trim().max(500).nullable().optional(),
 });
 export type ReceivePurchaseOrderDto = z.infer<typeof receivePurchaseOrderSchema>;
@@ -59,3 +63,24 @@ export const listPurchaseOrdersQuerySchema = z.object({
   supplierId: z.string().optional(),
 });
 export type ListPurchaseOrdersQueryDto = z.infer<typeof listPurchaseOrdersQuerySchema>;
+
+export const reorderQuerySchema = z.object({
+  /** Sales history window; defaults to `forecast.lookbackDays`. */
+  days: z.coerce.number().int().min(14).max(365).optional(),
+  horizonDays: z.coerce.number().int().min(7).max(180).optional(),
+  categoryId: z.string().min(1).optional(),
+  supplierId: z.string().min(1).optional(),
+  /** `actionable` hides variants that are fine or have no demand. */
+  show: z.enum(["actionable", "all"]).default("actionable"),
+});
+export type ReorderQueryDto = z.infer<typeof reorderQuerySchema>;
+
+export const createDraftOrdersSchema = z.object({
+  locationId: z.string().min(1),
+  items: z
+    .array(z.object({ variantId: z.string().min(1), supplierId: z.string().min(1), quantity: z.number().int().min(1).max(1_000_000) }))
+    .min(1)
+    .max(500)
+    .refine(uniqueVariants, "Each variant may appear only once"),
+});
+export type CreateDraftOrdersDto = z.infer<typeof createDraftOrdersSchema>;

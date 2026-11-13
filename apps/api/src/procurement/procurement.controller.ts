@@ -7,16 +7,21 @@ import { RequirePermissions } from "../common/require-permissions.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { SuppliersService } from "./suppliers.service";
 import { PurchaseOrdersService } from "./purchase-orders.service";
+import { ReorderService } from "./reorder.service";
 import {
+  createDraftOrdersSchema,
   createPurchaseOrderSchema,
   listPurchaseOrdersQuerySchema,
   receivePurchaseOrderSchema,
+  reorderQuerySchema,
   supplierSchema,
   updatePurchaseOrderSchema,
   updateSupplierSchema,
+  type CreateDraftOrdersDto,
   type CreatePurchaseOrderDto,
   type ListPurchaseOrdersQueryDto,
   type ReceivePurchaseOrderDto,
+  type ReorderQueryDto,
   type SupplierDto,
   type UpdatePurchaseOrderDto,
   type UpdateSupplierDto,
@@ -104,5 +109,25 @@ export class PurchaseOrdersController {
   @RequirePermissions("procurement.manage", "inventory.manage")
   receive(@Param("id") id: string, @Body(new ZodValidationPipe(receivePurchaseOrderSchema)) body: ReceivePurchaseOrderDto, @Req() req: Request) {
     return this.purchaseOrders.receive(id, body, req.staff!);
+  }
+}
+
+/** Demand forecast and reorder suggestions (§8.2 Inventory, §16 M17). */
+@ApiTags("procurement")
+@Controller("admin/reorder")
+@UseGuards(StaffAuthGuard, PermissionsGuard)
+@RequirePermissions("procurement.manage")
+export class ReorderController {
+  constructor(private readonly reorder: ReorderService) {}
+
+  @Get()
+  suggestions(@Query(new ZodValidationPipe(reorderQuerySchema)) query: ReorderQueryDto) {
+    return this.reorder.suggestions(query);
+  }
+
+  /** Turns accepted suggestions into one draft purchase order per supplier. */
+  @Post("draft-orders")
+  draftOrders(@Body(new ZodValidationPipe(createDraftOrdersSchema)) body: CreateDraftOrdersDto, @Req() req: Request) {
+    return this.reorder.createDraftOrders(body, req.staff!);
   }
 }

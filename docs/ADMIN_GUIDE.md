@@ -1124,3 +1124,234 @@ details); make a new link if it leaks.
 চাপুন — সব অনুমোদিত কমিশন *পরিশোধিত* হয়ে যায়। প্রতিটি অ্যাফিলিয়েটের একটি ব্যক্তিগত
 *পার্টনার পেজ* লিংক আছে যেখানে তিনি নিজের ক্লিক ও কমিশন দেখেন (গ্রাহকের তথ্য নয়);
 লিংক ফাঁস হলে নতুন লিংক তৈরি করুন।
+
+
+## Reorder suggestions & demand forecast (`procurement.manage`, Settings → inventory)
+
+**EN** — Inventory → *Reorder* looks at recent sales of every variant that sold
+lately and tells you what to buy and how urgent it is. The forecast is a
+recency-weighted average of daily sales (last 90 days by default), nudged by
+whether the last two weeks are up or down. For each variant it shows stock,
+units already on open purchase orders, sales per day, how many days the stock
+will last, and the supplier's lead time. *Critical* means it will run out
+before a new order could arrive. The suggested quantity covers the lead time
+plus the "target days of cover" plus safety stock (all in Settings →
+inventory: lead time, safety stock days, cover days, history days; a
+supplier's own lead time on its record overrides the default). Tick the
+variants you agree with, change quantities if you like, pick a supplier where
+none is known (the supplier of the last order is used otherwise) and press
+*Create draft orders* — you get one draft purchase order per supplier to
+review and send as usual. It does not know about seasons or festivals, and a
+variant that was out of stock shows lower demand than it really had, so treat
+the numbers as a starting point.
+
+**BN** — ইনভেন্টরি → *রিঅর্ডার* সাম্প্রতিক বিক্রি দেখে বলে দেয় কী কিনতে হবে ও কতটা
+জরুরি। পূর্বাভাস হলো দৈনিক বিক্রির গড় (ডিফল্ট গত ৯০ দিন, সাম্প্রতিক দিনের ওজন
+বেশি), শেষ দুই সপ্তাহে বিক্রি বাড়লে বা কমলে সেই অনুযায়ী সামান্য সমন্বয়। প্রতিটি
+ভ্যারিয়েন্টের মজুত, খোলা পারচেজ অর্ডারে থাকা ইউনিট, দৈনিক বিক্রি, কত দিন চলবে
+এবং সাপ্লায়ারের লিড টাইম দেখা যায়। *জরুরি* মানে নতুন অর্ডার আসার আগেই শেষ হয়ে
+যাবে। সাজেস্ট করা পরিমাণ লিড টাইম + লক্ষ্য দিন + সেফটি স্টক পূরণ করে (সেটিংস →
+ইনভেন্টরি; সাপ্লায়ারের নিজস্ব লিড টাইম থাকলে সেটাই ধরা হয়)। যেগুলো ঠিক মনে
+হয় টিক দিন, দরকারে পরিমাণ বদলান, সাপ্লায়ার অজানা হলে বেছে নিন, তারপর *ড্রাফট
+অর্ডার তৈরি করুন* — প্রতি সাপ্লায়ারের জন্য একটি ড্রাফট পারচেজ অর্ডার পাবেন, যা
+আগের মতোই দেখে পাঠাতে পারবেন। মৌসুম বা উৎসব এতে ধরা হয় না, আর স্টক শেষ থাকলে
+চাহিদা কম দেখায় — তাই সংখ্যাগুলো শুরুর আন্দাজ হিসেবে নিন।
+
+## Materials & bills of materials (`materials.manage`, Settings → inventory)
+
+**EN** — Inventory → *Materials & BOM* holds raw materials (fabric, buttons,
+thread, packaging) with their own stock. Pick a unit fine enough that
+quantities are whole numbers — centimetres for fabric, grams, pieces — and
+enter the cost *per one unit*. *Receive stock* adds stock and blends the cost
+the same way finished goods do; *Adjust* needs a reason; every change is in
+the ledger, and stock can never go below zero. Search a product on the same
+screen to edit its **bill of materials**: how much of each material one
+finished unit uses, plus a wastage percentage for cutting loss. A line for
+all variants applies to every size/colour; add a line for one variant (say
+XXL, which needs more fabric) and it replaces the all-variants line for that
+material. The BOM page also shows the material cost of each variant. For a
+planned run, ask *What do we need?* via a production order: materials needed
+versus on hand are shown, short ones first. If you turn on **Consume
+materials when a production order is received** (Settings → inventory),
+receiving finished goods on a *production* order deducts the BOM's materials
+automatically; if a material is short the receipt is refused, unless you tick
+*allow material shortage* to consume what there is.
+
+**BN** — ইনভেন্টরি → *কাঁচামাল ও BOM*-এ কাঁচামাল (কাপড়, বোতাম, সুতা, প্যাকেজিং) ও
+তাদের স্টক থাকে। এমন ছোট একক নিন যাতে পরিমাণ পূর্ণসংখ্যা হয় — কাপড়ের জন্য
+সেন্টিমিটার, গ্রাম, পিস — এবং *প্রতি এক একক*-এর খরচ দিন। *স্টক গ্রহণ*-এ স্টক বাড়ে ও
+তৈরি পণ্যের মতোই খরচ গড় হয়; *সমন্বয়ে* কারণ লাগে; প্রতিটি পরিবর্তন খতিয়ানে থাকে
+এবং স্টক কখনো শূন্যের নিচে যায় না। একই পেজে পণ্য খুঁজে তার **BOM** (বিল অব
+মেটেরিয়ালস) ঠিক করুন: একটি তৈরি ইউনিটে কোন কাঁচামাল কতটুকু লাগে, সঙ্গে কাটার
+অপচয়ের শতাংশ। "সব ভ্যারিয়েন্ট"-এর লাইন সব সাইজ/রঙে খাটে; একটি ভ্যারিয়েন্টের
+(যেমন বেশি কাপড় লাগা XXL) আলাদা লাইন দিলে সেই কাঁচামালের জন্য সেটাই ধরা হয়।
+BOM পেজে প্রতিটি ভ্যারিয়েন্টের কাঁচামালের খরচও দেখা যায়। **প্রোডাকশন অর্ডার
+গ্রহণে কাঁচামাল স্বয়ংক্রিয়ভাবে কাটুন** (সেটিংস → ইনভেন্টরি) চালু করলে *প্রোডাকশন*
+অর্ডারে তৈরি পণ্য গ্রহণ করামাত্র BOM অনুযায়ী কাঁচামাল কমে যায়; কাঁচামাল কম থাকলে
+গ্রহণ আটকে যায়, তবে *কাঁচামালের ঘাটতি অনুমোদন* টিক দিলে যতটা আছে ততটাই কাটে।
+
+## Expenses & profit and loss (`expenses.manage`, `finance.pnl.read`, Settings → finance)
+
+**EN** — Finance → *Expenses*: record rent, salaries, packaging and other
+running costs by date, category and amount (taka). Categories are a list you
+edit in Settings → finance (*Expense categories*); a category still used by
+old expenses can be removed from the list and those expenses keep their key.
+Finance → *Profit & loss* turns it into a statement for any date range, or
+month by month (up to 12 months): net revenue, minus cost of goods, gives
+gross profit; minus courier charges and gateway fees gives contribution;
+minus ad spend (imported in Marketing) and your expenses gives net profit.
+It uses the same delivered/rejected orders as *True profit* — orders still in
+transit are not in yet — and warns when some units have no cost price. If you
+also enter ad spend as expenses, turn off *Count imported ad spend in the
+P&L* in Settings → finance so it is not counted twice. Both screens export
+CSV.
+
+**BN** — ফাইন্যান্স → *খরচ*: ভাড়া, বেতন, প্যাকেজিংসহ চলতি খরচ তারিখ, ক্যাটাগরি ও
+টাকার পরিমাণসহ রেকর্ড করুন। ক্যাটাগরির তালিকা সেটিংস → ফাইন্যান্সে (*খরচের
+ক্যাটাগরি*) বদলানো যায়; পুরনো খরচে ব্যবহৃত ক্যাটাগরি তালিকা থেকে সরালেও সেই
+খরচগুলো নিজের key সহ থেকে যায়। ফাইন্যান্স → *লাভ-ক্ষতি* যেকোনো সময়ের (বা মাস
+ধরে, সর্বোচ্চ ১২ মাস) বিবরণী দেয়: রিফান্ড বাদে আয় থেকে পণ্যের খরচ বাদ দিলে
+মোট মুনাফা; কুরিয়ার চার্জ ও গেটওয়ে ফি বাদে কন্ট্রিবিউশন; বিজ্ঞাপন খরচ
+(মার্কেটিংয়ে আমদানি করা) ও আপনার খরচ বাদে নিট মুনাফা। এটি *প্রকৃত মুনাফা*-র
+মতো একই ডেলিভারি/প্রত্যাখ্যাত অর্ডার ধরে — পথে থাকা অর্ডার এখনো যুক্ত নয় — আর
+কিছু ইউনিটের ক্রয়মূল্য না থাকলে সতর্ক করে। বিজ্ঞাপন খরচ খরচ হিসেবেও লিখলে
+সেটিংস → ফাইন্যান্সে *P&L-এ আমদানি করা বিজ্ঞাপন খরচ ধরুন* বন্ধ করুন, নইলে দু'বার
+ধরা হবে। দুটি পেজেই CSV এক্সপোর্ট আছে।
+
+## Cohorts & lifetime value (`reports.read`)
+
+**EN** — Reports → *Cohorts & LTV*. Each row is the customers who first bought
+in a month; the columns show how many of them bought again 1, 2, 3 … months
+later (*Retention*) or how much each has spent in total by then (*Cumulative
+value / customer*). The tiles show average and median lifetime value, the
+share of customers who ordered more than once, and how much of your revenue
+comes from the top 10%. Only delivered and completed orders count, net of
+refunds; guest checkouts can't be followed and are left out. Empty cells are
+months that haven't happened yet.
+
+**BN** — রিপোর্ট → *কোহর্ট ও LTV*। প্রতিটি সারি হলো কোনো মাসে প্রথমবার কেনা গ্রাহকরা;
+ঘরগুলো দেখায় ১, ২, ৩… মাস পরে তাঁদের কতজন আবার কিনেছেন (*রিটেনশন*) বা তত দিনে প্রতি
+গ্রাহক মোট কত খরচ করেছেন (*গ্রাহক প্রতি জমা মূল্য*)। উপরের ঘরগুলোতে গড় ও মধ্যমা
+লাইফটাইম ভ্যালু, একাধিকবার কেনা গ্রাহকের হার এবং শীর্ষ ১০% গ্রাহক থেকে আয়ের অংশ
+আছে। শুধু ডেলিভারি ও সম্পন্ন অর্ডার রিফান্ড বাদে গোনা হয়; গেস্ট চেকআউট অনুসরণ করা
+যায় না বলে বাদ। ফাঁকা ঘর মানে সেই মাস এখনো আসেনি।
+
+## Report builder (`reports.read`, `reports.builder.manage`, Settings → reports)
+
+**EN** — Reports → *Report builder* lets you make your own report. Choose the
+data (*Sales* has one row per order, *Products* one row per order line), pick
+up to two things to group by (day, week, month, channel, source, category,
+size, colour, new vs returning customers …), the measures (orders, units,
+revenue, average order value, discount rate, cost of goods, gross margin …),
+optional filters ("channel is web", "category is one of Shirts, Polos") and a
+date range, then *Run report*. Cancelled, expired and unpaid orders are left
+out unless you tick the box. *Export CSV* downloads exactly what you see
+(with a totals row). Name and *Save report* to keep it; saved reports appear
+at the top. Saving needs the *build custom reports* permission; running only
+needs reports access. Reports are computed live from orders, so the date range
+(default 366 days) and the number of source rows are capped in Settings →
+reports — narrow the range if you hit the limit.
+
+**BN** — রিপোর্ট → *রিপোর্ট বিল্ডার* দিয়ে নিজের মতো রিপোর্ট বানান। ডেটা বেছে নিন
+(*বিক্রয়*-এ প্রতি অর্ডারে একটি সারি, *পণ্য*-এ প্রতি অর্ডার লাইনে), সর্বোচ্চ দুটি
+ভাগের ভিত্তি (দিন, সপ্তাহ, মাস, চ্যানেল, সোর্স, ক্যাটাগরি, সাইজ, রঙ, নতুন/পুরনো
+গ্রাহক…), পরিমাপ (অর্ডার, ইউনিট, আয়, গড় অর্ডার মূল্য, ডিসকাউন্টের হার, পণ্যের
+খরচ, গ্রস মার্জিন…), চাইলে ফিল্টার ("চ্যানেল হলো web", "ক্যাটাগরি এগুলোর একটি")
+এবং তারিখ পরিসর দিয়ে *রিপোর্ট চালান*। বাতিল, মেয়াদোত্তীর্ণ ও অপরিশোধিত অর্ডার
+টিক না দিলে বাদ থাকে। *CSV এক্সপোর্ট* যা দেখছেন ঠিক তা (মোট সারিসহ) নামায়। নাম
+দিয়ে *রিপোর্ট সংরক্ষণ* করলে রিপোর্টটি উপরে থাকে। সংরক্ষণে *কাস্টম রিপোর্ট
+তৈরি* অনুমতি লাগে, চালাতে শুধু রিপোর্ট অ্যাক্সেস। রিপোর্ট সরাসরি অর্ডার থেকে হিসাব
+হয়, তাই তারিখ পরিসর (ডিফল্ট ৩৬৬ দিন) ও সোর্স সারির সংখ্যা সেটিংস → রিপোর্টে সীমিত
+— সীমায় আটকে গেলে পরিসর ছোট করুন।
+
+## API keys & the public API (`api_keys.manage`, Settings → platform)
+
+**EN** — Platform → *API keys* lets another system read your data. Turn on
+*Public API enabled* in Settings → platform first; nothing works while it is
+off. Create a key: give it a name (say who will use it), tick the access it
+needs (*products*, *stock levels*, *orders* — read-only; keys can never change
+anything) and optionally an expiry date. The key is shown **once** — copy it
+into the other system's settings. We keep only a fingerprint, so a lost key
+can't be recovered: revoke it and make a new one. The other system sends
+`Authorization: Bearer <key>` to `/api/v1/public/v1/products`, `/inventory` or
+`/orders` (list endpoints return pages with a `nextCursor`; pass it back as
+`after`). Each key is limited to a number of requests per minute (Settings →
+platform). Orders include the delivery contact because couriers and ERPs need
+it; they never include cost prices, risk scores or internal notes. Revoke a
+key the moment you suspect it leaked — it stops working immediately.
+
+**BN** — প্ল্যাটফর্ম → *API কী* দিয়ে অন্য সিস্টেমকে আপনার ডেটা পড়তে দিন। আগে সেটিংস →
+প্ল্যাটফর্মে *পাবলিক API চালু* করুন; বন্ধ থাকলে কিছুই চলবে না। কী তৈরি করুন: নাম
+দিন (কে ব্যবহার করবে), কী অ্যাক্সেস লাগবে টিক দিন (*পণ্য*, *স্টক*, *অর্ডার* — শুধু
+পড়া; কী দিয়ে কিছু বদলানো যায় না) এবং চাইলে মেয়াদ দিন। কী **একবারই** দেখানো হয় —
+অন্য সিস্টেমের সেটিংসে কপি করে নিন। আমরা শুধু ফিঙ্গারপ্রিন্ট রাখি, তাই হারালে
+ফেরত পাওয়া যায় না: বাতিল করে নতুন বানান। অন্য সিস্টেম `Authorization: Bearer <কী>`
+পাঠিয়ে `/api/v1/public/v1/products`, `/inventory` বা `/orders` ডাকে (তালিকায় পাতা
+আসে, `nextCursor`-টি `after` হিসেবে ফেরত দিন)। প্রতিটি কী প্রতি মিনিটে নির্দিষ্ট
+সংখ্যক অনুরোধ করতে পারে (সেটিংস → প্ল্যাটফর্ম)। অর্ডারে ডেলিভারির যোগাযোগের তথ্য
+থাকে, কারণ কুরিয়ার ও ERP-র তা লাগে; ক্রয়মূল্য, ঝুঁকি স্কোর বা অভ্যন্তরীণ নোট কখনো
+থাকে না। কী ফাঁস হয়েছে সন্দেহ হলেই বাতিল করুন — সঙ্গে সঙ্গে অকেজো হয়ে যায়।
+
+## Outbound webhooks (`webhooks.manage`, Settings → platform)
+
+**EN** — Platform → *Webhooks* sends your own system a call whenever an order
+is placed, confirmed, put on hold, cancelled, shipped, delivered or rejected
+at the door. Turn on *Outbound webhooks enabled* in Settings → platform, then
+add an endpoint: a name, an **https** address (private/internal addresses are
+refused) and the events you want. A *signing secret* is shown once — your
+system uses it to check that a call really came from the store: each call has
+`X-Webhook-Signature: t=<time>,v1=<HMAC-SHA256 of "time.body">`, plus
+`X-Webhook-Id` and `X-Webhook-Event`. A call counts as delivered when your
+system answers 2xx; otherwise it is retried after 1, 2, 4, 8… minutes (up to
+the attempt limit in Settings), and an endpoint that fails many times in a
+row is switched off with a note saying why — fix it and switch it back on.
+Delivery is at least once, so ignore an `X-Webhook-Id` you've already
+handled. *Send test* fires a harmless ping; *Show deliveries* lists what was
+sent and the answers, and failed ones can be retried. *Replace secret*
+invalidates the old one at once.
+
+**BN** — প্ল্যাটফর্ম → *ওয়েবহুক* অর্ডার প্লেস, কনফার্ম, হোল্ড, বাতিল, শিপ, ডেলিভারি বা
+দরজায় প্রত্যাখ্যাত হলেই আপনার নিজের সিস্টেমে কল পাঠায়। সেটিংস → প্ল্যাটফর্মে
+*আউটবাউন্ড ওয়েবহুক চালু* করে এন্ডপয়েন্ট যোগ করুন: নাম, একটি **https** ঠিকানা
+(ব্যক্তিগত/অভ্যন্তরীণ ঠিকানা নেওয়া হয় না) এবং কোন কোন ইভেন্ট চান। একটি *সাইনিং
+সিক্রেট* একবার দেখানো হয় — কলটি সত্যিই স্টোর থেকে এসেছে কিনা যাচাই করতে আপনার সিস্টেম
+এটি ব্যবহার করে: প্রতিটি কলে `X-Webhook-Signature: t=<সময়>,v1=<"সময়.বডি"-র
+HMAC-SHA256>` এবং `X-Webhook-Id`, `X-Webhook-Event` থাকে। আপনার সিস্টেম 2xx উত্তর দিলে
+ডেলিভারি সফল; নইলে ১, ২, ৪, ৮… মিনিট পর আবার চেষ্টা হয় (সেটিংসের সীমা পর্যন্ত), আর
+পরপর অনেকবার ব্যর্থ এন্ডপয়েন্ট কারণসহ বন্ধ হয়ে যায় — ঠিক করে আবার চালু করুন।
+ডেলিভারি অন্তত একবার হয়, তাই যে `X-Webhook-Id` আগে সামলেছেন তা বাদ দিন। *টেস্ট
+পাঠান* নিরীহ একটি পিং পাঠায়; *ডেলিভারি দেখুন*-এ কী গেল ও কী উত্তর এল দেখা যায়, ব্যর্থ
+কল আবার চেষ্টা করা যায়। *সিক্রেট বদলান* পুরনোটি সঙ্গে সঙ্গে অকেজো করে।
+
+## Config bundle — launching another brand (`config_bundle.export`, `config_bundle.import`)
+
+**EN** — Platform → *Config bundle* copies this store's *setup* (not its
+data) to a fresh deployment. **Export** picks the parts you want — settings
+(secrets are never included), UI texts, message templates, categories,
+attributes, menus and CMS pages — and downloads one JSON file. To launch a new
+brand: deploy the new store, finish the setup wizard, sign in as the owner,
+open *Config bundle*, choose the file, then press **Preview changes**. The
+preview says per part how many items would be created, updated or left alone
+and lists anything that can't be applied — a setting you lack permission for,
+a category whose parent is missing, a menu link to a collection that doesn't
+exist here yet. When it looks right, press **Apply import** (everything except
+settings is applied all-or-nothing; nothing is ever deleted). Pages arrive as
+drafts unless you tick *Publish pages that were published in the bundle*.
+Images and product references inside pages and banners don't travel (media and
+products belong to each store), so re-pick them afterwards — the preview warns
+which pages need it. Typical flow: export → import → upload logo, products and
+photos → set the payment/courier credentials → launch checklist.
+
+**BN** — প্ল্যাটফর্ম → *কনফিগ বান্ডেল* এই স্টোরের *সেটআপ* (ডেটা নয়) নতুন ডিপ্লয়মেন্টে
+কপি করে। **এক্সপোর্টে** যা যা চান বেছে নিন — সেটিংস (সিক্রেট কখনো থাকে না), UI লেখা,
+মেসেজ টেমপ্লেট, ক্যাটাগরি, অ্যাট্রিবিউট, মেনু ও CMS পেজ — একটি JSON ফাইল নামবে। নতুন
+ব্র্যান্ড চালু করতে: নতুন স্টোর ডিপ্লয় করে সেটআপ উইজার্ড শেষ করুন, মালিক হিসেবে লগইন
+করে *কনফিগ বান্ডেল* খুলে ফাইলটি বেছে **পরিবর্তনের প্রিভিউ** চাপুন। প্রিভিউ প্রতিটি
+অংশে কতগুলো তৈরি, হালনাগাদ বা অপরিবর্তিত থাকবে বলে দেয় এবং যা প্রয়োগ করা যাবে না
+তার তালিকা দেয় — যেমন অনুমতি নেই এমন সেটিং, প্যারেন্ট নেই এমন ক্যাটাগরি, এখানে এখনো
+নেই এমন কালেকশনের মেনু লিংক। ঠিক মনে হলে **ইমপোর্ট প্রয়োগ করুন** (সেটিংস বাদে বাকি
+সব হয় পুরোটা নয় কিছুই না; কিছু মোছা হয় না)। *বান্ডেলে প্রকাশিত পেজগুলো প্রকাশ করুন*
+টিক না দিলে পেজ ড্রাফট হয়ে আসে। পেজ ও ব্যানারের ভেতরের ছবি ও পণ্যের রেফারেন্স সঙ্গে
+যায় না (মিডিয়া ও পণ্য প্রতিটি স্টোরের নিজস্ব), তাই পরে আবার বেছে নিন — কোন কোন পেজে
+লাগবে প্রিভিউ সতর্ক করে। সাধারণ ধাপ: এক্সপোর্ট → ইমপোর্ট → লোগো, পণ্য ও ছবি আপলোড →
+পেমেন্ট/কুরিয়ারের ক্রেডেনশিয়াল দিন → লঞ্চ চেকলিস্ট।

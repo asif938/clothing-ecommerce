@@ -83,6 +83,10 @@ import { StoreCreditModule } from "./store-credit/store-credit.module";
 import { GiftCardsModule } from "./gift-cards/gift-cards.module";
 import { ReferralsModule } from "./referrals/referrals.module";
 import { AffiliatesModule } from "./affiliates/affiliates.module";
+import { MaterialsModule } from "./materials/materials.module";
+import { ApiKeysModule } from "./api-keys/api-keys.module";
+import { WebhooksModule } from "./webhooks/webhooks.module";
+import { ConfigBundleModule } from "./config-bundle/config-bundle.module";
 
 @Module({
   imports: [
@@ -203,6 +207,13 @@ import { AffiliatesModule } from "./affiliates/affiliates.module";
     // Milestone 12 (§16 M12): inventory and finance.
     ProcurementModule,
     FinanceModule,
+    // §16 M17 — advanced analytics and procurement: materials & BOM (forecast/reorder live in
+    // ProcurementModule, expenses/P&L in FinanceModule, cohorts/report builder in ReportsModule),
+    // plus the public API, outbound webhooks and config bundles.
+    MaterialsModule,
+    ApiKeysModule,
+    WebhooksModule,
+    ConfigBundleModule,
   ],
 })
 export class AppModule {}

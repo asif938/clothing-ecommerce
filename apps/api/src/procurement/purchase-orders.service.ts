@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { SettingsService } from "../settings/settings.service";
 import { InventoryService, type StockMovementResult } from "../inventory/inventory.service";
+import { BomService } from "../materials/bom.service";
 import { nextCostPrice, purchaseOrderStatusAfterReceive } from "../inventory/stock-math";
 import { createWithDocumentNumber } from "../common/document-number";
 import type { AuthenticatedStaff } from "../common/types";
@@ -36,6 +37,7 @@ export class PurchaseOrdersService {
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
     private readonly inventory: InventoryService,
+    private readonly bom: BomService,
   ) {}
 
   async list(query: ListPurchaseOrdersQueryDto) {
@@ -198,13 +200,27 @@ export class PurchaseOrdersService {
         item.qtyReceived += line.quantity;
       }
 
+      // §16 M17: finished goods arriving on a production order use up raw
+      // materials per their BOM. Same transaction, so a shortage rolls the
+      // receipt back unless the receiver explicitly allows it.
+      let materials: { consumed: { materialId: string; quantity: number }[]; shortages: { materialId: string; short: number }[]; withoutBom: string[] } | null = null;
+      if (po.type === "production" && (await this.settings.getValue<boolean>("procurement.materials.autoConsume"))) {
+        materials = await this.bom.consumeForProductionTx(tx, {
+          lines: dto.lines,
+          purchaseOrderId: po.id,
+          purchaseOrderNumber: po.number,
+          allowShortage: dto.allowMaterialShortage,
+          actor: actor.id,
+        });
+      }
+
       const status = purchaseOrderStatusAfterReceive(po.items);
       await tx.purchaseOrder.update({ where: { id }, data: { status, ...(status === "received" ? { receivedAt: new Date() } : {}) } });
-      return { status, costChanges };
+      return { status, costChanges, materials };
     });
 
     await this.inventory.afterMovementsCommitted(movements);
-    await this.audit.record({ actorType: "staff", actorId: actor.id, action: "purchase_order.receive", entityType: "purchase_order", entityId: id, after: { lines: dto.lines, status: result.status, costChanges: result.costChanges } });
+    await this.audit.record({ actorType: "staff", actorId: actor.id, action: "purchase_order.receive", entityType: "purchase_order", entityId: id, after: { lines: dto.lines, status: result.status, costChanges: result.costChanges, materials: result.materials } });
     return this.get(id);
   }
 }

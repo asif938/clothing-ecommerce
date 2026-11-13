@@ -44,6 +44,8 @@ export type {
   ProductType,
   ProviderMode,
   PurchaseOrderStatus,
+  MaterialMovementReason,
+  WebhookDeliveryStatus,
   PurchaseOrderType,
   RefundMethod,
   RefundStatus,

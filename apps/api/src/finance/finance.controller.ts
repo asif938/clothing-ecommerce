@@ -11,16 +11,26 @@ import { CourierProvidersService } from "../couriers/courier-providers.service";
 import { CodSettlementsService } from "./cod-settlements.service";
 import { GatewaySettlementsService } from "./gateway-settlements.service";
 import { ProfitService } from "./profit.service";
+import { ExpensesService } from "./expenses.service";
+import { PnlService } from "./pnl.service";
 import {
   confirmCodSettlementSchema,
+  expenseSchema,
   fetchCodApiSchema,
   gatewaySettlementSchema,
   importCodFileSchema,
   inspectFileSchema,
   listCodSettlementsQuerySchema,
+  listExpensesQuerySchema,
+  pnlQuerySchema,
+  updateExpenseSchema,
   profitQuerySchema,
   updateCodLineSchema,
   type ConfirmCodSettlementDto,
+  type ExpenseDto,
+  type ListExpensesQueryDto,
+  type PnlQueryDto,
+  type UpdateExpenseDto,
   type FetchCodApiDto,
   type GatewaySettlementDto,
   type ImportCodFileDto,
@@ -175,5 +185,84 @@ export class ProfitController {
             { key: "profit", header: "Profit (poisha)" },
           ]);
     res.header("Content-Type", "text/csv").header("Content-Disposition", `attachment; filename="profit-${query.groupBy}.csv"`).send(csv);
+  }
+}
+
+@ApiTags("finance")
+@Controller("admin/finance/expenses")
+@UseGuards(StaffAuthGuard, PermissionsGuard)
+@RequirePermissions("expenses.manage")
+export class ExpensesController {
+  constructor(
+    private readonly expenses: ExpensesService,
+    private readonly audit: AuditService,
+  ) {}
+
+  @Get()
+  async list(@Query(new ZodValidationPipe(listExpensesQuerySchema)) query: ListExpensesQueryDto, @Req() req: Request, @Res() res: Response) {
+    const result = await this.expenses.list(query);
+    if (query.format !== "csv") {
+      res.json(result);
+      return;
+    }
+    await this.audit.record({ actorType: "staff", actorId: req.staff!.id, action: "report.export", entityType: "report", entityId: "expenses.csv", after: { from: query.from, to: query.to, category: query.category } });
+    const csv = toCsv(result.rows as unknown as Record<string, unknown>[], [
+      { key: "date", header: "Date" },
+      { key: "category", header: "Category" },
+      { key: "amount", header: "Amount (poisha)" },
+      { key: "note", header: "Note" },
+    ]);
+    res.header("Content-Type", "text/csv").header("Content-Disposition", 'attachment; filename="expenses.csv"').send(csv);
+  }
+
+  @Post()
+  create(@Body(new ZodValidationPipe(expenseSchema)) body: ExpenseDto, @Req() req: Request) {
+    return this.expenses.create(body, req.staff!);
+  }
+
+  @Patch(":id")
+  update(@Param("id") id: string, @Body(new ZodValidationPipe(updateExpenseSchema)) body: UpdateExpenseDto, @Req() req: Request) {
+    return this.expenses.update(id, body, req.staff!);
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  remove(@Param("id") id: string, @Req() req: Request) {
+    return this.expenses.remove(id, req.staff!);
+  }
+}
+
+@ApiTags("finance")
+@Controller("admin/finance/pnl")
+@UseGuards(StaffAuthGuard, PermissionsGuard)
+@RequirePermissions("finance.pnl.read")
+export class PnlController {
+  constructor(
+    private readonly pnl: PnlService,
+    private readonly audit: AuditService,
+  ) {}
+
+  @Get()
+  async report(@Query(new ZodValidationPipe(pnlQuerySchema)) query: PnlQueryDto, @Req() req: Request, @Res() res: Response) {
+    const report = await this.pnl.report(query.from, query.to, query.groupBy);
+    if (query.format !== "csv") {
+      res.json(report);
+      return;
+    }
+    await this.audit.record({ actorType: "staff", actorId: req.staff!.id, action: "report.export", entityType: "report", entityId: "pnl.csv", after: { from: query.from, to: query.to, groupBy: query.groupBy } });
+    const statements = query.groupBy === "month" ? report.months.map((m) => ({ period: m.month, ...m.statement })) : [{ period: "total", ...report.total }];
+    const csv = toCsv(statements as unknown as Record<string, unknown>[], [
+      { key: "period", header: "Period" },
+      { key: "revenue", header: "Revenue (poisha)" },
+      { key: "cogs", header: "COGS (poisha)" },
+      { key: "grossProfit", header: "Gross profit (poisha)" },
+      { key: "courierCost", header: "Courier (poisha)" },
+      { key: "gatewayFees", header: "Gateway fees (poisha)" },
+      { key: "contribution", header: "Contribution (poisha)" },
+      { key: "adSpend", header: "Ad spend (poisha)" },
+      { key: "operatingExpenses", header: "Operating expenses (poisha)" },
+      { key: "netProfit", header: "Net profit (poisha)" },
+    ]);
+    res.header("Content-Type", "text/csv").header("Content-Disposition", `attachment; filename="pnl-${query.groupBy}.csv"`).send(csv);
   }
 }

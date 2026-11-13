@@ -15,16 +15,22 @@ export function isPrivateAddress(address: string): boolean {
 }
 
 /**
- * Outbound POST for automation `call_webhook` actions. Staff supply the URL,
- * so it is treated as untrusted: https only, no private/loopback/metadata
- * targets (checked on the resolved addresses), short timeout, no redirects.
+ * Throws unless `url` is https and every address it resolves to is public.
+ * Staff supply webhook URLs, so they are untrusted: this blocks
+ * loopback/private/link-local/metadata targets (SSRF). Callers must also
+ * refuse redirects, since a public host could redirect to a private one.
  */
-export async function postJsonSafely(url: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<{ status: number }> {
+export async function assertPublicHttpsUrl(url: string): Promise<void> {
   const parsed = new URL(url);
   if (parsed.protocol !== "https:") throw new Error("Webhook URL must use https");
   const host = parsed.hostname.replace(/^\[|\]$/g, "");
   const addresses = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address);
   if (addresses.length === 0 || addresses.some(isPrivateAddress)) throw new Error("Webhook URL resolves to a private address");
+}
+
+/** Outbound POST for automation `call_webhook` actions: https only, public targets only, short timeout, no redirects. */
+export async function postJsonSafely(url: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<{ status: number }> {
+  await assertPublicHttpsUrl(url);
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { "content-type": "application/json" },

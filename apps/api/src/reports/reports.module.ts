@@ -7,12 +7,15 @@ import { ReportsController } from "./reports.controller";
 import { ScheduledReportsService } from "./scheduled-reports.service";
 import { AnomalyAlertsService } from "./anomaly-alerts.service";
 import { AnomalyAlertsController, ScheduledReportsController } from "./scheduled-reports.controller";
+import { CohortsService } from "./cohorts.service";
+import { ReportBuilderService } from "./report-builder.service";
+import { CohortsController, ReportBuilderController } from "./analytics-reports.controller";
 
-/** Core reports (M8) plus M12's scheduled email reports and anomaly alerts, both driven by recurring scheduler handlers. */
+/** Core reports (M8), M12's scheduled email reports and anomaly alerts (recurring scheduler handlers), and M17's cohorts/LTV and report builder. */
 @Module({
   imports: [NotificationsModule, FinanceModule],
-  controllers: [ScheduledReportsController, AnomalyAlertsController, ReportsController],
-  providers: [ReportsService, ScheduledReportsService, AnomalyAlertsService],
+  controllers: [ScheduledReportsController, AnomalyAlertsController, ReportsController, CohortsController, ReportBuilderController],
+  providers: [ReportsService, ScheduledReportsService, AnomalyAlertsService, CohortsService, ReportBuilderService],
   exports: [AnomalyAlertsService],
 })
 export class ReportsModule implements OnModuleInit {

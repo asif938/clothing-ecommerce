@@ -10,21 +10,23 @@ reasoning behind choices made along the way.
 | --- | --- | --- |
 | Phase 1 — MVP | M0–M9 | Complete |
 | Phase 2 — Growth and operations automation | M10–M13 | Complete |
-| Phase 3 — Advanced and intelligence | M14–M17 | M14–M16 complete — **M17 is next** |
+| Phase 3 — Advanced and intelligence | M14–M17 | Complete |
 
-- Latest milestone: M16 (loyalty extensions). The repository has no git
+- Latest milestone: M17 (advanced analytics and procurement). The repository has no git
   remote, so milestone commits are local only.
-- Unit tests: `packages/shared` 258, `packages/blocks` 13, `apps/api` 598,
+- Unit tests: `packages/shared` 269, `packages/blocks` 13, `apps/api` 748,
   `apps/storefront` 10 — all passing.
-- Database: migrations up to `20261116090000_loyalty_extensions` (M16)
-  are committed, but the configured dev database was last known at M11;
-  run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed` before
-  using M12–M16 features (code from M16 on needs the new cart/order
+- Database: migrations up to `20261117090000_advanced_analytics_procurement`
+  (M17) are committed, but the configured dev database was last known at
+  M11; run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed`
+  before using M12–M17 features (code from M16 on needs the new cart/order
   columns to serve carts at all).
 - Cross-cutting caveat: no milestone has been clicked through in a
   browser or run against live third-party providers here — each section's
   "Not verified" list says what remains.
-- Remaining plan: M17 advanced analytics and procurement.
+- Remaining plan: none in §16 — all 17 milestones are built. What's left is
+  operational: apply the migrations, click through each milestone in a
+  browser, and rehearse launching a brand from a config bundle.
 
 ---
 
@@ -2661,9 +2663,142 @@ commissions.
 
 ---
 
+## Milestone 17 — Advanced analytics and procurement
+
+Status: complete (§16 M17) at the code/test level, with the same caveat as
+every prior milestone: the migration wasn't applied to a database and nothing
+was clicked through in a browser here — see "Not verified in this
+environment". Scope per §16: demand forecasting and reorder suggestions,
+materials & BOM, cohort/LTV reports, report builder, expenses and P&L, public
+API keys and outbound webhooks, config bundle export/import for onboarding
+new brands. This completes Phase 3.
+
+### Built
+
+- **`packages/db`**: migration `20261117090000_advanced_analytics_procurement`
+  (generated with `prisma migrate diff` against the committed schema —
+  purely additive): `expenses`, `materials`, `material_movements`,
+  `bom_items`, `custom_reports`, `api_keys`, `outbound_webhooks`,
+  `webhook_deliveries`; `suppliers.lead_time_days`.
+- **`packages/shared`**: new `@clothing/shared/analytics` (report-builder
+  datasets, dimensions, metrics and config schema with semantic validation;
+  default expense categories; API scopes; webhook events; config bundle
+  sections); 9 permissions (`expenses.manage`, `finance.pnl.read`,
+  `materials.manage`, `reports.builder.manage`, `api_keys.manage`,
+  `webhooks.manage`, `config_bundle.export`/`.import`,
+  `settings.platform.write`); 13 settings in `settings/definitions-m17.ts`
+  (forecast/lead-time/safety/cover days, materials auto-consume, expense
+  categories, P&L ad-spend toggle, report builder limits, public API
+  enabled + rate limit, webhooks enabled + attempts + auto-disable). The
+  public API and webhooks are off by default.
+- **`apps/api`**:
+  - `procurement/forecast.ts` + `ReorderService`: recency-weighted demand
+    forecast, reorder-point policy with lead time, safety stock, cover days,
+    pack size/MOQ; one aggregating SQL query for sales; open-PO "incoming"
+    units; supplier inferred from the last PO; `GET admin/reorder` and
+    `POST admin/reorder/draft-orders` (one draft PO per supplier). Supplier
+    records gained a lead time.
+  - `MaterialsModule`: materials, an append-only stock ledger that cannot go
+    negative, receiving with cost blending, adjustments, BOM per product
+    (variant overrides, wastage), requirements-vs-stock for any variant list
+    or production order, and consumption of materials when a *production* PO
+    is received (`procurement.materials.autoConsume`, shortage refuses the
+    receipt unless `allowMaterialShortage`).
+  - `FinanceModule`: `ExpensesService` (CRUD, CSV, category validation
+    against the setting) and `PnlService`/`pnl.ts` (gross profit →
+    contribution → net profit, total or per Dhaka month, CSV).
+  - `ReportsModule`: `CohortsService` (retention matrix, cumulative value
+    per customer, LTV summary — SQL-aggregated) and `ReportBuilderService`
+    (two datasets, filters, grouping by up to two dimensions, saved
+    reports, CSV, range and row caps).
+  - `ApiKeysModule`: hashed, scoped, expiring/revocable keys; `ApiKeyGuard`
+    (feature gate, scope check, per-key rate limit); read-only public API at
+    `/api/v1/public/v1/{products,inventory,orders}` with cursor pagination
+    and field allow-lists.
+  - `WebhooksModule`: endpoints with encrypted signing secrets, signed
+    at-least-once delivery on the scheduler tick with doubling retries,
+    SSRF-safe sending, auto-disable, test ping, delivery log and manual
+    retry; fed by the existing after-commit order triggers.
+  - `ConfigBundleModule`: export (settings without secrets, UI strings,
+    message templates, categories, attributes, menus, pages) and
+    previewable, merge-only import with per-section reports and warnings;
+    10 MB body limit on the import route.
+- **`apps/admin`**: Finance tabs *Expenses* and *Profit & loss*; Inventory
+  tabs *Reorder* (select, edit quantities, create draft POs) and *Materials
+  & BOM* (list, detail with ledger/receive/adjust, per-product BOM editor);
+  Reports → *Cohorts & LTV* and *Report builder*; *API keys*, *Webhooks*
+  (endpoints, deliveries, test, rotate) and *Config bundle* screens; nav
+  entries. All strings bn + en (validated as ICU messages).
+- Docs: decisions (2026-11-14 M17 entries), admin guide entries (EN + BN).
+
+### Verified
+
+- `tsc --noEmit` clean for `packages/shared`, `packages/db`, `apps/api`
+  (source and tests), `apps/storefront` and `apps/admin`. ESLint clean on
+  every touched file.
+- Unit tests: `packages/shared` 269 (was 258), `apps/api` 748 (was 598) —
+  all passing (`packages/blocks` 13 and `apps/storefront` 10 unchanged).
+  Covered: forecast maths and reorder policy (rate, trend clamp, lead time,
+  incoming, pack/MOQ, urgency order), reorder service and draft-order
+  grouping, material ledger guard and cost blending, BOM resolution and
+  requirements, consumption on production receipt (including rollback on
+  shortage and the override), existing PO receiving unchanged, P&L maths and
+  Dhaka month splitting, expense validation, cohort matrix and LTV summary,
+  report builder aggregation/filters/sorting/null handling/new-vs-returning,
+  saved-report validation, API key generation/hashing/authentication/guard
+  (disabled, missing, invalid, scope, rate limit), webhook signing and
+  verification, retry schedule, delivery outcomes, auto-disable, SSRF
+  refusal, and config bundle dry run / transactional apply / parent
+  ordering / permissions / drafts-vs-published / menu link re-resolution.
+- The Nest **DI graph compiles** with the new modules (`Test.createTestingModule`
+  on `AppModule` with a stubbed Prisma — no database touched).
+- `prisma validate` passes; the migration SQL is only CREATE / ADD COLUMN /
+  indexes / foreign keys.
+- Admin message coverage: every key used by the new pages exists in both
+  locales with matching placeholders, and all new messages parse as ICU.
+
+### Not verified in this environment
+
+- **The migration has not been applied to any database** (M12–M17 pending
+  on the dev database): run `pnpm db:generate`, `pnpm db:migrate:deploy`,
+  `pnpm db:seed` (grants the new permissions to Super Admin). Until then,
+  the new screens and the production-order receive path (which now reads the
+  `procurement.materials.autoConsume` setting) fail against that database.
+- Nothing was clicked through in a browser: the nine new admin screens.
+- The raw SQL (daily sales for the forecast, cohort and LTV aggregates) ran
+  only against mocked Prisma, never Postgres.
+- Webhook delivery to a real receiver, and the public API over HTTP with a
+  real key, were exercised only through mocked `fetch`/guards.
+- The config bundle was never round-tripped between two real deployments;
+  the "launch a brand in under an hour" acceptance needs that rehearsal.
+
+### Known issues / explicitly deferred
+
+- The forecast ignores seasonality and festivals, and doesn't correct for
+  days a variant was out of stock (it understates demand then).
+- Materials have no purchase orders of their own; deliveries are booked with
+  *Receive stock*. Costs are weighted average / last / none only (no FIFO).
+- Material quantities are integers of a chosen unit; costs below one poisha
+  per unit can't be represented (choose a coarser unit, e.g. grams not mg).
+- Cohorts exclude guest checkouts and count only delivered/completed orders;
+  there are no acquisition-channel cohorts (use the report builder's source
+  dimension).
+- The report builder has two fixed datasets; units are placed quantities
+  before returns. Heavy ranges are refused rather than sampled.
+- The public API is read-only; the rate limiter is per API instance
+  (in-memory); API keys have no IP allow-list.
+- Webhook events are the seven order lifecycle events only; there are no
+  stock, customer or return events yet. Payloads are order summaries.
+- Config bundles don't carry media files or products, and don't rewrite ids
+  embedded in page blocks (they are reported as warnings); the theme travels
+  inside settings. Import never deletes.
+
+---
+
 ### Next up
 
-Phase 3 (§16) continues: **M17 — Advanced analytics and procurement**
-(demand forecasting and reorder suggestions, materials & BOM, cohort/LTV
-reports, report builder, expenses and P&L, public API keys and outbound
-webhooks, config bundle export/import polish).
+Phase 3 (§16) is complete. Remaining work is operational: apply the pending
+migrations (M12–M17) and seed, click through each milestone in a browser, run
+the stack against real providers, rehearse the config-bundle launch on a
+fresh deployment, and write the launch content (policies, brand assets)
+for the first real brand.

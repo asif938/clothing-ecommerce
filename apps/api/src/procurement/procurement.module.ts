@@ -1,13 +1,16 @@
 import { Module } from "@nestjs/common";
 import { InventoryModule } from "../inventory/inventory.module";
-import { PurchaseOrdersController, SuppliersController } from "./procurement.controller";
+import { MaterialsModule } from "../materials/materials.module";
+import { PurchaseOrdersController, ReorderController, SuppliersController } from "./procurement.controller";
 import { PurchaseOrdersService } from "./purchase-orders.service";
+import { ReorderService } from "./reorder.service";
 import { SuppliersService } from "./suppliers.service";
 
-/** Suppliers and purchase/production orders with receiving (docs/PROJECT_SPEC.md §16 M12). Materials & BOM are M17. */
+/** Suppliers, purchase/production orders with receiving (M12), and demand forecasting / reorder suggestions (M17). Materials & BOM live in MaterialsModule. */
 @Module({
-  imports: [InventoryModule],
-  controllers: [SuppliersController, PurchaseOrdersController],
-  providers: [SuppliersService, PurchaseOrdersService],
+  imports: [InventoryModule, MaterialsModule],
+  controllers: [SuppliersController, PurchaseOrdersController, ReorderController],
+  providers: [SuppliersService, PurchaseOrdersService, ReorderService],
+  exports: [PurchaseOrdersService],
 })
 export class ProcurementModule {}

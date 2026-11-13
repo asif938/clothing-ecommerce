@@ -7,6 +7,8 @@ const TABS = [
   { href: "/finance/cod", key: "tabCod" },
   { href: "/finance/gateway", key: "tabGateway" },
   { href: "/finance/profit", key: "tabProfit" },
+  { href: "/finance/expenses", key: "tabExpenses" },
+  { href: "/finance/pnl", key: "tabPnl" },
   { href: "/refunds", key: "tabRefunds" },
 ] as const;
 

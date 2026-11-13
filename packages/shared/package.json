@@ -20,7 +20,8 @@
     "./ai": "./src/ai/index.ts",
     "./personalization": "./src/personalization/index.ts",
     "./support": "./src/support/index.ts",
-    "./rewards": "./src/rewards/index.ts"
+    "./rewards": "./src/rewards/index.ts",
+    "./analytics": "./src/analytics/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

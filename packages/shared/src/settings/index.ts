@@ -11,3 +11,5 @@ import "./definitions-m15.ts";
 // Milestone 16 (§16 M16) - store credit, gift cards, referrals, affiliates.
 import "./definitions-m16.ts";
 export { AD_PLATFORMS, type AdPlatform, type AdSpendSourceMap } from "./definitions-m13.ts";
+// Milestone 17 (§16 M17) - forecasting, materials, expenses, report builder, public API, webhooks.
+import "./definitions-m17.ts";

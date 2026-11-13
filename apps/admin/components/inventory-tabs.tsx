@@ -8,6 +8,8 @@ const TABS = [
   { href: "/inventory/transfers", key: "tabTransfers" },
   { href: "/inventory/stock-takes", key: "tabStockTakes" },
   { href: "/inventory/analysis", key: "tabAnalysis" },
+  { href: "/inventory/reorder", key: "tabReorder" },
+  { href: "/materials", key: "tabMaterials" },
   { href: "/purchase-orders", key: "tabPurchaseOrders" },
 ] as const;
 
