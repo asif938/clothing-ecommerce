@@ -12,20 +12,29 @@ const nextConfig = {
     const apiUrl = process.env.API_URL ?? "http://localhost:4000";
     return [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }];
   },
-  // §12 CSP — static (no nonce needed: the admin app renders no inline
-  // `<script>`, every script is Next's own same-origin bundle). `frame-src`
-  // allows the page builder's live-preview iframe (M3) to embed the
-  // storefront; `frame-ancestors 'none'` because nothing should embed the
-  // admin panel itself.
+  // §12 CSP — static. NOTE: Next.js's App Router always injects inline
+  // bootstrap scripts (`self.__next_r`, `self.__next_f.push(...)`), so a
+  // `script-src 'self'` policy blocks hydration entirely (the page renders
+  // but no JS runs — forms fall back to a native GET submit). A nonce can't
+  // be threaded in from static `headers()`, so `'unsafe-inline'` is used,
+  // same trade-off as apps/storefront/proxy.ts (docs/DECISIONS.md
+  // 2026-11-12). Dev additionally needs `'unsafe-eval'` (React/Turbopack
+  // dev tooling) and the HMR websocket. `frame-src` allows the page
+  // builder's live-preview iframe (M3) to embed the storefront;
+  // `frame-ancestors 'none'` because nothing should embed the admin panel.
   async headers() {
     const storefrontUrl = process.env.STOREFRONT_URL ?? "http://localhost:3000";
+    const isDev = process.env.NODE_ENV !== "production";
+    // The local storage driver serves media from `${API_URL}/media` — on plain http in development,
+    // which the `https:` source alone doesn't cover (docs/DECISIONS.md 2026-11-14).
+    const apiOrigin = new URL(process.env.API_URL ?? "http://localhost:4000").origin;
     const csp = [
       "default-src 'self'",
-      "script-src 'self'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
+      `img-src 'self' data: blob: https: ${apiOrigin}`,
       "font-src 'self' data:",
-      "connect-src 'self'",
+      `connect-src 'self'${isDev ? " ws://localhost:3001 ws://127.0.0.1:3001" : ""}`,
       `frame-src 'self' ${storefrontUrl}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",

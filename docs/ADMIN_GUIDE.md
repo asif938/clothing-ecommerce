@@ -259,11 +259,44 @@ token is empty.
 
 ## Import/export (`catalog.manage` / `inventory.manage`)
 
-**EN** — Bulk CSV/Excel product and inventory import, dry-run first,
-error report per row on failure.
+**EN** — Bulk CSV/Excel product import with column mapping and images.
+1. Choose the spreadsheet (one row per variant; only the first sheet is
+   read). Every column is matched to an import field automatically — check
+   the *Imports as* column, change any that are wrong, or set unwanted ones to
+   *Don't import*. SKU, product handle and price must be mapped.
+2. Set *Prices in the sheet are in* (taka or poisha). Prices are stored in
+   poisha either way.
+3. Optional: choose an images ZIP. Names in the images column (`A-1.jpg;A-2.jpg`)
+   are matched to the ZIP's files; with no images column, files are matched
+   to the SKU (`SKU.jpg`, `SKU-2.jpg`). https image links in the images
+   column are downloaded. Images on a row go to that row's colour.
+4. *Save mapping* to reuse it next time (*Load saved mapping*).
+5. *Preview* reports errors (row skipped) and warnings (row imported, e.g. a
+   missing image or size chart). Then *Start import*; it runs in the
+   background and the report can be downloaded when it finishes.
+Product details (title, description, category …) only need to be on a
+product's first row. A category path like `Men > Panjabi` creates any missing
+category; fit/occasion become product attributes. Re-importing the same file
+updates by SKU and doesn't duplicate images. Size charts are matched by name
+and are not created — make them under Catalog first.
 
-**BN** — বাল্ক CSV/Excel প্রোডাক্ট ও ইনভেন্টরি ইম্পোর্ট, প্রথমে ড্রাই-রান,
-ব্যর্থ হলে প্রতি সারির এরর রিপোর্ট।
+**BN** — কলাম ম্যাপিং ও ছবিসহ বাল্ক CSV/Excel প্রোডাক্ট ইমপোর্ট।
+১. স্প্রেডশিট বেছে নিন (প্রতি ভ্যারিয়েন্টে এক সারি; শুধু প্রথম শিট পড়া হয়)।
+   প্রতিটা কলাম আপনা-আপনি একটা ফিল্ডের সঙ্গে মেলানো হয় — *যেভাবে ইমপোর্ট
+   হবে* কলামে দেখে নিন, ভুল হলে বদলান, অদরকারি কলাম *ইমপোর্ট করবেন না*
+   করে দিন। SKU, প্রোডাক্ট হ্যান্ডেল আর দাম অবশ্যই মেলাতে হবে।
+২. *শিটের দামের একক* বেছে নিন (টাকা বা পয়সা)। ভেতরে সবসময় পয়সায় রাখা হয়।
+৩. চাইলে ছবির ZIP দিন। ছবির কলামের নাম (`A-1.jpg;A-2.jpg`) ZIP-এর ফাইলের
+   সঙ্গে মেলানো হয়; ছবির কলাম না থাকলে SKU দিয়ে (`SKU.jpg`, `SKU-2.jpg`)।
+   ছবির কলামে https লিংক থাকলে ডাউনলোড হয়। একটা সারির ছবি ওই সারির রঙে যুক্ত হয়।
+৪. পরের বারের জন্য *ম্যাপিং সেভ করুন* (*সেভ করা ম্যাপিং* থেকে আবার আনা যায়)।
+৫. *প্রিভিউ* ত্রুটি (সারি বাদ) আর সতর্কবার্তা (সারি ইমপোর্ট হবে, যেমন ছবি বা
+   সাইজ চার্ট পাওয়া যায়নি) দেখায়। তারপর *ইমপোর্ট শুরু করুন*; এটা
+   ব্যাকগ্রাউন্ডে চলে, শেষ হলে রিপোর্ট ডাউনলোড করা যায়।
+প্রোডাক্টের তথ্য (নাম, বিবরণ, ক্যাটাগরি …) শুধু প্রথম সারিতে দিলেই হয়।
+`Men > Panjabi`-এর মতো ক্যাটাগরি পাথ না থাকা ক্যাটাগরি তৈরি করে; ফিট/উপলক্ষ
+অ্যাট্রিবিউট হিসেবে বসে। একই ফাইল আবার ইমপোর্ট করলে SKU ধরে আপডেট হয়, ছবি
+দ্বিগুণ হয় না। সাইজ চার্ট নাম দিয়ে মেলানো হয়, তৈরি হয় না — আগে Catalog-এ বানান।
 
 ## Search settings (`search.manage`)
 

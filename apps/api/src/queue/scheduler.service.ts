@@ -4,6 +4,14 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { Env } from "../config/env.schema";
 
 const EMBEDDED_TICK_INTERVAL_MS = 60_000;
+/**
+ * A task still `running` this long after it was claimed is treated as abandoned — its handler hung
+ * (e.g. the database connection dropped mid-query) or the process died. Far above any handler's
+ * normal run time (an import chunk takes a minute or two).
+ */
+export const STALE_TASK_AFTER_MS = 15 * 60_000;
+/** Marks a task that has already been requeued once after going stale; going stale again fails it. */
+export const STALE_REQUEUE_MARKER = "Requeued after going stale";
 
 export type ScheduledTaskHandler = (payload: unknown) => Promise<void>;
 export type RecurringTaskHandler = () => Promise<void>;
@@ -63,6 +71,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    await this.recoverStaleTasks();
+
     const due = await this.prisma.scheduledTask.findMany({
       where: { status: "pending", runAt: { lte: new Date() } },
       take: 50,
@@ -70,19 +80,49 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
 
     let processed = 0;
     for (const task of due) {
-      await this.prisma.scheduledTask.update({ where: { id: task.id }, data: { status: "running" } });
+      // Atomic claim: ticks can overlap (a slow or hung tick doesn't stop the interval, and an
+      // external cron may fire alongside), so only the tick that flips pending → running runs it.
+      // `claimedAt` is stamped into `updatedAt` so completion can tell whether it still owns the task.
+      const claimedAt = new Date();
+      const claim = await this.prisma.scheduledTask.updateMany({ where: { id: task.id, status: "pending" }, data: { status: "running", updatedAt: claimedAt } });
+      if (claim.count === 0) continue;
+
       const handler = this.handlers.get(task.type);
+      let outcome: { status: "done" } | { status: "failed"; lastError: string };
       try {
         if (!handler) throw new Error(`No handler registered for scheduled task type "${task.type}"`);
         await handler(task.payload);
-        await this.prisma.scheduledTask.update({ where: { id: task.id }, data: { status: "done" } });
+        outcome = { status: "done" };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
         this.logger.error(`Scheduled task ${task.id} (${task.type}) failed: ${message}`);
-        await this.prisma.scheduledTask.update({ where: { id: task.id }, data: { status: "failed", lastError: message } });
+        outcome = { status: "failed", lastError: message };
       }
+      // Only if nothing reclaimed the task while its handler ran (see recoverStaleTasks).
+      const finished = await this.prisma.scheduledTask.updateMany({ where: { id: task.id, status: "running", updatedAt: claimedAt }, data: outcome });
+      if (finished.count === 0) this.logger.warn(`Scheduled task ${task.id} (${task.type}) finished after it had been reclaimed as stale; result not recorded`);
       processed += 1;
     }
     return { processed };
+  }
+
+  /**
+   * A handler that never returns (a dropped database connection, a crashed process) used to leave its
+   * task `running` forever, silently stalling whatever chain it belonged to (e.g. the last chunk of a
+   * catalog import). Stale tasks are requeued once; one that goes stale again is failed, so a handler
+   * that reliably hangs can't loop forever.
+   */
+  private async recoverStaleTasks(): Promise<void> {
+    const staleBefore = new Date(Date.now() - STALE_TASK_AFTER_MS);
+    const stale = await this.prisma.scheduledTask.findMany({ where: { status: "running", updatedAt: { lt: staleBefore } }, select: { id: true, type: true, lastError: true, updatedAt: true }, take: 50 });
+    for (const task of stale) {
+      const alreadyRequeued = task.lastError?.startsWith(STALE_REQUEUE_MARKER) ?? false;
+      const data = alreadyRequeued
+        ? { status: "failed" as const, lastError: `Gave up: still running ${Math.round(STALE_TASK_AFTER_MS / 60_000)} minutes after being requeued` }
+        : { status: "pending" as const, runAt: new Date(), lastError: `${STALE_REQUEUE_MARKER} (no result ${Math.round(STALE_TASK_AFTER_MS / 60_000)} minutes after it started)` };
+      // Conditional on the same `updatedAt`, so two overlapping ticks can't both act on one task.
+      const result = await this.prisma.scheduledTask.updateMany({ where: { id: task.id, status: "running", updatedAt: task.updatedAt }, data });
+      if (result.count > 0) this.logger.warn(`Scheduled task ${task.id} (${task.type}) was stale — ${alreadyRequeued ? "marked failed" : "requeued"}`);
+    }
   }
 }

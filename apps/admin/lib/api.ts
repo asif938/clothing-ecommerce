@@ -22,7 +22,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     ...init,
     credentials: "include",
-    headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
+    // JSON bodies only: for a FormData upload the browser must set `multipart/form-data` (with its boundary) itself —
+    // forcing `application/json` there made every admin file upload (media, catalog import) unparseable server-side.
+    headers: { ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}), ...init?.headers },
   });
 
   if (response.status === 204) return undefined as T;

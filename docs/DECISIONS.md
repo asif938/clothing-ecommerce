@@ -2248,6 +2248,34 @@ Postgres computes it. No migration is needed (the DB column was already generate
 
 **Decision.** `ConfirmOrderView` follows that precedent rather than inventing a second mechanism for one page; it is listed as a known gap to move to `ui_strings` together with the tracking view when those pages are next touched.
 
+## 2026-11-12 — Admin CSP must allow Next's inline bootstrap scripts
+
+**Context.** First run of the admin app in a real browser: `/en/setup` rendered but nothing
+hydrated (console: "Expected a request ID to be defined for the document via self.__next_r"),
+so the setup form submitted as a native `GET /en/setup?`. Cause: `apps/admin/next.config.mjs` set
+`script-src 'self'` on the false assumption that the admin renders no inline `<script>`; Next.js's
+App Router always emits inline bootstrap scripts.
+
+**Decision.** `script-src 'self' 'unsafe-inline'` (plus `'unsafe-eval'` and the HMR websocket in
+development only) — the same trade-off already documented for the storefront (`proxy.ts`).
+
+**Alternatives.** Per-request nonces (needs a proxy/middleware that forwards a nonce header into
+the render; next-intl's middleware composition makes this non-trivial — revisit before launch).
+
+## 2026-11-12 — Admin `/` is the dashboard; first-run redirect moved to the login page
+
+**Context.** After a successful login the admin bounced straight back to `/login`. M1's
+`app/[locale]/page.tsx` (a server redirector: `hasSuperAdmin ? /login : /setup`) and M8's
+`app/[locale]/(dashboard)/page.tsx` (the real dashboard) both resolve to `/`; the redirector won,
+so `router.push("/")` after login always ended on `/login` and `/auth/me` was never called.
+
+**Decision.** Delete the root redirector so `/` is the dashboard (its layout already redirects
+unauthenticated visitors to `/login`). The "no Super Admin yet → `/setup`" behaviour moved into the
+login page (client-side `GET /setup/status`).
+
+**Alternatives.** Keep the redirector and have it send authenticated staff on (rejected: the server
+component can't cheaply know the session; the layout already handles it).
+
 ## 2026-11-12 — M12: one transactional stock-movement path for multi-line documents
 
 **Context.** Purchase receiving, transfers and stock takes each change many inventory levels at once, and M2's `InventoryService.adjust()` is single-line and not transaction-composable.
@@ -2565,3 +2593,118 @@ Postgres computes it. No migration is needed (the DB column was already generate
 ## 2026-11-14 — M17: what the new feature toggles switch off
 
 **Decision.** `publicApi.enabled` and `webhooks.enabled` default to off and gate the public API and event queueing respectively (test pings and already-queued deliveries still work so staff can debug). Materials auto-consumption is off by default so existing production orders behave as before. Forecasting, expenses, P&L, cohorts, the report builder, materials and config bundles are admin-only screens guarded by their own permissions rather than feature toggles, matching how M12's finance and inventory tools were done.
+
+## 2026-11-14 — Route-scoped body parser must not be named `jsonParser`
+
+**Context.** After M17, every JSON POST to the API (admin login included) failed with
+`VALIDATION_ERROR ... expected object, received undefined`. M17 added
+`app.use("/api/v1/admin/config-bundle/import", json({ limit: "10mb" }))` in `apps/api/src/main.ts`.
+Express's `json()` returns a function named `jsonParser`; Nest's ExpressAdapter checks the router
+stack for a middleware with that name and, finding one, skips registering its own global JSON
+parser — so no other route had a parsed body.
+
+**Decision.** Keep the route-scoped 10 MB parser but register it through an arrow-function wrapper,
+so Nest still installs its default parser for every other route.
+
+**Alternatives.** `app.useBodyParser("json", { limit: "10mb" })` (rejected: raises the limit for
+every route, which the M17 comment explicitly avoided).
+
+## 2026-11-14 — §8.2 catalog import completed: column mapping, ZIP/URL images
+
+**Context.** M2 shipped the import with one fixed template and deferred the column mapper and
+image import (entries above, "picked up whenever catalog import needs more than the fixed
+template handles"). They were never picked up. A real merchant template (Shopify-style
+`product_handle` / `variant_sku` / `price_bdt`, `option1_name/value`, `Men > Panjabi` category
+paths, product fields only on a product's first row, `;`-separated lists, an `images` column of
+ZIP file names) matched almost none of the fixed columns — every row failed — and its taka prices
+would have been read as poisha (100× too low).
+
+**Decisions.**
+- **Mapping:** the server suggests a header → field mapping from aliases (`mapping.ts`), which
+  covers the old template too, so old files and API callers keep working unchanged. Staff can
+  change it per column in the admin screen and save it as a named preset
+  (`catalog_import_presets`). The chosen mapping is stored on the job.
+- **Price unit** is an explicit option (taka/poisha), auto-suggested from money headers
+  (`price_bdt` → taka; bare `price` → poisha, the old template's unit). Always stored as poisha.
+- **Product-level cells only need one row.** Blank cells on a product's other rows never overwrite
+  anything; option names left blank on continuation rows resolve to the product's option at the
+  same position. Localized text is merged into what the product already has.
+- **Option types** from names: Size/Waist/Age/Length/Chest → size, Color/Colour → colour (gets
+  the row's `color_hex`), anything else → generic.
+- **Category paths** create missing levels (slug = joined path, e.g. `men-panjabi`) and report
+  them as warnings. `categorySlug` (old template) still requires an existing category.
+- **Size charts** are matched by name only, never created (they need measurement data the sheet
+  doesn't have) — a warning instead.
+- **Fit / Occasion** become `fit` (select) / `occasion` (multiselect) attributes, created on first
+  use with editable default names.
+- **Single-language cells** (care, fabric, model info, SEO) go to `bn` if they contain Bangla
+  script, else `en`; explicit `…_bn` / `…_en` columns win.
+- **Warnings vs errors:** an error skips the row; a warning (missing image, missing size chart,
+  created categories, bad hex) imports it and is listed in the downloadable report
+  (`warning_rows` counter on the job).
+- **Images:** a ZIP (new dependency `fflate`, pure JS) is unpacked in memory at upload — base
+  names only, junk/non-image entries skipped, per-file (15 MB) / total (300 MB) / count (2 000)
+  limits checked from the central directory before inflating — and held per job in
+  `catalog_import_files` until the job finishes. Files match the `images` column; without that
+  column, the SKU (`SKU.jpg`, `SKU-2.jpg`). https URLs are downloaded with the automation
+  webhook's SSRF guard (public addresses only, no redirects, 15 s, 15 MB, `image/*`). Every image
+  goes through `MediaService.upload` (sniffing + sized variants), joins the gallery tied to the
+  row's colour value, and is skipped on re-import if the product already has that file name.
+  A chunk stops after 12 images so a tick stays short.
+- **Related bug fixes found on the way:** a CSV's UTF-8 BOM became part of the first header; a
+  product slug that `slugify` changed (e.g. upper case) created a second product on the next row;
+  a SKU clash was detected only after the product had been written; and the admin `api.upload`
+  sent `Content-Type: application/json` with FormData bodies, so no admin file upload (media
+  library included) could be parsed by the API.
+
+**Alternatives.** A drag-and-drop mapper (rejected: a per-column dropdown with auto-suggestion
+does the same job with far less UI); creating size charts from a name (rejected: an empty chart is
+worse than none on the PDP); storing the whole ZIP on the job and re-reading it each tick
+(rejected: re-downloads tens of MB from the database every chunk).
+
+## 2026-11-14 — CSP `img-src` allows the API origin (local media)
+
+**Context.** The first real catalog import put product images in local storage, served from
+`${API_URL}/media` (`apps/api/src/storage/storage.module.ts`). In development that is
+`http://localhost:4000`, which the storefront's and admin's `img-src 'self' data: blob: https:`
+did not cover — every product image (and the admin media library's thumbnails) was blocked.
+R2/S3/Cloudinary media is https and was never affected.
+
+**Decision.** Both CSPs add the `API_URL` origin to `img-src`. The storefront CSP also gets the
+development-only `'unsafe-eval'` and HMR websocket the admin got on 2026-11-12.
+
+**Also found in the same run (not changed here):** a scheduled task whose handler hangs (the
+database connection dropped mid-chunk) stays `running` forever — the scheduler never reclaims it,
+so that import's last chunk stalled until the task was requeued by hand. And `nest start --watch`
+once crashed natively on Windows (exit 3221226505) while restarting after a file change; a fresh
+`pnpm dev` boots normally.
+
+## 2026-11-14 — Scheduler: atomic task claims and stale-task recovery
+
+**Context.** During the first live catalog import the database connection dropped while a chunk
+was running. The handler never returned, its `scheduled_tasks` row stayed `running` forever, and
+the import's last chunk stalled until the task was requeued by hand (entry above). Two more gaps
+in `SchedulerService.runDueTasks()`: it claimed tasks with a plain `update` after a `findMany`, so
+overlapping ticks (a hung tick doesn't stop the 60 s interval; an external cron can fire alongside)
+could run one task twice; and a hung handler that eventually returned would overwrite whatever had
+happened to its task since.
+
+**Decisions.**
+- **Atomic claim:** `updateMany where { id, status: "pending" }` → `running`, stamping the claim
+  time into `updatedAt`; a tick that gets `count = 0` skips the task.
+- **Owned completion:** the done/failed write is conditional on `{ status: "running", updatedAt:
+  claimedAt }`, so a late-returning handler can't overwrite a re-run's outcome (logged instead).
+- **Stale recovery:** each tick first looks for tasks `running` for more than 15 minutes (far above
+  any handler's normal run time). The first time, the task is requeued with a marker in
+  `lastError`; if it goes stale again it is failed ("Gave up …"), so a handler that reliably hangs
+  can't loop forever. No schema change — the marker lives in `lastError`.
+- **Catalog import:** the chunk's job update is conditional on the cursor it started from; a chunk
+  that finishes after a re-run already advanced the job is discarded (no cursor rewind, no second
+  chain of chunks). Rows it touched were upserts, so the duplicate work is harmless.
+
+**Alternatives.** An `attempts`/`lockedUntil` column (cleaner, but a migration on every deployment
+for no behavioural gain over the marker); per-handler timeouts (a timed-out promise keeps running
+in Node, so it would still need the ownership check above).
+
+**Verified live:** a probe task inserted as `running` an hour ago was requeued and run on the next
+tick of the real dev server, then removed.

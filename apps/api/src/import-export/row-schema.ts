@@ -1,111 +1,263 @@
-import { z } from "zod";
+import { applyMapping, suggestMapping, suggestOptions, type ColumnMapping, type ImportField, type ImportOptions } from "./mapping";
 
 /**
- * Fixed CSV/Excel import template (docs/PROJECT_SPEC.md §8.2 "CSV/Excel
- * import with column mapping"): a full drag-and-drop column mapper is out
- * of scope for this milestone (see docs/DECISIONS.md) — one row is one
- * variant, grouped into a product by `productSlug`, which covers the
- * stated acceptance scenario ("import 500 products with variants from a
- * CSV in one job with an error report") without that extra UI. Column
- * names are case-insensitive and tolerant of spaces (`"Product Slug"` ==
- * `productSlug`), since that's how non-technical staff actually export a
- * spreadsheet.
+ * One spreadsheet row = one variant, grouped into a product by `productSlug`
+ * (docs/PROJECT_SPEC.md §8.2). Headers reach this file already projected onto
+ * import fields by `mapping.ts` — either a staff-chosen column mapping or the
+ * auto-suggested one, so the original fixed M2 template keeps working as-is.
+ *
+ * Product-level cells (title, category, description …) only need to appear on
+ * one row of a product (typically its first); blank cells on the product's
+ * other rows never overwrite them. The same goes for option names: a template
+ * that writes `option1_name = Size` once and only `option1_value` afterwards
+ * is resolved against the product's existing option at that position.
  */
-export const IMPORT_COLUMNS = [
-  "sku",
-  "productSlug",
-  "productTitleEn",
-  "productTitleBn",
-  "categorySlug",
-  "optionSize",
-  "optionColor",
-  "price",
-  "compareAtPrice",
-  "costPrice",
-  "barcode",
-  "weightGrams",
-  "onHand",
-  "status",
-  "tags",
-] as const;
-export type ImportColumn = (typeof IMPORT_COLUMNS)[number];
 
-const normalizedColumnLookup = new Map(IMPORT_COLUMNS.map((column) => [column.toLowerCase().replace(/[\s_-]/g, ""), column]));
-
-/** Maps a raw sheet row's arbitrary header casing/spacing onto the fixed template's column keys. */
-export function normalizeRow(raw: Record<string, unknown>): Partial<Record<ImportColumn, unknown>> {
-  const normalized: Partial<Record<ImportColumn, unknown>> = {};
-  for (const [key, value] of Object.entries(raw)) {
-    const column = normalizedColumnLookup.get(key.toLowerCase().replace(/[\s_-]/g, ""));
-    if (column) normalized[column] = value;
-  }
-  return normalized;
+export interface LocalizedInput {
+  bn?: string;
+  en?: string;
 }
 
-function toNumber(value: unknown): number | undefined {
-  if (value === undefined || value === null || value === "") return undefined;
-  const n = typeof value === "number" ? value : Number(String(value).trim());
-  return Number.isFinite(n) ? n : NaN;
+export interface ImportOptionInput {
+  /** 0-based option slot (option1 → 0, option2 → 1). */
+  position: number;
+  /** Absent on continuation rows — resolved from the product's existing option at `position`. */
+  name?: string;
+  value: string;
 }
 
-export const importRowSchema = z.object({
-  sku: z.string().min(1, "sku is required"),
-  productSlug: z.string().min(1, "productSlug is required"),
-  productTitleEn: z.string().optional(),
-  productTitleBn: z.string().optional(),
-  categorySlug: z.string().optional(),
-  optionSize: z.string().optional(),
-  optionColor: z.string().optional(),
-  price: z.number().int("price must be a whole number of poisha").min(0, "price must not be negative"),
-  compareAtPrice: z.number().int().min(0).optional(),
-  costPrice: z.number().int().min(0).optional(),
-  barcode: z.string().optional(),
-  weightGrams: z.number().int().min(0).optional(),
-  onHand: z.number().int().min(0).optional(),
-  status: z.enum(["draft", "active", "archived", "scheduled"]).optional(),
-  tags: z.array(z.string()).optional(),
-});
-export type ImportRow = z.infer<typeof importRowSchema>;
+export interface ImportRow {
+  sku: string;
+  productSlug: string;
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  barcode?: string;
+  weightGrams?: number;
+  onHand?: number;
+  options: ImportOptionInput[];
+  /**
+   * The row's swatch colour. Applied at import time to whichever option resolves to the colour
+   * type — on continuation rows the option names are blank, so it can't be decided here.
+   */
+  colorHex?: string;
+  title?: LocalizedInput;
+  categoryPath?: string[];
+  categorySlug?: string;
+  status?: "draft" | "active" | "archived" | "scheduled";
+  tags?: string[];
+  description?: LocalizedInput;
+  careInstructions?: LocalizedInput;
+  fabric?: LocalizedInput;
+  modelInfo?: LocalizedInput;
+  seoTitle?: LocalizedInput;
+  seoDescription?: LocalizedInput;
+  isFeatured?: boolean;
+  sizeChart?: string;
+  fit?: string;
+  occasion?: string[];
+  /** File names (matched against the uploaded ZIP) or https URLs. */
+  images?: string[];
+}
 
 export interface RowValidationError {
   row: number;
   sku: string | null;
   message: string;
+  /** Warnings are reported but never fail the row (e.g. a missing size chart or image). */
+  level?: "error" | "warning";
 }
 
-/** Coerces a raw sheet row (arbitrary header casing, string numbers, comma-joined tags) and validates it. 1-based `rowNumber` is for error reporting, matching what a spreadsheet editor shows. */
-export function validateImportRow(raw: Record<string, unknown>, rowNumber: number): { row: ImportRow; error: null } | { row: null; error: RowValidationError } {
-  const normalized = normalizeRow(raw);
-  const skuRaw = normalized.sku;
-  const sku = typeof skuRaw === "string" ? skuRaw.trim() : skuRaw != null ? String(skuRaw) : null;
+const BANGLA_SCRIPT = /[ঀ-৿]/;
+const BANGLA_DIGITS = /[০-৯]/g;
+const STATUSES = new Set(["draft", "active", "archived", "scheduled"]);
+const HEX_COLOR = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i;
+const MAX_CATEGORY_DEPTH = 5;
 
-  const candidate = {
-    sku: sku ?? "",
-    productSlug: normalized.productSlug != null ? String(normalized.productSlug).trim() : "",
-    productTitleEn: normalized.productTitleEn != null ? String(normalized.productTitleEn) : undefined,
-    productTitleBn: normalized.productTitleBn != null ? String(normalized.productTitleBn) : undefined,
-    categorySlug: normalized.categorySlug != null ? String(normalized.categorySlug).trim() : undefined,
-    optionSize: normalized.optionSize != null ? String(normalized.optionSize).trim() : undefined,
-    optionColor: normalized.optionColor != null ? String(normalized.optionColor).trim() : undefined,
-    price: toNumber(normalized.price),
-    compareAtPrice: toNumber(normalized.compareAtPrice),
-    costPrice: toNumber(normalized.costPrice),
-    barcode: normalized.barcode != null && normalized.barcode !== "" ? String(normalized.barcode).trim() : undefined,
-    weightGrams: toNumber(normalized.weightGrams),
-    onHand: toNumber(normalized.onHand),
-    status: normalized.status != null ? String(normalized.status).trim() : undefined,
-    tags:
-      normalized.tags != null && String(normalized.tags).trim() !== ""
-        ? String(normalized.tags)
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-        : undefined,
+function text(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const result = String(value).trim();
+  return result === "" ? undefined : result;
+}
+
+function westernDigits(value: string): string {
+  return value.replace(BANGLA_DIGITS, (digit) => String(digit.charCodeAt(0) - 0x09e6));
+}
+
+/** Parses a number cell — tolerant of thousands separators, Bangla digits, and currency marks (`৳2,450`, `Tk 2450`). NaN for non-numeric text. */
+function parseNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "number") return value;
+  const cleaned = westernDigits(String(value))
+    .replace(/৳|tk\.?|bdt|taka|,|\s/gi, "")
+    .trim();
+  if (cleaned === "") return undefined;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Splits a multi-value cell (`eid-2027;new-arrival`, `Eid, Festive`, `a|b`). */
+export function splitList(value: unknown, separators: RegExp = /[;,|]/): string[] | undefined {
+  const raw = text(value);
+  if (!raw) return undefined;
+  const parts = raw
+    .split(separators)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : undefined;
+}
+
+/** A single-language cell goes to `bn` when it contains Bangla script, else `en`. Explicit `…Bn`/`…En` columns win over the auto one. */
+export function localize(auto: unknown, bn?: unknown, en?: unknown): LocalizedInput | undefined {
+  const result: LocalizedInput = {};
+  const autoText = text(auto);
+  if (autoText) result[BANGLA_SCRIPT.test(autoText) ? "bn" : "en"] = autoText;
+  const bnText = text(bn);
+  const enText = text(en);
+  if (bnText) result.bn = bnText;
+  if (enText) result.en = enText;
+  return result.bn || result.en ? result : undefined;
+}
+
+export function parseBoolean(value: unknown): boolean | undefined | null {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "yes", "y", "1", "হ্যাঁ"].includes(normalized)) return true;
+  if (["false", "no", "n", "0", "না"].includes(normalized)) return false;
+  return null;
+}
+
+/** `Men > Panjabi` → `["Men", "Panjabi"]`. */
+export function parseCategoryPath(value: unknown): string[] | undefined {
+  return splitList(value, />/);
+}
+
+/** Option-name heuristics shared with the importer: which option type a column like `Waist` or `Colour` represents. */
+export function optionTypeForName(name: string): "size" | "color" | "generic" {
+  const normalized = name.trim().toLowerCase();
+  if (/^(colou?r|shade|রং|রঙ)$/.test(normalized)) return "color";
+  if (/^(size|waist|age|length|chest|inseam|সাইজ|মাপ)$/.test(normalized)) return "size";
+  return "generic";
+}
+
+export function validateImportRow(
+  raw: Record<string, unknown>,
+  rowNumber: number,
+  mapping?: ColumnMapping | null,
+  options?: ImportOptions,
+): { row: ImportRow; error: null; warnings: string[] } | { row: null; error: RowValidationError; warnings: string[] } {
+  const effectiveMapping = mapping ?? suggestMapping(Object.keys(raw));
+  const effectiveOptions = options ?? suggestOptions(effectiveMapping);
+  const cells = applyMapping(raw, effectiveMapping);
+  const get = (field: ImportField) => cells[field];
+
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const sku = text(get("sku")) ?? null;
+  const productSlug = text(get("productSlug"));
+  if (!sku) errors.push("sku is required");
+  if (!productSlug) errors.push("productSlug is required");
+
+  const money = (field: ImportField, label: string, required: boolean): number | undefined => {
+    const value = parseNumber(get(field));
+    if (value === undefined) {
+      if (required) errors.push(`${label} is required`);
+      return undefined;
+    }
+    if (Number.isNaN(value)) {
+      errors.push(`${label} must be a number`);
+      return undefined;
+    }
+    if (value < 0) {
+      errors.push(`${label} must not be negative`);
+      return undefined;
+    }
+    if (effectiveOptions.priceUnit === "bdt") return Math.round(value * 100);
+    if (!Number.isInteger(value)) {
+      errors.push(`${label} must be a whole number of poisha`);
+      return undefined;
+    }
+    return value;
+  };
+  const wholeNumber = (field: ImportField, label: string): number | undefined => {
+    const value = parseNumber(get(field));
+    if (value === undefined) return undefined;
+    if (Number.isNaN(value) || !Number.isInteger(value) || value < 0) {
+      errors.push(`${label} must be a whole number, 0 or more`);
+      return undefined;
+    }
+    return value;
   };
 
-  const result = importRowSchema.safeParse(candidate);
-  if (!result.success) {
-    return { row: null, error: { row: rowNumber, sku, message: result.error.issues.map((issue) => issue.message).join("; ") } };
+  const price = money("price", "price", true);
+  const compareAtPrice = money("compareAtPrice", "compareAtPrice", false);
+  const costPrice = money("costPrice", "costPrice", false);
+  const onHand = wholeNumber("onHand", "onHand");
+  const weightGrams = wholeNumber("weightGrams", "weightGrams");
+
+  const statusText = text(get("status"))?.toLowerCase();
+  if (statusText && !STATUSES.has(statusText)) errors.push(`status must be one of draft, active, archived, scheduled (got "${statusText}")`);
+
+  const isFeatured = parseBoolean(get("isFeatured"));
+  if (isFeatured === null) errors.push(`isFeatured must be TRUE or FALSE`);
+
+  // Options: generic option1/option2 slots, plus the original template's fixed size/color columns.
+  const optionInputs: ImportOptionInput[] = [];
+  let colorHex = text(get("colorHex"));
+  if (colorHex && !HEX_COLOR.test(colorHex)) {
+    warnings.push(`colorHex "${colorHex}" is not a hex colour — ignored`);
+    colorHex = undefined;
   }
-  return { row: result.data, error: null };
+  const normalizedHex = colorHex ? (colorHex.startsWith("#") ? colorHex : `#${colorHex}`).toUpperCase() : undefined;
+  for (const [position, nameField, valueField] of [
+    [0, "option1Name", "option1Value"],
+    [1, "option2Name", "option2Value"],
+  ] as const) {
+    const value = text(get(valueField));
+    if (!value) continue;
+    const name = text(get(nameField));
+    optionInputs.push({ position, name, value });
+  }
+  const size = text(get("optionSize"));
+  if (size) optionInputs.push({ position: optionInputs.length, name: "Size", value: size });
+  const color = text(get("optionColor"));
+  if (color) optionInputs.push({ position: optionInputs.length, name: "Color", value: color });
+
+  const categoryPath = parseCategoryPath(get("categoryPath"));
+  if (categoryPath && categoryPath.length > MAX_CATEGORY_DEPTH) errors.push(`categoryPath is deeper than ${MAX_CATEGORY_DEPTH} levels`);
+
+  if (errors.length > 0) {
+    return { row: null, error: { row: rowNumber, sku, message: errors.join("; "), level: "error" }, warnings };
+  }
+
+  const row: ImportRow = {
+    sku: sku!,
+    productSlug: productSlug!,
+    price: price!,
+    compareAtPrice,
+    costPrice,
+    barcode: text(get("barcode")),
+    weightGrams,
+    onHand,
+    options: optionInputs,
+    colorHex: normalizedHex,
+    title: localize(get("title"), get("titleBn"), get("titleEn")),
+    categoryPath,
+    categorySlug: text(get("categorySlug")),
+    status: statusText as ImportRow["status"],
+    tags: splitList(get("tags")),
+    description: localize(get("description"), get("descriptionBn"), get("descriptionEn")),
+    careInstructions: localize(get("careInstructions"), get("careInstructionsBn"), get("careInstructionsEn")),
+    fabric: localize(get("fabric")),
+    modelInfo: localize(get("modelInfo")),
+    seoTitle: localize(get("seoTitle")),
+    seoDescription: localize(get("seoDescription")),
+    isFeatured: isFeatured ?? undefined,
+    sizeChart: text(get("sizeChart")),
+    fit: text(get("fit")),
+    occasion: splitList(get("occasion")),
+    images: splitList(get("images"), /[;,|\n]/),
+  };
+  return { row, error: null, warnings };
 }

@@ -28,13 +28,18 @@ const intlProxy = createMiddleware(routing);
  */
 function withSecurityHeaders(response: NextResponse): NextResponse {
   const frameAncestors = ["'self'", process.env.ADMIN_URL].filter(Boolean).join(" ");
+  const isDev = process.env.NODE_ENV !== "production";
+  // The local storage driver serves media from `${API_URL}/media` — on plain http in development,
+  // which the `https:` source alone doesn't cover, so product images were blocked (docs/DECISIONS.md 2026-11-14).
+  const apiOrigin = new URL(process.env.API_URL ?? "http://localhost:4000").origin;
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com",
+    // Dev only: React's debug tooling needs eval, and Next's HMR client needs its websocket.
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: https: ${apiOrigin}`,
     "font-src 'self' data:",
-    "connect-src 'self' https://www.google-analytics.com https://analytics.tiktok.com https://connect.facebook.net https://www.facebook.com",
+    `connect-src 'self'${isDev ? " ws://localhost:3000 ws://127.0.0.1:3000" : ""} https://www.google-analytics.com https://analytics.tiktok.com https://connect.facebook.net https://www.facebook.com`,
     `frame-ancestors ${frameAncestors}`,
     "base-uri 'self'",
     "form-action 'self'",

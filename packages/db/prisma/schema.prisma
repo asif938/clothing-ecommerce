@@ -1048,8 +1048,44 @@ model CatalogImportJob {
   createdAt     DateTime               @default(now()) @map("created_at")
   updatedAt     DateTime               @updatedAt @map("updated_at")
   finishedAt    DateTime?              @map("finished_at")
+  /// §8.2 column mapping: `{ [sourceHeader]: importField | null }`. Null = auto-detected at parse time (fixed-template uploads).
+  mapping       Json?
+  /// Import options, e.g. `{ priceUnit: "bdt" | "poisha" }`.
+  options       Json?
+  warningRows   Int                    @default(0) @map("warning_rows")
+
+  files CatalogImportFile[]
 
   @@map("catalog_import_jobs")
+}
+
+/// Images extracted from an import's ZIP upload (§8.2 "bulk upload zip"), held only until the job finishes.
+model CatalogImportFile {
+  id        String   @id @default(cuid(2))
+  jobId     String   @map("job_id")
+  /// Lower-cased file name without directories — what the `images` column / SKU match is compared against.
+  name      String
+  bytes     Bytes
+  sizeBytes Int      @map("size_bytes")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job CatalogImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, name])
+  @@map("catalog_import_files")
+}
+
+/// Saved column mappings for repeat imports from the same spreadsheet template (§8.2).
+model CatalogImportPreset {
+  id        String   @id @default(cuid(2))
+  name      String   @unique
+  mapping   Json
+  options   Json?
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("catalog_import_presets")
 }
 
 // ---------------------------------------------------------------------------

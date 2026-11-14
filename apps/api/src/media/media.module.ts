@@ -13,6 +13,7 @@ import { MediaService } from "./media.service";
   imports: [ProvidersModule],
   controllers: [MediaController, MediaFoldersController, MediaFilesController, MediaMigrationController],
   providers: [MediaService, MediaProvidersService, MediaMigrationService, MediaUsageService],
-  exports: [MediaProvidersService, MediaUsageService],
+  // MediaService is exported for the catalog importer's ZIP/URL image import (§8.2).
+  exports: [MediaProvidersService, MediaUsageService, MediaService],
 })
 export class MediaModule {}

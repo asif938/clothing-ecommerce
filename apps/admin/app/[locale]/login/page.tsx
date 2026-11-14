@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "../../../i18n/navigation";
 import { api, ApiError } from "../../../lib/api";
@@ -20,6 +20,19 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // First-run: with no Super Admin yet, send the visitor to the setup wizard
+  // (this used to live in the `/` route, which shadowed the dashboard page).
+  useEffect(() => {
+    api
+      .get<{ hasSuperAdmin: boolean }>("/setup/status")
+      .then((status) => {
+        if (!status.hasSuperAdmin) router.replace("/setup");
+      })
+      .catch(() => {
+        // API unreachable — stay on the login form; its own request reports the error.
+      });
+  }, [router]);
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();

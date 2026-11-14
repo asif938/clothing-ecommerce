@@ -4,7 +4,7 @@ Updated after every milestone. See `docs/PROJECT_SPEC.md` §16 for the full
 milestone plan and acceptance criteria, and `docs/DECISIONS.md` for the
 reasoning behind choices made along the way.
 
-## Current status (2026-11-13)
+## Current status (2026-11-14)
 
 | Phase (§16) | Milestones | State |
 | --- | --- | --- |
@@ -12,22 +12,25 @@ reasoning behind choices made along the way.
 | Phase 2 — Growth and operations automation | M10–M13 | Complete |
 | Phase 3 — Advanced and intelligence | M14–M17 | Complete |
 
-- Latest milestone: M17 (advanced analytics and procurement). The repository has no git
-  remote, so milestone commits are local only.
-- Unit tests: `packages/shared` 269, `packages/blocks` 13, `apps/api` 748,
+- Latest work: §8.2 catalog import completed (column mapping, saved mappings,
+  ZIP/URL image import) — see "Catalog import completion" below. The
+  repository has no git remote, so commits are local only.
+- Unit tests: `packages/shared` 269, `packages/blocks` 13, `apps/api` 792,
   `apps/storefront` 10 — all passing.
-- Database: migrations up to `20261117090000_advanced_analytics_procurement`
-  (M17) are committed, but the configured dev database was last known at
-  M11; run `pnpm db:generate`, `pnpm db:migrate:deploy`, `pnpm db:seed`
-  before using M12–M17 features (code from M16 on needs the new cart/order
-  columns to serve carts at all).
-- Cross-cutting caveat: no milestone has been clicked through in a
-  browser or run against live third-party providers here — each section's
+- Database: the dev database (Neon) is fully migrated, up to
+  `20261118090000_catalog_import_mapping_images` (applied 2026-11-14), and
+  holds the 14 demo-template products imported through the new importer.
+- First live run (2026-11-11 → 14) against Neon and a real browser found and
+  fixed: the `inventory_levels.available` generated column, the admin CSP
+  blocking hydration, the admin `/` route shadowing the dashboard, the M17
+  body parser disabling JSON parsing for every route, and the admin upload
+  helper's JSON content type (see DECISIONS.md 2026-11-11 → 14).
+- Cross-cutting caveat: most milestones have still not been clicked through
+  in a browser or run against live third-party providers — each section's
   "Not verified" list says what remains.
 - Remaining plan: none in §16 — all 17 milestones are built. What's left is
   operational: apply the migrations, click through each milestone in a
   browser, and rehearse launching a brand from a config bundle.
-
 ---
 
 ## Milestone 0 — Repository and tooling
@@ -2792,6 +2795,86 @@ new brands. This completes Phase 3.
 - Config bundles don't carry media files or products, and don't rewrite ids
   embedded in page blocks (they are reported as warnings); the theme travels
   inside settings. Import never deletes.
+
+---
+
+## Catalog import completion (§8.2, 2026-11-14)
+
+Status: complete, and run end to end against the dev database: the demo
+XLSX + images ZIP imported through the real service and the API's own
+scheduler (45/45 rows, 14 products, 45 variants, 23 gallery images, 8 new
+categories, 0 errors), then re-imported (45 updated, 0 created, no duplicate
+images). The storefront PDP shows the gallery, colour swatches, prices and
+care text. The admin import screen itself has not been clicked through
+(the job was created server-side; staff login needs the owner's 2FA).
+
+### Why it was missing
+
+M2 shipped a fixed template and deferred the column mapper and image import
+("picked up whenever catalog import needs more than the fixed template
+handles", DECISIONS.md); no later milestone picked them up. A real merchant
+template matched almost none of the fixed columns, used taka prices (read as
+poisha → 100× too low), `Men > Panjabi` category paths, option1/option2 slots
+and a ZIP of images — none of which the importer handled.
+
+### Built
+
+- **`packages/db`**: migration `20261118090000_catalog_import_mapping_images`
+  (offline `prisma migrate diff`): `catalog_import_jobs.mapping`/`options`/
+  `warning_rows`, `catalog_import_files` (a job's ZIP images until it
+  finishes), `catalog_import_presets` (saved mappings).
+- **`apps/api` `import-export/`**: `mapping.ts` (37 import fields, header
+  aliases, suggested mapping + price unit, sanitizing), `row-schema.ts`
+  rewritten (any mapping, taka/poisha, Bangla digits and `৳2,450`, lists,
+  category paths, option slots with colour hex, localized text by script,
+  warnings vs errors), `image-archive.ts` (fflate; zip-slip/zip-bomb/junk
+  guards; SKU file-name matching), `workbook.ts` (BOM strip, header
+  inspection), `catalog-import.service.ts` (category-path creation, size
+  chart by name, fit/occasion attributes, generic options, product field
+  merge, ZIP/https images through `MediaService` tied to the row's colour,
+  re-import dedupe, 12-image chunk budget, presets). New routes:
+  `POST /admin/catalog/import/inspect`, `GET|PUT /admin/catalog/import/presets`,
+  `DELETE /admin/catalog/import/presets/:id`; dry-run/import accept
+  `mapping`, `options` and an `images` ZIP. New dependency: `fflate`.
+- **`apps/admin`**: Import/export page rebuilt — upload → per-column
+  "imports as" dropdowns with sample values → price unit → optional ZIP →
+  save/load mapping → preview (errors + warnings) → background import with
+  report download. `importExport` + new `importFields` strings in bn/en.
+  `lib/api.ts` no longer forces a JSON content type on uploads.
+
+### Verified
+
+- `apps/api`: tsc clean, eslint clean on changed files, 786 tests passing
+  (38 new: mapping, row validation for merchant templates, archive limits and
+  traversal, end-to-end chunk processing of a merchant template with a ZIP
+  against an in-memory Prisma fake). `apps/admin`: tsc and eslint clean;
+  the page compiles (200).
+- The demo files (`demo_products_import.csv`, `.xlsx`, `demo_product_images.zip`)
+  through the real parsing/mapping/validation code: all 30 columns
+  auto-mapped, 45/45 rows valid, 14 products, 23/23 images found, prices
+  converted (2,450 ৳ → 245 000 poisha).
+
+### Not verified
+
+- The admin import screen (mapping dropdowns, presets, preview, ZIP picker)
+  has not been clicked through in a browser; https image URLs have not been
+  tried against a real remote host.
+- The live run found and fixed: a colour hex on a continuation row landing on
+  the size slot (Off White lost its swatch), and the storefront/admin CSP
+  blocking locally stored media. It also exposed a scheduler gap, now fixed:
+  a task whose handler hung (database connection dropped mid-chunk) stayed
+  `running` forever — the demo import's last chunk had to be requeued by
+  hand. The scheduler now claims tasks atomically, requeues a task stale for
+  15 minutes once (then fails it), ignores a late finish from a reclaimed
+  task, and the importer discards a chunk that finishes after a re-run
+  advanced the job (DECISIONS.md 2026-11-14; verified live with a probe
+  task on the dev server).
+
+### Known gaps
+
+- Size charts are matched by name, never created. Category images/SEO and
+  product videos are not importable. Export still writes the original fixed
+  template (no option labels / images).
 
 ---
 

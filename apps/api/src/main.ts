@@ -15,7 +15,15 @@ async function bootstrap() {
   // §16 M17 config bundles carry whole CMS pages and UI string tables, well over
   // the 100 kb default. Parsed here, ahead of Nest's default parser (which skips
   // an already-parsed body), and only for that one route.
-  app.use("/api/v1/admin/config-bundle/import", json({ limit: "10mb" }));
+  // Wrapped in an arrow function on purpose: Express's parser is a function
+  // named `jsonParser`, and Nest's ExpressAdapter skips registering its own
+  // global JSON parser when it finds a middleware with that name in the stack
+  // — passing `json(...)` directly left every other route with `req.body`
+  // undefined (every POST failed validation; see docs/DECISIONS.md 2026-11-14).
+  const configBundleJson = json({ limit: "10mb" });
+  app.use("/api/v1/admin/config-bundle/import", (req: Parameters<typeof configBundleJson>[0], res: Parameters<typeof configBundleJson>[1], next: Parameters<typeof configBundleJson>[2]) =>
+    configBundleJson(req, res, next),
+  );
 
   // §12 baseline security headers. No CSP here — this is a JSON API
   // consumed server-side by the storefront/admin's own proxy routes, not an
