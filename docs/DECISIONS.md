@@ -2708,3 +2708,44 @@ in Node, so it would still need the ownership check above).
 
 **Verified live:** a probe task inserted as `running` an hour ago was requeued and run on the next
 tick of the real dev server, then removed.
+
+## 2026-11-15 — Admin Menus screen, storefront header rebuild, storefront UI strings
+
+**Context.** The storefront navbar showed only search and cart. Menus had an API and storefront
+rendering since M3, but the admin screen was deferred ("Admin UI for menus … a real gap") and never
+built, so no menu existed. The header itself had no account, wishlist, language switch or mobile
+menu, dropdowns only existed in the `mega` variant and opened on hover only, and the footer linked
+every non-URL item to `#`. Storefront chrome text was inline `locale === "bn" ? … : …` copy, while
+the `ui_strings` table was never read by the storefront.
+
+**Decisions.**
+- **Admin → CMS → Menus** (`/cms/menus`): tabs for the two layout slots (`header`, `footer`),
+  create-if-missing, an item tree (≤ 3 levels) with bn/en labels, a type (category, collection,
+  page, product, URL) and a target picker. Targets are stored as **slugs** in `targetId` (the
+  storefront routes look up by slug — no per-render id→slug lookup). Picking a target fills empty
+  labels from its name. Validation: a label in one language, and a target — except an item with
+  children, which may be a heading only (footer column, dropdown title); URLs must start with `/`,
+  `https://`, `mailto:` or `tel:`. Tree logic is pure (`lib/menu-tree.ts`) and unit-tested; the
+  admin app now runs Vitest.
+- **Header**: mobile-first — below `lg` a menu drawer (accordion submenus, account, wishlist,
+  order tracking, language switch; Escape/backdrop/navigation close it, focus moves in and back,
+  page scroll locked), logo, search icon (full-width search row) and cart icon with badge; from
+  `lg` the menu inline with dropdowns for every variant (wide panel for `mega`) that open on hover
+  **and** keyboard focus, plus wishlist, account and language. Sticky. Header variants keep their
+  meaning (`centered` puts the menu on its own row; `minimal` hides it).
+- **Footer**: links resolve through the same menu → href code as the header; a target-less column
+  heading renders as text; contact details are `tel:`/`mailto:` links.
+- **Storefront UI strings**: every key under `storefront.` is public via `GET /store/ui-strings`
+  (60 s cache, `ui_strings` tag; admin string edits under that prefix trigger revalidation). Missing
+  keys fall back to the seeded defaults. Header/footer copy uses this; older storefront components
+  still use inline copy and can migrate key by key.
+
+**Alternatives.** A drag-and-drop tree (rejected for now: up/down buttons are fully keyboard
+accessible and need no library); storing database ids and resolving them per render (rejected:
+an extra lookup on every page for no benefit, and the M3 header already expected slugs).
+
+**Found, not changed:** `REVALIDATE_SECRET` is empty in both `.env` files, so the storefront
+answers the API's revalidation call with 403 and changes appear only when the 60 s cache expires.
+Set the same random value in `apps/api/.env` and `apps/storefront/.env.local` to make admin edits
+show immediately. The header still gets `logoUrl={null}` (brand-logo → URL resolution is an M3
+known gap), so the brand name is shown instead of a logo.

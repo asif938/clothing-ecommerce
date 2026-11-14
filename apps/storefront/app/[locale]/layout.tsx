@@ -13,7 +13,7 @@ import { TrackingScripts } from "../../components/tracking-scripts";
 import { UtmCapture } from "../../components/utm-capture";
 import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
-import { getAnnouncements, getMenu, getPage, getStoreConfig } from "../../lib/store-api";
+import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
 
@@ -67,7 +67,7 @@ export default async function LocaleLayout({
     );
   }
 
-  const [announcements, headerMenu, footerMenu] = await Promise.all([getAnnouncements(), getMenu("header"), getMenu("footer")]);
+  const [announcements, headerMenu, footerMenu, uiStrings] = await Promise.all([getAnnouncements(), getMenu("header"), getMenu("footer"), getUiStrings()]);
   const baseUrl = process.env.STOREFRONT_URL ?? "http://localhost:3000";
   // Organization + WebSite(SearchAction) structured data (§13.2) — site-wide, so it lives here rather than on any one page.
   const siteLd = [
@@ -95,7 +95,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
-          <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} visualSearch={config["visualSearch.enabled"] === true} />
+          <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
           <main className="flex-1">{children}</main>
           <Footer
             brandName={brandName}
@@ -104,6 +104,7 @@ export default async function LocaleLayout({
             phone={typeof config["brand.phone"] === "string" ? (config["brand.phone"] as string) : null}
             email={typeof config["brand.email"] === "string" ? (config["brand.email"] as string) : null}
             locale={locale}
+            uiStrings={uiStrings}
           />
           <ChatButtons
             liveChatEnabled={config["support.liveChat.enabled"] === true}

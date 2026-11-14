@@ -111,6 +111,11 @@ export interface AnnouncementBar {
   experiment?: { experimentId: string; variants: { key: string; payload: { message: { bn?: string; en?: string }; linkText?: { bn?: string; en?: string } | null; linkUrl?: string | null } | null }[] };
 }
 
+/** Admin-editable storefront chrome text (`storefront.*` UI strings, golden rule 1). Missing keys fall back to the seeded defaults — see lib/ui-text.ts. */
+export async function getUiStrings(): Promise<Record<string, { bn?: string; en?: string }>> {
+  return (await storeGet<Record<string, { bn?: string; en?: string }>>("/store/ui-strings", ["ui_strings"])) ?? {};
+}
+
 export async function getAnnouncements(): Promise<AnnouncementBar[]> {
   return (await storeGet<AnnouncementBar[]>("/store/announcements", ["announcements"])) ?? [];
 }

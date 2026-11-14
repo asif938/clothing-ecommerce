@@ -7,7 +7,9 @@ import { RequirePermissions } from "../common/require-permissions.decorator";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { RevalidationService } from "../revalidation/revalidation.service";
 import { updateUiStringSchema, type UpdateUiStringDto } from "./dto";
+import { STOREFRONT_UI_STRING_PREFIX } from "./store-ui-strings.controller";
 
 /** The admin "UI Text" screen (docs/PROJECT_SPEC.md §4.5) — search + inline edit over `ui_strings`. */
 @ApiTags("ui-strings")
@@ -18,6 +20,7 @@ export class UiStringsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly revalidation: RevalidationService,
   ) {}
 
   @Get()
@@ -51,6 +54,8 @@ export class UiStringsController {
       ip: req.ip ?? null,
       userAgent: req.get("user-agent") ?? null,
     });
+    // Storefront chrome text is cached under this tag (GET /store/ui-strings).
+    if (key.startsWith(STOREFRONT_UI_STRING_PREFIX)) await this.revalidation.revalidate(["ui_strings"]);
     return updated;
   }
 }

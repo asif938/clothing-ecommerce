@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/finance/cod", labelKey: "navFinance" },
   { href: "/cms/pages", labelKey: "navCmsPages" },
   { href: "/cms/announcements", labelKey: "navCmsAnnouncements" },
+  { href: "/cms/menus", labelKey: "navCmsMenus" },
   { href: "/blog", labelKey: "navBlog" },
   { href: "/products", labelKey: "navProducts" },
   { href: "/catalog", labelKey: "navCatalog" },

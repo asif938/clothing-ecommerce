@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { t } from "@clothing/shared";
-import { useRouter } from "../i18n/navigation";
+import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 
 interface SuggestResult {
@@ -13,7 +13,7 @@ interface SuggestResult {
 const EMPTY: SuggestResult = { products: [], categories: [] };
 
 /** Instant suggestions (docs/PROJECT_SPEC.md §7.2 "typo-tolerant... including Banglish like panjabi/punjabi") — debounced, client-side, hitting the same-origin rewrite so no API URL is exposed to the browser. */
-export function SearchBox({ locale }: { locale: string }) {
+export function SearchBox({ locale, placeholder, autoFocus = false, fullWidth = false }: { locale: string; placeholder: string; autoFocus?: boolean; fullWidth?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SuggestResult>(EMPTY);
@@ -47,37 +47,40 @@ export function SearchBox({ locale }: { locale: string }) {
   const hasSuggestions = results.products.length > 0 || results.categories.length > 0;
 
   return (
-    <div className="relative w-full max-w-xs">
+    <div className={`relative w-full ${fullWidth ? "" : "max-w-xs"}`}>
       <input
         type="search"
+        // Only the mobile search row uses this, right after an explicit tap on the search icon.
+        autoFocus={autoFocus}
+        aria-label={placeholder}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
-        placeholder={locale === "bn" ? "পণ্য খুঁজুন…" : "Search products…"}
-        className="w-full rounded-theme border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-brand"
+        placeholder={placeholder}
+        className="h-10 w-full rounded-theme border border-border bg-surface px-3 text-sm outline-none focus:border-brand"
       />
       {open && hasSuggestions && (
         <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-theme border border-border bg-surface p-2 shadow-lg">
           {results.categories.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
               {results.categories.map((category) => (
-                <a key={category.id} href={`/c/${category.slug}`} className="rounded-theme bg-muted px-2 py-1 text-xs text-surface-foreground">
+                <Link key={category.id} href={`/c/${category.slug}`} className="rounded-theme bg-muted px-2 py-1 text-xs text-surface-foreground">
                   {t(category.name, locale as "bn" | "en")}
-                </a>
+                </Link>
               ))}
             </div>
           )}
           {results.products.map((product) => (
-            <a key={product.id} href={`/p/${product.slug}`} className="flex items-center gap-2 rounded-theme px-1 py-1.5 text-sm hover:bg-muted">
+            <Link key={product.id} href={`/p/${product.slug}`} className="flex items-center gap-2 rounded-theme px-1 py-1.5 text-sm hover:bg-muted">
               {product.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element -- see apps/storefront/components/header.tsx
                 <img src={product.imageUrl} alt="" className="h-8 w-8 rounded-theme object-cover" />
               )}
               <span className="flex-1 truncate">{t(product.title, locale as "bn" | "en")}</span>
               {product.price !== null && <span className="text-xs text-surface-foreground/60">{formatBdt(product.price)}</span>}
-            </a>
+            </Link>
           ))}
         </div>
       )}

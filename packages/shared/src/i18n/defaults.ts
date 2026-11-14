@@ -93,4 +93,20 @@ export const UI_STRING_DEFAULTS: UiStringDefault[] = [
   // Admin shell
   { key: "shell.search.placeholder", bn: "খুঁজুন বা একটি কমান্ড চালান…", en: "Search or run a command…" },
   { key: "shell.nav.dashboard", bn: "ড্যাশবোর্ড", en: "Dashboard" },
+
+  // Storefront header & footer. Every key under `storefront.` is public — served to the
+  // storefront by `GET /store/ui-strings` and editable via the admin UI-strings API.
+  { key: "storefront.header.menu", bn: "মেনু", en: "Menu" },
+  { key: "storefront.header.closeMenu", bn: "মেনু বন্ধ করুন", en: "Close menu" },
+  { key: "storefront.header.search", bn: "খুঁজুন", en: "Search" },
+  { key: "storefront.header.searchPlaceholder", bn: "প্রোডাক্ট খুঁজুন…", en: "Search products…" },
+  { key: "storefront.header.account", bn: "অ্যাকাউন্ট", en: "Account" },
+  { key: "storefront.header.wishlist", bn: "উইশলিস্ট", en: "Wishlist" },
+  { key: "storefront.header.cart", bn: "কার্ট", en: "Cart" },
+  { key: "storefront.header.trackOrder", bn: "অর্ডার ট্র্যাক করুন", en: "Track order" },
+  // Label of the language switch: names the language it switches *to*.
+  { key: "storefront.header.otherLanguage", bn: "English", en: "বাংলা" },
+  { key: "storefront.header.showSubmenu", bn: "সাবমেনু দেখান", en: "Show submenu" },
+  { key: "storefront.header.searchByPhoto", bn: "ছবি দিয়ে খুঁজুন", en: "Search by photo" },
+  { key: "storefront.footer.contact", bn: "যোগাযোগ", en: "Contact" },
 ];

@@ -15,8 +15,12 @@ reasoning behind choices made along the way.
 - Latest work: §8.2 catalog import completed (column mapping, saved mappings,
   ZIP/URL image import) — see "Catalog import completion" below. The
   repository has no git remote, so commits are local only.
-- Unit tests: `packages/shared` 269, `packages/blocks` 13, `apps/api` 792,
-  `apps/storefront` 10 — all passing.
+- Unit tests: `packages/shared` 269, `packages/blocks` 13, `apps/api` 793,
+  `apps/storefront` 15, `apps/admin` 10 — all passing.
+- Storefront navigation (2026-11-15): admin CMS → Menus screen, rebuilt
+  mobile-first header (drawer, account, wishlist, language switch, keyboard
+  dropdowns), footer links fixed, header/footer copy from `storefront.*` UI
+  strings — see "Storefront navigation" below.
 - Database: the dev database (Neon) is fully migrated, up to
   `20261118090000_catalog_import_mapping_images` (applied 2026-11-14), and
   holds the 14 demo-template products imported through the new importer.
@@ -2875,6 +2879,40 @@ and a ZIP of images — none of which the importer handled.
 - Size charts are matched by name, never created. Category images/SEO and
   product videos are not importable. Export still writes the original fixed
   template (no option labels / images).
+
+---
+
+## Storefront navigation: Menus admin and header rebuild (2026-11-15)
+
+Status: complete and checked in a browser (360 px and desktop, bn and en) against the dev
+database. The admin Menus screen compiles but has not been clicked through (staff login needs the
+owner's 2FA); the starter menus were created through `MenusService` server-side.
+
+### Built
+
+- **`apps/admin`**: CMS → Menus (`/cms/menus`) — header/footer tabs, create-if-missing, item tree
+  editor (≤ 3 levels, bn/en labels, category/collection/page/product/URL targets stored as slugs,
+  product search, label auto-fill, up/down, sub-items, validation), sidebar entry, `menus` strings in
+  bn/en. `lib/menu-tree.ts` + 10 Vitest tests; the admin app now runs Vitest (`pnpm --filter admin test`).
+- **`apps/storefront`**: header rebuilt mobile-first (`header.tsx`, `mobile-menu.tsx`,
+  `mobile-search.tsx`, `language-switch.tsx`, `nav-link.tsx`, `icons.tsx`, icon `cart-link.tsx`):
+  drawer with accordion submenus, account, wishlist, order tracking and language switch; desktop
+  dropdowns for all variants (hover + keyboard focus), sticky. Footer uses the same href resolution
+  (no more `#` links). Search suggestions now keep the locale prefix. `lib/ui-text.ts`,
+  `lib/menu-href.ts`, `lib/nav-items.ts` (+5 tests).
+- **`apps/api`**: public `GET /store/ui-strings` (only `storefront.*` keys); admin UI-string edits
+  under that prefix revalidate the storefront. `packages/shared`: 12 `storefront.*` default strings
+  (seeded by `pnpm db:seed`).
+- **Dev database**: storefront UI strings seeded; starter header (Men, Women, Kids, Accessories with
+  sub-categories) and footer (Shop, Help) menus created from the imported categories.
+
+### Known gaps
+
+- `REVALIDATE_SECRET` is unset, so revalidation calls get 403 and changes show after the 60 s
+  cache — set it in `apps/api/.env` and `apps/storefront/.env.local`.
+- No logo yet (`logoUrl` is always null — brand-logo resolution is an M3 gap).
+- Other storefront components still use inline bn/en copy instead of UI strings.
+- Admin screens for popups, redirects and UI strings are still missing (API only).
 
 ---
 

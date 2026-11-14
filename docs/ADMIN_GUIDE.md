@@ -89,6 +89,32 @@ Only one per locale shows at a time if several overlap — the highest
 **BN** — পেজের উপরে শুরু/শেষ সময় এবং ঐচ্ছিক লিংক সহ ব্যানার বার। একাধিক
 ওভারল্যাপ করলে সর্বোচ্চ `priority`-র ব্যানারটি দেখা যাবে।
 
+## Menus (`cms.manage`)
+
+**EN** — CMS → Menus builds the storefront's navigation. **Header menu**:
+top-level items appear in the navigation bar; their sub-items open as a
+dropdown on desktop and as an expandable list in the phone menu (up to three
+levels). **Footer menu**: each top-level item is a column heading, its
+sub-items are the column's links. For each item give a label (Bangla and/or
+English), choose what it links to (category, collection, page, product, or a
+URL such as `/track` or `https://…`) and pick the target — an empty label is
+filled from the target's name. Use Up/Down to reorder, *Add sub-item* to nest,
+then **Save menu**. An item may have no target only if it has sub-items (a
+heading). The storefront shows changes within about a minute. Header/footer
+words such as "Cart" or "Account" are UI strings (`storefront.*`).
+
+**BN** — CMS → মেনু থেকে স্টোরফ্রন্টের নেভিগেশন বানানো হয়। **হেডার মেনু**:
+প্রথম স্তরের আইটেম নেভিগেশন বারে দেখায়; সাব-আইটেম ডেস্কটপে ড্রপডাউনে আর
+ফোনের মেনুতে খোলা-বন্ধ তালিকায় দেখায় (সর্বোচ্চ তিন স্তর)। **ফুটার মেনু**:
+প্রথম স্তরের প্রতিটা আইটেম একটা কলামের শিরোনাম, সাব-আইটেমগুলো ওই কলামের লিংক।
+প্রতিটা আইটেমে নাম (বাংলা আর/অথবা ইংরেজি) দিন, কোথায় লিংক হবে বাছুন
+(ক্যাটাগরি, কালেকশন, পেজ, প্রোডাক্ট, অথবা `/track` বা `https://…`-এর মতো
+লিংক) আর গন্তব্য বেছে নিন — নাম ফাঁকা থাকলে গন্তব্যের নাম বসে যায়। উপরে/নিচে
+দিয়ে ক্রম বদলান, *সাব-আইটেম যোগ করুন* দিয়ে ভেতরে রাখুন, তারপর **মেনু সেভ
+করুন**। সাব-আইটেম থাকলে তবেই গন্তব্য ছাড়া (শুধু শিরোনাম) রাখা যায়। এক মিনিটের
+মধ্যে স্টোরফ্রন্টে দেখাবে। হেডার/ফুটারের "কার্ট", "অ্যাকাউন্ট"-এর মতো লেখাগুলো
+UI strings (`storefront.*`)।
+
 ## Products (`catalog.manage`)
 
 **EN** — The full product editor: title/description (bn+en), options

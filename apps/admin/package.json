@@ -9,7 +9,7 @@
     "start": "next start --port 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"no unit tests in admin yet\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@clothing/sdk": "workspace:*",
@@ -30,6 +30,7 @@
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.13.0",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
   }
 }
