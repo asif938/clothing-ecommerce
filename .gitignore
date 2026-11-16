@@ -40,6 +40,10 @@ Thumbs.db
 
 # Local storage driver (dev file storage)
 .local-storage/
+.data/
+
+# Shell crash dumps (Git Bash on Windows)
+*.stackdump
 
 # Sentry
 .sentryclirc
