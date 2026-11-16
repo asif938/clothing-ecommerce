@@ -388,6 +388,23 @@ instance" — ড্রাইভার বেছে নিন, কনফিগ �
 টেস্ট করুন। কুরিয়ারের `webhookSecret` ফিল্ড (থাকলে) সেই কুরিয়ারের নিজের
 webhook সেটিংসে যা পেস্ট করছেন তার সাথে মিলতে হবে।
 
+**EN** — The form shows one input per setting (required ones are marked
+with \*; secrets are hidden). When you edit a connection, its secrets
+show only as `••••1234`: leave a secret blank to keep it, type a new
+value to replace it. Each connection can be switched on/off, marked
+*Primary* for its service, edited, tested and deleted (a storage
+connection that still holds media cannot be deleted — migrate it first).
+To use Cloudinary for uploads: Integrations → Storage → + Cloudinary,
+then Settings → Media default provider.
+
+**BN** — ফর্মে প্রতিটা তথ্যের জন্য আলাদা ঘর আছে (আবশ্যক ঘরে \* চিহ্ন;
+সিক্রেট লুকানো থাকে)। সংযোগ সম্পাদনার সময় সিক্রেট শুধু `••••1234` আকারে
+দেখায়: না বদলাতে চাইলে ঘরটা খালি রাখুন, নতুন মান দিলে সেটা বদলে যাবে।
+প্রতিটা সংযোগ চালু/বন্ধ, *প্রধান* হিসেবে চিহ্নিত, সম্পাদনা, পরীক্ষা ও মুছে ফেলা
+যায় (যে স্টোরেজে এখনো মিডিয়া আছে সেটা মোছা যায় না — আগে মাইগ্রেট করুন)।
+আপলোডের জন্য Cloudinary ব্যবহার করতে: ইন্টিগ্রেশন → স্টোরেজ → + Cloudinary,
+তারপর সেটিংস → মিডিয়ার ডিফল্ট প্রোভাইডার।
+
 ## System health (`providers.manage`)
 
 **EN** — Shared-credit storage provider (e.g. Cloudinary) usage against

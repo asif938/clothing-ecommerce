@@ -2749,3 +2749,28 @@ answers the API's revalidation call with 403 and changes appear only when the 60
 Set the same random value in `apps/api/.env` and `apps/storefront/.env.local` to make admin edits
 show immediately. The header still gets `logoUrl={null}` (brand-logo → URL resolution is an M3
 known gap), so the brand name is shown instead of a logo.
+
+## 2026-11-15 — Integrations form built from each driver's config schema
+
+**Context.** The Integrations screen (built in M1 as the generic provider pattern) asked for a
+driver's whole config as raw JSON, with English-only labels, no edit, no on/off switch and no
+delete — even though the API supported PATCH and DELETE. Editing would also have been unsafe: the
+list returns secrets masked (`••••1234`), so saving an edited config would have stored the mask.
+
+**Decisions.**
+- `describeConfigFields()` (`packages/shared/src/providers/config-fields.ts`) turns a driver's zod
+  `configSchema` into form descriptors via zod's JSON Schema export on the input side (text, secret,
+  number, boolean, select, json; required/nullable/default/min/max/url). The catalog endpoint
+  returns them as `fields`, plus `supportsUsage`. New drivers get a form with no UI code; a unit test
+  covers every driver in the catalog.
+- The admin form renders one input per field; records (e.g. generic HTTP `params`) fall back to a
+  small JSON box, PEM keys to a textarea. Field labels come from `integrations.fields.<key>` (bn/en)
+  when present, otherwise a humanized key; capability tabs are translated.
+- On PATCH, a secret that is blank, missing or still masked keeps the stored value
+  (`ProviderRegistryService.mergeKeptSecrets`, unit-tested). The update audit entry now also records
+  mode, primary and whether the config changed (never the values).
+- New connections start enabled, in sandbox mode, and *Primary* if they are the first for that
+  capability.
+
+**Alternatives.** Hand-written forms per driver (40 drivers — rejected: drifts from the schemas);
+sending decrypted secrets to the edit form (rejected: secrets never leave the API, spec §4.1).

@@ -2882,6 +2882,22 @@ and a ZIP of images — none of which the importer handled.
 
 ---
 
+## Integrations form: one input per setting (2026-11-15)
+
+Status: built; typecheck, lint and unit tests pass (shared 272, admin 16, API provider tests). Not
+clicked through in a browser yet — the admin login needs the owner's password and 2FA.
+
+- `packages/shared`: `describeConfigFields()` derives form fields from each driver's zod schema
+  (+ tests over the whole catalog).
+- `apps/api`: catalog returns `fields` and `supportsUsage`; PATCH keeps secrets left blank or masked
+  (`mergeKeptSecrets`, tested); richer audit entry.
+- `apps/admin`: Integrations rebuilt — translated, scrollable capability tabs; connection cards
+  with on/off switch, primary/mode/mock badges, edit, test, usage (only where supported), delete with
+  confirm; create/edit form with per-field inputs, inline validation (`lib/provider-form.ts` + tests),
+  hidden secrets with "leave blank to keep". bn/en strings in `integrations.*`.
+
+---
+
 ## Storefront navigation: Menus admin and header rebuild (2026-11-15)
 
 Status: complete and checked in a browser (360 px and desktop, bn and en) against the dev

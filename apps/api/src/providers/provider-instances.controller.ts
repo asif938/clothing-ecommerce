@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
-import { listDriverDefinitions, type ProviderCapability } from "@clothing/shared/providers";
+import { describeConfigFields, listDriverDefinitions, type ProviderCapability } from "@clothing/shared/providers";
 import { StaffAuthGuard } from "../auth/staff-auth.guard";
 import { PermissionsGuard } from "../common/permissions.guard";
 import { RequirePermissions } from "../common/require-permissions.decorator";
@@ -30,7 +30,15 @@ export class ProviderInstancesController {
   @Get("catalog")
   catalog(@Query("capability") capability?: ProviderCapability) {
     const drivers = capability ? listDriverDefinitions(capability) : [];
-    return drivers.map((d) => ({ capability: d.capability, driver: d.driver, label: d.label, secretFields: d.secretFields }));
+    return drivers.map((d) => ({
+      capability: d.capability,
+      driver: d.driver,
+      label: d.label,
+      secretFields: d.secretFields,
+      // Drives the admin's per-field form (no raw JSON box).
+      fields: describeConfigFields(d),
+      supportsUsage: typeof d.usage === "function",
+    }));
   }
 
   @Get()
@@ -80,8 +88,13 @@ export class ProviderInstancesController {
   @Patch(":id")
   async update(@Param("id") id: string, @Body(new ZodValidationPipe(updateProviderInstanceSchema)) body: UpdateProviderInstanceDto, @Req() req: Request) {
     const existing = await this.prisma.providerInstance.findUniqueOrThrow({ where: { id } });
+    const capability = existing.capability as ProviderCapability;
     const validatedConfig = body.config
-      ? this.registry.validateConfig(existing.capability as ProviderCapability, existing.driver, body.config)
+      ? this.registry.validateConfig(
+          capability,
+          existing.driver,
+          this.registry.mergeKeptSecrets(capability, existing.driver, this.registry.decryptConfig(existing.config), body.config),
+        )
       : undefined;
 
     const updated = await this.prisma.providerInstance.update({
@@ -102,8 +115,8 @@ export class ProviderInstancesController {
       action: "provider_instance.update",
       entityType: "provider_instance",
       entityId: id,
-      before: { name: existing.name, enabled: existing.enabled },
-      after: { name: updated.name, enabled: updated.enabled },
+      before: { name: existing.name, enabled: existing.enabled, mode: existing.mode, isDefault: existing.isDefault },
+      after: { name: updated.name, enabled: updated.enabled, mode: updated.mode, isDefault: updated.isDefault, configChanged: Boolean(validatedConfig) },
       ip: req.ip ?? null,
       userAgent: req.get("user-agent") ?? null,
     });

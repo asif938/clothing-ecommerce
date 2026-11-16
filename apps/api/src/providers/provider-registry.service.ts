@@ -51,6 +51,29 @@ export class ProviderRegistryService {
     return masked;
   }
 
+  /**
+   * Edits from the admin form never see decrypted secrets (they get the
+   * masked `••••1234` value), so a secret field left blank — or sent back
+   * still masked — keeps the stored value instead of overwriting it.
+   */
+  mergeKeptSecrets(
+    capability: ProviderCapability,
+    driver: string,
+    existing: Record<string, unknown>,
+    incoming: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const definition = getDriverDefinition(capability, driver);
+    if (!definition) return incoming;
+    const merged = { ...incoming };
+    for (const field of definition.secretFields) {
+      const value = merged[field];
+      const untouched = value === undefined || value === null || value === "" || (typeof value === "string" && value.startsWith("••••"));
+      if (untouched && existing[field] !== undefined) merged[field] = existing[field];
+      else if (untouched) delete merged[field];
+    }
+    return merged;
+  }
+
   validateConfig(capability: ProviderCapability, driver: string, config: unknown): Record<string, unknown> {
     const definition = getDriverDefinition(capability, driver);
     if (!definition) {

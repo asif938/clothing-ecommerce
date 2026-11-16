@@ -1,6 +1,7 @@
 export * from "./types.ts";
 export * from "./catalog.ts";
 export * from "./ssrf-guard.ts";
+export * from "./config-fields.ts";
 export * from "./drivers/storage-local.ts";
 export * from "./drivers/storage-s3.ts";
 export * from "./drivers/storage-cloudinary.ts";

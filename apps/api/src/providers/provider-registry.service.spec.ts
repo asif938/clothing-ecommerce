@@ -57,6 +57,18 @@ describe("ProviderRegistryService", () => {
     expect(masked.password).toBe("••••word");
   });
 
+  it("keeps stored secrets when an edit leaves them blank or masked", () => {
+    const existing = { cloudName: "old", apiKey: "k", apiSecret: "stored-secret" };
+    expect(service.mergeKeptSecrets("storage", "cloudinary", existing, { cloudName: "new", apiKey: "k2", apiSecret: "" })).toEqual({
+      cloudName: "new",
+      apiKey: "k2",
+      apiSecret: "stored-secret",
+    });
+    expect(service.mergeKeptSecrets("storage", "cloudinary", existing, { cloudName: "x", apiKey: "k", apiSecret: "••••cret" }).apiSecret).toBe("stored-secret");
+    expect(service.mergeKeptSecrets("storage", "cloudinary", existing, { cloudName: "x", apiKey: "k", apiSecret: "fresh" }).apiSecret).toBe("fresh");
+    expect(service.mergeKeptSecrets("storage", "cloudinary", existing, { cloudName: "x", apiKey: "k" }).apiSecret).toBe("stored-secret");
+  });
+
   it("testConnection runs the real driver's test and logs the result", async () => {
     const config_ = { rootDir: root, publicBaseUrl: "http://localhost:4000/media" };
     prisma.providerInstance.findUnique.mockResolvedValue({
