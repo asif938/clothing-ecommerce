@@ -1,6 +1,6 @@
 # VPS mode only (docs/PROJECT_SPEC.md §15.3). Free-tier hosts (Render, etc.)
 # typically build straight from the repo with their own buildpacks instead.
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 RUN corepack enable
 WORKDIR /repo
 
