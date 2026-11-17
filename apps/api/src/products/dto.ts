@@ -53,6 +53,12 @@ export type CreateProductDto = z.infer<typeof createProductSchema>;
 export const updateProductSchema = createProductSchema.partial();
 export type UpdateProductDto = z.infer<typeof updateProductSchema>;
 
+/** Bulk soft delete from the product list. Capped so one request stays a reasonable unit of work and audit trail. */
+export const bulkDeleteProductsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(200),
+});
+export type BulkDeleteProductsDto = z.infer<typeof bulkDeleteProductsSchema>;
+
 export const listProductsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(200).optional(),

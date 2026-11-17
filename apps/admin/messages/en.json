@@ -352,7 +352,14 @@
     "bundleItemsHint": "Each item is an exact variant — pick a product and one of its sellable variants.",
     "componentProductId": "Component product ID",
     "componentVariantId": "Component variant ID",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "selectAll": "Select all products on this page",
+    "selectRow": "Select product",
+    "selectedCount": "{count, plural, one {# product selected} other {# products selected}}",
+    "deleteSelected": "Delete selected",
+    "bulkDeleteConfirm": "Delete {count, plural, one {# product} other {# products}}? They disappear from the store and the list; importing the same slug again brings a product back.",
+    "bulkDeleted": "{count, plural, one {# product deleted} other {# products deleted}}.",
+    "bulkDeleteFailed": "{count, plural, one {# product} other {# products}} could not be deleted and are still selected."
   },
   "collections": {
     "title": "Collections",

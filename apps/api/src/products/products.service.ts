@@ -185,6 +185,26 @@ export class ProductsService {
     await this.audit.record({ actorType: "staff", actorId: actor.id, action: "product.delete", entityType: ENTITY_TYPE, entityId: id, before: { title: before.title } });
   }
 
+  /**
+   * Soft-deletes each product through `remove` — the same media-usage
+   * cleanup and one audit entry per product as a single delete. One product
+   * failing (e.g. already gone) doesn't stop the rest; failures come back
+   * by id so the list can say which ones were left.
+   */
+  async removeMany(ids: string[], actor: AuthenticatedStaff): Promise<{ deleted: number; failed: { id: string; message: string }[] }> {
+    let deleted = 0;
+    const failed: { id: string; message: string }[] = [];
+    for (const id of new Set(ids)) {
+      try {
+        await this.remove(id, actor);
+        deleted += 1;
+      } catch (error) {
+        failed.push({ id, message: error instanceof Error ? error.message : "Delete failed" });
+      }
+    }
+    return { deleted, failed };
+  }
+
   async snapshotVersion(product: { id: string }, createdBy: string): Promise<void> {
     // Round-trip through JSON so Date objects etc. become plain JSON-safe
     // values before they hit the Json column (Prisma's Json input type

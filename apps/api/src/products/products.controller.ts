@@ -8,6 +8,8 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { stripCostPrice } from "./cost-price.filter";
 import { ProductsService } from "./products.service";
 import {
+  bulkDeleteProductsSchema,
+  type BulkDeleteProductsDto,
   createProductSchema,
   listProductsQuerySchema,
   updateProductSchema,
@@ -43,6 +45,11 @@ export class ProductsController {
   @Patch(":id")
   update(@Param("id") id: string, @Body(new ZodValidationPipe(updateProductSchema)) body: UpdateProductDto, @Req() req: Request) {
     return this.products.update(id, body, req.staff!);
+  }
+
+  @Post("bulk-delete")
+  removeMany(@Body(new ZodValidationPipe(bulkDeleteProductsSchema)) body: BulkDeleteProductsDto, @Req() req: Request) {
+    return this.products.removeMany(body.ids, req.staff!);
   }
 
   @Delete(":id")
