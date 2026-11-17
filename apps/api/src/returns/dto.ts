@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { localizedTextSchema } from "@clothing/shared";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const createReturnReasonSchema = z.object({
   code: z.string().min(1).max(60),
@@ -9,7 +10,7 @@ export const createReturnReasonSchema = z.object({
   position: z.number().int().default(0),
 });
 export type CreateReturnReasonDto = z.infer<typeof createReturnReasonSchema>;
-export const updateReturnReasonSchema = createReturnReasonSchema.partial();
+export const updateReturnReasonSchema = updateSchemaFrom(createReturnReasonSchema);
 export type UpdateReturnReasonDto = z.infer<typeof updateReturnReasonSchema>;
 
 const returnItemSchema = z.object({

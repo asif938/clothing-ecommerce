@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const listCustomersQuerySchema = z.object({
   search: z.string().optional(),
@@ -53,7 +54,7 @@ export const createSegmentSchema = z.object({
   isDynamic: z.boolean().default(true),
 });
 export type CreateSegmentDto = z.infer<typeof createSegmentSchema>;
-export const updateSegmentSchema = createSegmentSchema.partial();
+export const updateSegmentSchema = updateSchemaFrom(createSegmentSchema);
 export type UpdateSegmentDto = z.infer<typeof updateSegmentSchema>;
 
 export const previewSegmentSchema = segmentRulesSchema;

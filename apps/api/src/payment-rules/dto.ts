@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateSchemaFrom } from "../common/zod-update";
 
 const conditionsSchema = z.record(z.string(), z.unknown());
 const actionSchema = z.object({
@@ -19,5 +20,5 @@ export const createPaymentRuleSchema = z.object({
   stopProcessing: z.boolean().default(false),
 });
 export type CreatePaymentRuleDto = z.infer<typeof createPaymentRuleSchema>;
-export const updatePaymentRuleSchema = createPaymentRuleSchema.partial();
+export const updatePaymentRuleSchema = updateSchemaFrom(createPaymentRuleSchema);
 export type UpdatePaymentRuleDto = z.infer<typeof updatePaymentRuleSchema>;

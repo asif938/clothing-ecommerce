@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const createCourierAreaMappingSchema = z.object({
   courierProviderInstanceId: z.string().min(1),
@@ -9,5 +10,5 @@ export const createCourierAreaMappingSchema = z.object({
   courierAreaName: z.string().nullable().default(null),
 });
 export type CreateCourierAreaMappingDto = z.infer<typeof createCourierAreaMappingSchema>;
-export const updateCourierAreaMappingSchema = createCourierAreaMappingSchema.partial();
+export const updateCourierAreaMappingSchema = updateSchemaFrom(createCourierAreaMappingSchema);
 export type UpdateCourierAreaMappingDto = z.infer<typeof updateCourierAreaMappingSchema>;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateSchemaFrom } from "../common/zod-update";
 
 const conditionsSchema = z
   .object({
@@ -41,7 +42,7 @@ export const createDiscountSchema = z.object({
   status: z.enum(["draft", "active", "scheduled", "expired", "disabled"]).default("draft"),
 });
 export type CreateDiscountDto = z.infer<typeof createDiscountSchema>;
-export const updateDiscountSchema = createDiscountSchema.partial();
+export const updateDiscountSchema = updateSchemaFrom(createDiscountSchema);
 export type UpdateDiscountDto = z.infer<typeof updateDiscountSchema>;
 
 export const generateBulkCodesSchema = z.object({
@@ -62,5 +63,5 @@ export const createFlashSaleSchema = z.object({
     .default([]),
 });
 export type CreateFlashSaleDto = z.infer<typeof createFlashSaleSchema>;
-export const updateFlashSaleSchema = createFlashSaleSchema.partial();
+export const updateFlashSaleSchema = updateSchemaFrom(createFlashSaleSchema);
 export type UpdateFlashSaleDto = z.infer<typeof updateFlashSaleSchema>;

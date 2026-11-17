@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const createSearchSynonymSchema = z.object({
   term: z.string().min(1),
@@ -6,7 +7,7 @@ export const createSearchSynonymSchema = z.object({
 });
 export type CreateSearchSynonymDto = z.infer<typeof createSearchSynonymSchema>;
 
-export const updateSearchSynonymSchema = createSearchSynonymSchema.partial();
+export const updateSearchSynonymSchema = updateSchemaFrom(createSearchSynonymSchema);
 export type UpdateSearchSynonymDto = z.infer<typeof updateSearchSynonymSchema>;
 
 export const searchQuerySchema = z.object({

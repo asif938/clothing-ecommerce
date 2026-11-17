@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROVIDER_CAPABILITIES } from "@clothing/shared/providers";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const createProviderInstanceSchema = z.object({
   capability: z.enum(PROVIDER_CAPABILITIES),
@@ -13,5 +14,5 @@ export const createProviderInstanceSchema = z.object({
 });
 export type CreateProviderInstanceDto = z.infer<typeof createProviderInstanceSchema>;
 
-export const updateProviderInstanceSchema = createProviderInstanceSchema.partial().omit({ capability: true, driver: true });
+export const updateProviderInstanceSchema = updateSchemaFrom(createProviderInstanceSchema).omit({ capability: true, driver: true });
 export type UpdateProviderInstanceDto = z.infer<typeof updateProviderInstanceSchema>;
