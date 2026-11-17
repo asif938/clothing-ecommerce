@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "../../../../i18n/navigation";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { ProductTrashView } from "./trash-view";
 
 interface ProductListItem {
   id: string;
@@ -28,10 +29,13 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [view, setView] = useState<"catalog" | "trash">("catalog");
 
   async function load() {
     try {
-      const result = await api.get<{ data: ProductListItem[]; meta: { total: number } }>("/admin/products?pageSize=50");
+      const result = await api.get<{ data: ProductListItem[]; meta: { total: number } }>(
+        "/admin/products?pageSize=50",
+      );
       setItems(result.data);
       setTotal(result.meta.total);
     } catch (err) {
@@ -66,9 +70,13 @@ export default function ProductsPage() {
     setError(null);
     setNotice(null);
     try {
-      const result = await api.post<{ deleted: number; failed: { id: string; message: string }[] }>("/admin/products/bulk-delete", { ids });
+      const result = await api.post<{ deleted: number; failed: { id: string; message: string }[] }>(
+        "/admin/products/bulk-delete",
+        { ids },
+      );
       setNotice(t("bulkDeleted", { count: result.deleted }));
-      if (result.failed.length > 0) setError(t("bulkDeleteFailed", { count: result.failed.length }));
+      if (result.failed.length > 0)
+        setError(t("bulkDeleteFailed", { count: result.failed.length }));
       setSelected(new Set(result.failed.map((f) => f.id)));
       await load();
     } catch (err) {
@@ -81,7 +89,9 @@ export default function ProductsPage() {
   async function handleCreate() {
     setError(null);
     try {
-      const product = await api.post<{ id: string }>("/admin/products", { title: { en: titleEn, bn: titleBn || undefined } });
+      const product = await api.post<{ id: string }>("/admin/products", {
+        title: { en: titleEn, bn: titleBn || undefined },
+      });
       router.push(`/products/${product.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create product");
@@ -94,73 +104,128 @@ export default function ProductsPage() {
         <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
         <Button onClick={() => setCreating((v) => !v)}>{t("add")}</Button>
       </div>
-      {error && <Banner kind="error">{error}</Banner>}
-      {notice && <Banner kind="success">{notice}</Banner>}
+      <div className="flex gap-1 border-b border-border">
+        {(["catalog", "trash"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => {
+              setView(tab);
+              setSelected(new Set());
+              setNotice(null);
+              setError(null);
+            }}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm ${view === tab ? "border-brand font-medium text-surface-foreground" : "border-transparent text-surface-foreground/60"}`}
+          >
+            {tab === "catalog" ? t("tabCatalog") : t("tabTrash")}
+          </button>
+        ))}
+      </div>
 
-      {selected.size > 0 && (
-        <div className="flex items-center justify-between rounded-theme border border-border bg-muted px-4 py-2">
-          <span className="text-sm text-surface-foreground">{t("selectedCount", { count: selected.size })}</span>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setSelected(new Set())} disabled={deleting}>
-              {tCommon("cancel")}
-            </Button>
-            <Button variant="danger" onClick={() => void handleBulkDelete()} disabled={deleting}>
-              {t("deleteSelected")}
-            </Button>
-          </div>
-        </div>
+      {view === "trash" ? (
+        <ProductTrashView onChanged={() => void load()} />
+      ) : (
+        <>
+          {error && <Banner kind="error">{error}</Banner>}
+          {notice && <Banner kind="success">{notice}</Banner>}
+
+          {selected.size > 0 && (
+            <div className="flex items-center justify-between rounded-theme border border-border bg-muted px-4 py-2">
+              <span className="text-sm text-surface-foreground">
+                {t("selectedCount", { count: selected.size })}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setSelected(new Set())}
+                  disabled={deleting}
+                >
+                  {tCommon("cancel")}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => void handleBulkDelete()}
+                  disabled={deleting}
+                >
+                  {t("deleteSelected")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {creating && (
+            <Card className="flex flex-col gap-3">
+              <TextField
+                label={t("titleEn")}
+                value={titleEn}
+                onChange={(e) => setTitleEn(e.target.value)}
+              />
+              <TextField
+                label={t("titleBn")}
+                value={titleBn}
+                onChange={(e) => setTitleBn(e.target.value)}
+              />
+              <Button onClick={() => void handleCreate()} disabled={!titleEn}>
+                {tCommon("create")}
+              </Button>
+            </Card>
+          )}
+
+          <Card className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase text-surface-foreground/50">
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      aria-label={t("selectAll")}
+                    />
+                  </th>
+                  <th className="px-4 py-3">{t("titleEn")}</th>
+                  <th className="px-4 py-3">{t("status")}</th>
+                  <th className="px-4 py-3">{t("category")}</th>
+                  <th className="px-4 py-3">{t("variantsTitle")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted"
+                    onClick={() => router.push(`/products/${item.id}`)}
+                  >
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(item.id)}
+                        onChange={() => toggleOne(item.id)}
+                        aria-label={t("selectRow")}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-surface-foreground">
+                      {item.title.en ?? item.title.bn ?? item.slug}
+                    </td>
+                    <td className="px-4 py-3 text-surface-foreground/70">{item.status}</td>
+                    <td className="px-4 py-3 text-surface-foreground/70">
+                      {item.category?.name.en ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-surface-foreground/70">{item.variants.length}</td>
+                  </tr>
+                ))}
+                {items.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-surface-foreground/50" colSpan={5}>
+                      —
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Card>
+          <p className="text-xs text-surface-foreground/50">{total} total</p>
+        </>
       )}
-
-      {creating && (
-        <Card className="flex flex-col gap-3">
-          <TextField label={t("titleEn")} value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
-          <TextField label={t("titleBn")} value={titleBn} onChange={(e) => setTitleBn(e.target.value)} />
-          <Button onClick={() => void handleCreate()} disabled={!titleEn}>
-            {tCommon("create")}
-          </Button>
-        </Card>
-      )}
-
-      <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase text-surface-foreground/50">
-              <th className="w-10 px-4 py-3">
-                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label={t("selectAll")} />
-              </th>
-              <th className="px-4 py-3">{t("titleEn")}</th>
-              <th className="px-4 py-3">{t("status")}</th>
-              <th className="px-4 py-3">{t("category")}</th>
-              <th className="px-4 py-3">{t("variantsTitle")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.id}
-                className="cursor-pointer border-b border-border last:border-0 hover:bg-muted"
-                onClick={() => router.push(`/products/${item.id}`)}
-              >
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selected.has(item.id)} onChange={() => toggleOne(item.id)} aria-label={t("selectRow")} />
-                </td>
-                <td className="px-4 py-3 text-surface-foreground">{item.title.en ?? item.title.bn ?? item.slug}</td>
-                <td className="px-4 py-3 text-surface-foreground/70">{item.status}</td>
-                <td className="px-4 py-3 text-surface-foreground/70">{item.category?.name.en ?? "—"}</td>
-                <td className="px-4 py-3 text-surface-foreground/70">{item.variants.length}</td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td className="px-4 py-6 text-center text-surface-foreground/50" colSpan={5}>
-                  —
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
-      <p className="text-xs text-surface-foreground/50">{total} total</p>
     </div>
   );
 }

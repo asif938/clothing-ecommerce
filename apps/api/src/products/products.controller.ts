@@ -32,6 +32,24 @@ export class ProductsController {
     return await this.products.list(query);
   }
 
+  // Registered before `:id` so "trash" is never read as a product id.
+  @Get("trash")
+  listTrash() {
+    return this.products.listTrash();
+  }
+
+  @Post("restore")
+  restoreMany(@Body(new ZodValidationPipe(bulkDeleteProductsSchema)) body: BulkDeleteProductsDto, @Req() req: Request) {
+    return this.products.restoreMany(body.ids, req.staff!);
+  }
+
+  /** Irreversible, so it needs its own permission on top of `catalog.manage` (method-level metadata replaces the class-level list). */
+  @Post("purge")
+  @RequirePermissions("catalog.manage", "catalog.purge")
+  purgeMany(@Body(new ZodValidationPipe(bulkDeleteProductsSchema)) body: BulkDeleteProductsDto, @Req() req: Request) {
+    return this.products.purgeMany(body.ids, req.staff!);
+  }
+
   @Get(":id")
   async get(@Param("id") id: string, @Req() req: Request) {
     return stripCostPrice(await this.products.get(id), req.staff!);

@@ -2774,3 +2774,32 @@ list returns secrets masked (`••••1234`), so saving an edited config wou
 
 **Alternatives.** Hand-written forms per driver (40 drivers — rejected: drifts from the schemas);
 sending decrypted secrets to the edit form (rejected: secrets never leave the API, spec §4.1).
+
+
+## 2026-11-17 — Product trash with permanent delete in the admin
+
+**Context.** Deleting a product only soft-deletes it (`deletedAt` + `archived`), with no way to see,
+restore or erase deleted products. A store owner who wants to clear the catalog and re-import, or
+just remove junk for good, had to ask a developer to run SQL. The platform has to be operable by
+the owner alone.
+
+**Decisions.**
+- The product list gets a *Trash* tab (`GET /admin/products/trash`). From there products can be
+  restored (as drafts, never straight to live) or deleted permanently
+  (`POST /admin/products/purge`). Bulk "Delete selected" on the catalog tab moves products to Trash.
+- Permanent delete only accepts products already in Trash, needs a new `catalog.purge` permission on
+  top of `catalog.manage`, and a typed confirmation word in the UI. Each erased product gets a
+  `product.purge` audit entry (title and slug kept).
+- Products whose variants appear on orders, purchase orders or stock transfers are never erased —
+  those foreign keys are `onDelete: Restrict` on purpose. Trash marks them and purge reports them
+  as kept. Everything else cascades in the database (variants, options, gallery links, stock levels
+  and movements, reviews, questions, versions, cart lines). Media files stay in the media library.
+- The system *Super Admin* role now implicitly holds every permission in `PERMISSIONS`
+  (`StaffAuthGuard`). Its `role_permissions` rows are only written by the seed, so any permission
+  added in a release (like `catalog.purge`) was missing for the owner until someone re-ran
+  `pnpm db:seed` against production. Other roles still get exactly what is assigned to them.
+
+**Alternatives.** A developer-only CLI purge (rejected: the owner must be able to do it from the
+panel); hard delete straight from the catalog list (rejected: no undo for a misclick); also deleting
+order-linked products (rejected: breaks order history and accounting); a migration or seed step to
+grant new permissions to Super Admin (rejected: easy to forget on each release).

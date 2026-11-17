@@ -205,6 +205,78 @@ export class ProductsService {
     return { deleted, failed };
   }
 
+  /**
+   * Soft-deleted product ids among `productIds` that orders, purchase orders
+   * or stock transfers still point at (through a variant). Those rows are
+   * `onDelete: Restrict`, so the product can't be erased without breaking
+   * that history — the trash shows them as kept and purge skips them.
+   */
+  private async productsWithHistory(productIds: string[]): Promise<Set<string>> {
+    if (productIds.length === 0) return new Set();
+    const variants = await this.prisma.productVariant.findMany({
+      where: {
+        productId: { in: productIds },
+        OR: [{ orderItems: { some: {} } }, { purchaseOrderItems: { some: {} } }, { stockTransferItems: { some: {} } }],
+      },
+      select: { productId: true },
+    });
+    return new Set(variants.map((v) => v.productId));
+  }
+
+  /** Trash: products deleted from the catalog but still in the database. */
+  async listTrash() {
+    const products = await this.prisma.product.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: { id: true, title: true, slug: true, deletedAt: true, _count: { select: { variants: true } } },
+    });
+    const withHistory = await this.productsWithHistory(products.map((p) => p.id));
+    return products.map((p) => ({ id: p.id, title: p.title, slug: p.slug, deletedAt: p.deletedAt, variantCount: p._count.variants, hasOrderHistory: withHistory.has(p.id) }));
+  }
+
+  /** Puts trashed products back in the catalog as drafts, so nothing goes live without a look. */
+  async restoreMany(ids: string[], actor: AuthenticatedStaff): Promise<{ restored: number }> {
+    const trashed = await this.prisma.product.findMany({ where: { id: { in: [...new Set(ids)] }, deletedAt: { not: null } }, select: { id: true, title: true } });
+    for (const product of trashed) {
+      await this.prisma.product.update({ where: { id: product.id }, data: { deletedAt: null, status: "draft" } });
+      await this.audit.record({ actorType: "staff", actorId: actor.id, action: "product.restore", entityType: ENTITY_TYPE, entityId: product.id, after: { title: product.title } });
+    }
+    return { restored: trashed.length };
+  }
+
+  /**
+   * Permanently erases trashed products. Only products already in the trash
+   * qualify (a live product must be deleted first), and products with order,
+   * purchase-order or stock-transfer history are skipped and reported. The
+   * database cascades the rest: variants, options, gallery links, stock
+   * levels and movements, reviews, questions, versions, cart lines. Media
+   * files stay in the media library.
+   */
+  async purgeMany(ids: string[], actor: AuthenticatedStaff): Promise<{ deleted: number; skipped: { id: string; reason: "not_in_trash" | "has_order_history" | "failed" }[] }> {
+    const unique = [...new Set(ids)];
+    const trashed = await this.prisma.product.findMany({ where: { id: { in: unique }, deletedAt: { not: null } }, select: { id: true, title: true, slug: true } });
+    const trashedIds = new Set(trashed.map((p) => p.id));
+    const withHistory = await this.productsWithHistory([...trashedIds]);
+
+    const skipped: { id: string; reason: "not_in_trash" | "has_order_history" | "failed" }[] = unique.filter((id) => !trashedIds.has(id)).map((id) => ({ id, reason: "not_in_trash" as const }));
+    let deleted = 0;
+    for (const product of trashed) {
+      if (withHistory.has(product.id)) {
+        skipped.push({ id: product.id, reason: "has_order_history" });
+        continue;
+      }
+      try {
+        await this.prisma.product.delete({ where: { id: product.id } });
+        await this.audit.record({ actorType: "staff", actorId: actor.id, action: "product.purge", entityType: ENTITY_TYPE, entityId: product.id, before: { title: product.title, slug: product.slug } });
+        deleted += 1;
+      } catch {
+        // e.g. an order was placed for it between the check and the delete — the Restrict FK refuses, nothing is lost.
+        skipped.push({ id: product.id, reason: "failed" });
+      }
+    }
+    return { deleted, skipped };
+  }
+
   async snapshotVersion(product: { id: string }, createdBy: string): Promise<void> {
     // Round-trip through JSON so Date objects etc. become plain JSON-safe
     // values before they hit the Json column (Prisma's Json input type

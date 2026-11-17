@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, UnauthorizedException, type CanActivate, type ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
+import { PERMISSIONS } from "@clothing/shared";
 import { isIpAllowed } from "../common/ip-allowlist";
 import { SKIP_TOTP_ENFORCEMENT_METADATA_KEY } from "../common/skip-totp-enforcement.decorator";
 import { SettingsService } from "../settings/settings.service";
@@ -42,6 +43,12 @@ export class StaffAuthGuard implements CanActivate {
         permissions.add(rolePermission.permission);
       }
     }
+
+    // The system "Super Admin" role means every permission. Its role_permissions
+    // rows are only written by the seed, so a permission added in a later
+    // release would otherwise be missing for the owner until someone re-ran
+    // `pnpm db:seed` against production.
+    if (isSuperAdmin) for (const permission of PERMISSIONS) permissions.add(permission.key);
 
     request.staff = {
       id: session.staffUser.id,

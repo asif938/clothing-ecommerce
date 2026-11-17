@@ -55,6 +55,8 @@ export const PERMISSIONS: PermissionDefinition[] = [
   // in a way the rest of the catalog isn't.
   { key: "catalog.manage", group: "catalog", label: { bn: "পণ্য ক্যাটালগ পরিচালনা করুন", en: "Manage product catalog" } },
   { key: "catalog.cost.read", group: "catalog", label: { bn: "পণ্যের ক্রয়মূল্য দেখুন", en: "View product cost price" } },
+  // Erasing trashed products can't be undone, so it is separate from catalog.manage: the owner decides which staff may do it.
+  { key: "catalog.purge", group: "catalog", label: { bn: "মোছা পণ্য স্থায়ীভাবে মুছে ফেলুন", en: "Permanently delete trashed products" } },
   { key: "inventory.manage", group: "inventory", label: { bn: "ইনভেন্টরি পরিচালনা করুন", en: "Manage inventory" } },
   { key: "search.manage", group: "search", label: { bn: "সার্চ সেটিংস পরিচালনা করুন", en: "Manage search settings" } },
 
