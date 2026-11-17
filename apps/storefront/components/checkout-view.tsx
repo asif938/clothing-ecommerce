@@ -87,8 +87,9 @@ export function CheckoutView() {
 
   const addressComplete = !!(divisionId && districtId && areaId && addressLine && contactName && contactPhone);
 
-  async function saveAddress() {
-    if (!addressComplete) return;
+  /** Returns whether the address reached the cart — place-order calls this too, so a shopper who filled the form but never pressed "Save address" isn't rejected with "add a delivery address". */
+  async function saveAddress(): Promise<boolean> {
+    if (!addressComplete) return false;
     setAddressError(null);
     try {
       const result = await setCartAddress({ divisionId, districtId, areaId, addressLine, landmark: landmark || undefined, contactName, contactPhone, contactEmail: contactEmail || undefined });
@@ -96,8 +97,10 @@ export function CheckoutView() {
       const quote = await getShippingQuote(divisionId, districtId, areaId, result.pricing.totalWeightGrams, result.pricing.subtotalAfterDiscounts);
       setRates(quote.rates);
       if (quote.rates[0]) await selectCartShippingRate(quote.rates[0].rateId).then((r) => cart.setCart(r));
+      return true;
     } catch (error) {
       setAddressError(error instanceof Error ? error.message : "Could not save address");
+      return false;
     }
   }
 
@@ -112,6 +115,10 @@ export function CheckoutView() {
     setPlacing(true);
     setPlaceError(null);
     try {
+      if (!(await saveAddress())) {
+        setPlaceError(locale === "bn" ? "ডেলিভারির ঠিকানা সংরক্ষণ করা যায়নি — উপরের ঠিকানার অংশটি দেখুন।" : "Could not save your delivery address — please check the address section above.");
+        return;
+      }
       // §10.5/§13.3 — generated once here so the client Purchase event (fired on
       // the success page) and the server-side CAPI/MP/Events-API copy share
       // the same id for platform-side dedup.
@@ -188,7 +195,7 @@ export function CheckoutView() {
         </select>
         <input value={addressLine} onChange={(e) => setAddressLine(e.target.value)} placeholder={locale === "bn" ? "বিস্তারিত ঠিকানা" : "Address line"} className="w-full rounded-theme border border-border px-3 py-2 text-sm" />
         <input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder={locale === "bn" ? "ল্যান্ডমার্ক (ঐচ্ছিক)" : "Landmark (optional)"} className="w-full rounded-theme border border-border px-3 py-2 text-sm" />
-        <button onClick={saveAddress} disabled={!addressComplete} className="rounded-theme border border-brand px-4 py-2 text-sm text-brand disabled:opacity-50">
+        <button onClick={() => void saveAddress()} disabled={!addressComplete} className="rounded-theme border border-brand px-4 py-2 text-sm text-brand disabled:opacity-50">
           {locale === "bn" ? "ঠিকানা সংরক্ষণ করুন" : "Save address"}
         </button>
         {addressError && <p className="text-xs text-danger">{addressError}</p>}

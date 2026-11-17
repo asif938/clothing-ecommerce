@@ -1,5 +1,7 @@
 "use client";
 
+import { apiErrorMessage } from "./api-error";
+
 /**
  * Client-side cart/checkout calls (docs/PROJECT_SPEC.md §7.5, §11.1) — these
  * go through the storefront's own `/api/:path*` rewrite (`next.config.mjs`)
@@ -98,7 +100,7 @@ async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const data = (await response.json().catch(() => null)) as T | { error?: { code: string; message: string } } | null;
   if (!response.ok) {
-    const message = (data as { error?: { message?: string } } | null)?.error?.message ?? "Something went wrong. Please try again.";
+    const message = apiErrorMessage(data, "Something went wrong. Please try again.");
     throw new Error(message);
   }
   return data as T;

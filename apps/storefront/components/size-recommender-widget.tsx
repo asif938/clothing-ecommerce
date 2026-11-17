@@ -1,5 +1,7 @@
 "use client";
 
+import { apiErrorMessage } from "../lib/api-error";
+
 import { useState } from "react";
 
 interface Recommendation {
@@ -40,7 +42,7 @@ export function SizeRecommenderWidget({ slug, locale, onRecommend }: { slug: str
         body: JSON.stringify(Object.keys(measurements).length > 0 ? { measurements } : {}),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.error?.message ?? "Could not recommend a size");
+      if (!response.ok) throw new Error(apiErrorMessage(data, "Could not recommend a size"));
       setResult(data as Recommendation);
       onRecommend((data as Recommendation).size);
     } catch (e) {
