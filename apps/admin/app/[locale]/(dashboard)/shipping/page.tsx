@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField, Toggle } from "../../../../components/ui";
+import { LocationPicker, describeSelection, type LocationArea, type LocationDistrict, type LocationDivision, type LocationSelection, type LocationTree } from "../../../../components/location-picker";
 
 interface ShippingRate {
   id: string;
@@ -32,9 +33,12 @@ interface ShippingZone {
   rates: ShippingRate[];
 }
 
-/** Shipping zones & rates editor (docs/PROJECT_SPEC.md §16 M5, §6.4) — the matched division/district/area ids are entered as comma-separated ids here rather than a picker widget, since no location multi-select component exists yet; good enough for an admin who already knows the location ids from `/admin/locations`. */
+const EMPTY_SELECTION: LocationSelection = { divisionIds: [], districtIds: [], areaIds: [] };
+
+/** Shipping zones & rates editor (docs/PROJECT_SPEC.md §16 M5, §6.4). Matched locations are chosen from the BD location tree (the public read-only `/store/locations` endpoints, so this page needs no `locations.manage` permission); zones can be edited in place. */
 export default function ShippingPage() {
   const t = useTranslations("shipping");
+  const locale = useLocale();
   const tCommon = useTranslations("common");
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +48,9 @@ export default function ShippingPage() {
   const [priority, setPriority] = useState("0");
   const [matchDhakaCity, setMatchDhakaCity] = useState(false);
   const [isCatchAll, setIsCatchAll] = useState(false);
-  const [matchAreaIds, setMatchAreaIds] = useState("");
-  const [matchDistrictIds, setMatchDistrictIds] = useState("");
-  const [matchDivisionIds, setMatchDivisionIds] = useState("");
+  const [selection, setSelection] = useState<LocationSelection>(EMPTY_SELECTION);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [tree, setTree] = useState<LocationTree>({ divisions: [], districts: [], areas: [] });
 
   const [rateForm, setRateForm] = useState({ nameEn: "", nameBn: "", baseFee: "", includedWeightGrams: "1000", extraFeePerStep: "0", weightStepGrams: "1000", estimatedDaysMin: "1", estimatedDaysMax: "3" });
 
@@ -58,37 +62,73 @@ export default function ShippingPage() {
     }
   }
 
+  async function loadLocations() {
+    try {
+      const [divisions, districts, areas] = await Promise.all([
+        api.get<LocationDivision[]>("/store/locations/divisions"),
+        api.get<LocationDistrict[]>("/store/locations/districts"),
+        api.get<LocationArea[]>("/store/locations/areas"),
+      ]);
+      setTree({ divisions, districts, areas });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load locations");
+    }
+  }
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount
     void load();
+    void loadLocations();
   }, []);
 
-  function splitIds(value: string): string[] {
-    return value.split(",").map((v) => v.trim()).filter(Boolean);
+  function resetZoneForm() {
+    setEditingZoneId(null);
+    setZoneName("");
+    setPriority("0");
+    setMatchDhakaCity(false);
+    setIsCatchAll(false);
+    setSelection(EMPTY_SELECTION);
   }
 
-  async function handleCreateZone() {
+  function startEditZone(zone: ShippingZone) {
+    setEditingZoneId(zone.id);
+    setZoneName(zone.name);
+    setPriority(String(zone.priority));
+    setMatchDhakaCity(zone.matchDhakaCity);
+    setIsCatchAll(zone.isCatchAll);
+    setSelection({ divisionIds: zone.matchDivisionIds, districtIds: zone.matchDistrictIds, areaIds: zone.matchAreaIds });
+  }
+
+  async function handleSaveZone() {
+    const body = {
+      name: zoneName,
+      priority: Number(priority),
+      matchDhakaCity,
+      isCatchAll,
+      matchAreaIds: selection.areaIds,
+      matchDistrictIds: selection.districtIds,
+      matchDivisionIds: selection.divisionIds,
+    };
     try {
-      await api.post("/admin/shipping/zones", {
-        name: zoneName,
-        priority: Number(priority),
-        matchDhakaCity,
-        isCatchAll,
-        matchAreaIds: splitIds(matchAreaIds),
-        matchDistrictIds: splitIds(matchDistrictIds),
-        matchDivisionIds: splitIds(matchDivisionIds),
-      });
-      setZoneName("");
-      setPriority("0");
-      setMatchDhakaCity(false);
-      setIsCatchAll(false);
-      setMatchAreaIds("");
-      setMatchDistrictIds("");
-      setMatchDivisionIds("");
+      if (editingZoneId) await api.patch(`/admin/shipping/zones/${editingZoneId}`, body);
+      else await api.post("/admin/shipping/zones", body);
+      resetZoneForm();
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to create zone");
+      setError(err instanceof ApiError ? err.message : "Failed to save zone");
     }
+  }
+
+  function zoneSummary(zone: ShippingZone): string {
+    const named = describeSelection(tree, { divisionIds: zone.matchDivisionIds, districtIds: zone.matchDistrictIds, areaIds: zone.matchAreaIds }, locale);
+    const parts = [
+      named.divisions.length ? `${t("matchDivisions")}: ${named.divisions.join(", ")}` : null,
+      named.districts.length ? `${t("matchDistricts")}: ${named.districts.join(", ")}` : null,
+      named.areas.length ? `${t("matchAreas")}: ${named.areas.join(", ")}` : null,
+      zone.matchDhakaCity ? t("matchDhakaCity") : null,
+      zone.isCatchAll ? t("isCatchAll") : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" · ") : t("matchesNothing");
   }
 
   async function handleToggleZoneActive(zone: ShippingZone) {
@@ -148,13 +188,17 @@ export default function ShippingPage() {
               <div>
                 <span className="font-medium text-surface-foreground">{zone.name}</span>
                 <span className="ml-2 text-xs text-surface-foreground/50">
-                  priority {zone.priority} {zone.isCatchAll && "· catch-all"} {zone.matchDhakaCity && "· dhaka-city"}
+                  {t("priority")} {zone.priority}
                 </span>
+                <p className="mt-1 text-xs text-surface-foreground/70">{zoneSummary(zone)}</p>
               </div>
               <div className="flex items-center gap-3">
                 <Toggle checked={zone.isActive} onChange={() => void handleToggleZoneActive(zone)} />
                 <button onClick={() => setExpanded(expanded === zone.id ? null : zone.id)} className="text-xs text-brand underline">
                   {t("rates")} ({zone.rates.length})
+                </button>
+                <button onClick={() => startEditZone(zone)} className="text-xs text-brand underline">
+                  {tCommon("edit")}
                 </button>
                 <button onClick={() => void handleDeleteZone(zone.id)} className="text-xs text-danger">
                   {tCommon("delete")}
@@ -195,20 +239,24 @@ export default function ShippingPage() {
         {zones.length === 0 && <p className="text-sm text-surface-foreground/50">—</p>}
 
         <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
+          <h2 className="w-full text-sm font-semibold text-surface-foreground">{editingZoneId ? t("editZone") : t("addZone")}</h2>
           <TextField label={t("zoneName")} value={zoneName} onChange={(e) => setZoneName(e.target.value)} />
           <TextField label={t("priority")} type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
-          <TextField label={t("matchDivisionIds")} value={matchDivisionIds} onChange={(e) => setMatchDivisionIds(e.target.value)} />
-          <TextField label={t("matchDistrictIds")} value={matchDistrictIds} onChange={(e) => setMatchDistrictIds(e.target.value)} />
-          <TextField label={t("matchAreaIds")} value={matchAreaIds} onChange={(e) => setMatchAreaIds(e.target.value)} />
+          <LocationPicker tree={tree} value={selection} onChange={setSelection} locale={locale} />
           <label className="flex items-center gap-2 text-sm">
             <Toggle checked={matchDhakaCity} onChange={setMatchDhakaCity} /> {t("matchDhakaCity")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <Toggle checked={isCatchAll} onChange={setIsCatchAll} /> {t("isCatchAll")}
           </label>
-          <Button onClick={() => void handleCreateZone()} disabled={!zoneName}>
-            {t("addZone")}
+          <Button onClick={() => void handleSaveZone()} disabled={!zoneName}>
+            {editingZoneId ? t("saveZone") : t("addZone")}
           </Button>
+          {editingZoneId && (
+            <Button variant="secondary" onClick={resetZoneForm}>
+              {tCommon("cancel")}
+            </Button>
+          )}
         </div>
       </Card>
     </div>

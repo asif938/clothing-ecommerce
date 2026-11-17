@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { localizedTextSchema } from "@clothing/shared";
+import { updateSchemaFrom } from "../common/zod-update";
 
 export const createZoneSchema = z.object({
   name: z.string().min(1).max(120),
@@ -12,7 +13,7 @@ export const createZoneSchema = z.object({
   isActive: z.boolean().default(true),
 });
 export type CreateZoneDto = z.infer<typeof createZoneSchema>;
-export const updateZoneSchema = createZoneSchema.partial();
+export const updateZoneSchema = updateSchemaFrom(createZoneSchema);
 export type UpdateZoneDto = z.infer<typeof updateZoneSchema>;
 
 export const createRateSchema = z.object({
@@ -30,7 +31,7 @@ export const createRateSchema = z.object({
   position: z.number().int().default(0),
 });
 export type CreateRateDto = z.infer<typeof createRateSchema>;
-export const updateRateSchema = createRateSchema.partial();
+export const updateRateSchema = updateSchemaFrom(createRateSchema);
 export type UpdateRateDto = z.infer<typeof updateRateSchema>;
 
 export const shippingQuoteQuerySchema = z.object({
