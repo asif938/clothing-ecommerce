@@ -13,7 +13,7 @@ import { takeGiftCardCheckToken } from "../rewards-core/gift-card-rate-limit";
 import { ReferralsService } from "../referrals/referrals.service";
 import { AffiliatesService } from "../affiliates/affiliates.service";
 import { CartService, type CartIdentity } from "./cart.service";
-import { CartPricingService, type CartPricingContext } from "./cart-pricing.service";
+import { CartPricingService, type CartPricingContext, type CartPricingResult } from "./cart-pricing.service";
 import {
   addItemSchema,
   selectShippingRateSchema,
@@ -76,7 +76,7 @@ export class CartController {
   }
 
   private async respond(req: Request, cart: Awaited<ReturnType<CartService["getOrCreateActiveCart"]>>) {
-    return { cart, pricing: await this.pricing.price(cart, await this.context(req)) };
+    return { cart, pricing: toPricingResponse(await this.pricing.price(cart, await this.context(req))) };
   }
 
   @Get()
@@ -201,6 +201,19 @@ export class CartController {
   @Get("quote")
   async quote(@Query("paymentMethod") paymentMethod: string | undefined, @Req() req: Request) {
     const cart = await this.cart.getOrCreateActiveCart(this.identity(req));
-    return { cart, pricing: await this.pricing.price(cart, await this.context(req, paymentMethod)) };
+    return { cart, pricing: toPricingResponse(await this.pricing.price(cart, await this.context(req, paymentMethod))) };
   }
+}
+
+/**
+ * `paymentRules.disabledMethods` is a `Set` inside the API, and
+ * `JSON.stringify(new Set(["cod"]))` is `{}` — the storefront received an
+ * empty object where it expects `string[]` and the checkout page crashed on
+ * `new Set({})`. Convert it at the response boundary.
+ */
+export function toPricingResponse(pricing: CartPricingResult) {
+  return {
+    ...pricing,
+    paymentRules: { ...pricing.paymentRules, disabledMethods: [...pricing.paymentRules.disabledMethods] },
+  };
 }
