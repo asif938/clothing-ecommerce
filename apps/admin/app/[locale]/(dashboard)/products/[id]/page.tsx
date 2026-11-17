@@ -93,6 +93,10 @@ interface MediaLibraryItem {
 const STATUSES = ["draft", "active", "archived", "scheduled"] as const;
 const OPTION_TYPES = ["size", "color", "generic"] as const;
 const BULK_FIELDS = ["price", "compareAtPrice", "costPrice", "weightGrams", "isActive"] as const;
+/** Prices are stored in poisha (golden rule 3) but typed and shown in taka. */
+const MONEY_FIELDS = new Set(["price", "compareAtPrice", "costPrice"]);
+const takaToPoisha = (raw: string) => Math.round(Number(raw) * 100);
+const poishaToTaka = (poisha: number | null) => (poisha === null ? "" : poisha / 100);
 const PRODUCT_TYPES = ["standard", "bundle", "gift_card", "preorder"] as const;
 const BUNDLE_DISCOUNT_TYPES = ["none", "percent", "fixed_price"] as const;
 
@@ -157,7 +161,7 @@ export default function ProductEditorPage() {
       setPreorderReleaseDate(p.preorderReleaseDate ? p.preorderReleaseDate.slice(0, 10) : "");
       setPreorderLimit(p.preorderLimit === null ? "" : String(p.preorderLimit));
       setBundleDiscountType(p.bundleDiscountType);
-      setBundleDiscountValue(p.bundleDiscountValue === null ? "" : String(p.bundleDiscountValue));
+      setBundleDiscountValue(p.bundleDiscountValue === null ? "" : String(p.bundleDiscountType === "fixed_price" ? p.bundleDiscountValue / 100 : p.bundleDiscountValue));
       const media = await api.get<MediaLibraryItem[]>("/admin/media");
       setMediaLibrary(media);
       if (p.productType === "bundle") {
@@ -187,7 +191,8 @@ export default function ProductEditorPage() {
         preorderReleaseDate: productType === "preorder" && preorderReleaseDate ? preorderReleaseDate : null,
         preorderLimit: productType === "preorder" && preorderLimit !== "" ? Number(preorderLimit) : null,
         bundleDiscountType: productType === "bundle" ? bundleDiscountType : "none",
-        bundleDiscountValue: productType === "bundle" && bundleDiscountValue !== "" ? Number(bundleDiscountValue) : null,
+        bundleDiscountValue:
+          productType === "bundle" && bundleDiscountValue !== "" ? (bundleDiscountType === "fixed_price" ? takaToPoisha(bundleDiscountValue) : Number(bundleDiscountValue)) : null,
       });
       setSaved(true);
       await load();
@@ -253,7 +258,7 @@ export default function ProductEditorPage() {
         ? { isActive: value === "true" }
         : field === "sku" || field === "barcode"
           ? { [field]: value || null }
-          : { [field]: value === "" ? null : Number(value) };
+          : { [field]: value === "" ? null : MONEY_FIELDS.has(field) ? takaToPoisha(value) : Number(value) };
     try {
       await api.patch(`/admin/products/${productId}/variants/${variantId}`, payload);
       await load();
@@ -273,7 +278,7 @@ export default function ProductEditorPage() {
 
   async function handleBulkFill() {
     if (selectedVariants.size === 0 || bulkValue === "") return;
-    const value = bulkField === "isActive" ? bulkValue === "true" : Number(bulkValue);
+    const value = bulkField === "isActive" ? bulkValue === "true" : MONEY_FIELDS.has(bulkField) ? takaToPoisha(bulkValue) : Number(bulkValue);
     try {
       await api.patch(`/admin/products/${productId}/variants/bulk`, { variantIds: [...selectedVariants], field: bulkField, value });
       setSelectedVariants(new Set());
@@ -562,7 +567,7 @@ export default function ProductEditorPage() {
                     <input
                       type="number"
                       className="w-24 rounded-theme border border-border bg-surface px-2 py-1 text-xs"
-                      defaultValue={variant.price}
+                      defaultValue={poishaToTaka(variant.price)}
                       onBlur={(e) => void handleVariantField(variant.id, "price", e.target.value)}
                     />
                   </td>
@@ -570,7 +575,7 @@ export default function ProductEditorPage() {
                     <input
                       type="number"
                       className="w-24 rounded-theme border border-border bg-surface px-2 py-1 text-xs"
-                      defaultValue={variant.compareAtPrice ?? ""}
+                      defaultValue={poishaToTaka(variant.compareAtPrice)}
                       onBlur={(e) => void handleVariantField(variant.id, "compareAtPrice", e.target.value)}
                     />
                   </td>
@@ -578,7 +583,7 @@ export default function ProductEditorPage() {
                     <input
                       type="number"
                       className="w-24 rounded-theme border border-border bg-surface px-2 py-1 text-xs"
-                      defaultValue={variant.costPrice ?? ""}
+                      defaultValue={poishaToTaka(variant.costPrice)}
                       onBlur={(e) => void handleVariantField(variant.id, "costPrice", e.target.value)}
                     />
                   </td>

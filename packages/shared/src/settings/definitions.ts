@@ -528,12 +528,12 @@ export const SHIPPING_FREE_DELIVERY_THRESHOLD = defineSetting({
   group: "shipping",
   type: z.number().int().min(0).nullable(),
   default: null,
-  label: { bn: "ফ্রি ডেলিভারি থ্রেশহোল্ড (পয়সা)", en: "Free delivery threshold (poisha)" },
+  label: { bn: "ফ্রি ডেলিভারি থ্রেশহোল্ড (৳)", en: "Free delivery threshold (৳)" },
   help: { bn: "খালি রাখলে বন্ধ থাকবে", en: "Leave empty to disable" },
   secret: false,
   public: false,
   permission: "settings.shipping.write",
-  ui: { widget: "text" },
+  ui: { widget: "money" },
 });
 
 export const SHIPPING_FALLBACK_FEE = defineSetting({
@@ -541,12 +541,12 @@ export const SHIPPING_FALLBACK_FEE = defineSetting({
   group: "shipping",
   type: z.number().int().min(0).nullable(),
   default: null,
-  label: { bn: "কোনো জোন না মিললে ফি (পয়সা)", en: "Fee when no zone matches (poisha)" },
+  label: { bn: "কোনো জোন না মিললে ফি (৳)", en: "Fee when no zone matches (৳)" },
   help: { bn: "খালি রাখলে কোনো জোন না মিললে চেকআউট ব্লক হবে", en: "Leave empty to block checkout when no zone matches" },
   secret: false,
   public: false,
   permission: "settings.shipping.write",
-  ui: { widget: "text" },
+  ui: { widget: "money" },
 });
 
 export const PAYMENT_COD_ENABLED = defineSetting({
@@ -631,11 +631,11 @@ export const RISK_HIGH_VALUE_THRESHOLD = defineSetting({
   group: "risk",
   type: z.number().int().min(0),
   default: 500_00,
-  label: { bn: "উচ্চ-মূল্যের থ্রেশহোল্ড (পয়সা)", en: "High-value threshold (poisha)" },
+  label: { bn: "উচ্চ-মূল্যের থ্রেশহোল্ড (৳)", en: "High-value threshold (৳)" },
   secret: false,
   public: false,
   permission: "settings.risk.write",
-  ui: { widget: "text" },
+  ui: { widget: "money" },
 });
 
 export const RISK_DUPLICATE_WINDOW_MINUTES = defineSetting({
@@ -747,11 +747,11 @@ export const CHECKOUT_GIFT_WRAP_FEE = defineSetting({
   group: "checkout",
   type: z.number().int().min(0),
   default: 0,
-  label: { bn: "গিফট র‍্যাপ ফি (পয়সা)", en: "Gift wrap fee (poisha)" },
+  label: { bn: "গিফট র‍্যাপ ফি (৳)", en: "Gift wrap fee (৳)" },
   secret: false,
   public: false,
   permission: "settings.checkout.write",
-  ui: { widget: "text" },
+  ui: { widget: "money" },
 });
 
 export const CHECKOUT_ALLOW_CUSTOMER_CANCEL_WHILE_PENDING = defineSetting({
@@ -1274,12 +1274,12 @@ export const SMS_COST_PER_SEGMENT_POISHA = defineSetting({
   group: "notifications",
   type: z.number().int().min(0),
   default: 50,
-  label: { bn: "প্রতি SMS সেগমেন্টের আনুমানিক খরচ (পয়সা)", en: "Estimated cost per SMS segment (poisha)" },
+  label: { bn: "প্রতি SMS সেগমেন্টের আনুমানিক খরচ (৳)", en: "Estimated cost per SMS segment (৳)" },
   help: { bn: "টেমপ্লেট এডিটরে আনুমানিক খরচ দেখানোর জন্য ব্যবহৃত হয়; আসল বিলিং গেটওয়ে অনুযায়ী ভিন্ন হতে পারে", en: "Used only to estimate cost in the template editor — actual billing varies by gateway" },
   secret: false,
   public: false,
   permission: "settings.notifications.write",
-  ui: { widget: "text" },
+  ui: { widget: "money" },
 });
 
 // Milestone 9 (§16 M9) — launch checklist / operations.
@@ -1675,7 +1675,7 @@ export const FINANCE_COD_VARIANCE_TOLERANCE = defineSetting({
   group: "finance",
   type: z.number().int().min(0),
   default: 100,
-  label: { bn: "COD পার্থক্যের সহনসীমা (পয়সা)", en: "COD variance tolerance (poisha)" },
+  label: { bn: "COD পার্থক্যের সহনসীমা (৳)", en: "COD variance tolerance (৳)" },
   help: { bn: "এর চেয়ে বেশি পার্থক্য হলে লাইনটি চিহ্নিত হবে", en: "Lines differing by more than this are flagged" },
   secret: false,
   public: false,
