@@ -20,7 +20,7 @@ interface StaffNotificationRow {
  * single-instance deployment (golden rule 8); re-polls on open too, so the
  * unread count is never more than 30s stale while the panel is closed.
  */
-export function NotificationBell() {
+export function NotificationBell({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<StaffNotificationRow[]>([]);
@@ -53,19 +53,35 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex w-full items-center gap-2 rounded-theme px-2 py-1.5 text-left text-sm text-surface-foreground/70 hover:bg-muted hover:text-surface-foreground"
+        aria-label={compact ? t("notificationsBell") : undefined}
+        aria-expanded={open}
+        className={
+          compact
+            ? "relative flex h-9 w-9 items-center justify-center rounded-full text-surface-foreground/70 transition-colors hover:bg-muted hover:text-surface-foreground"
+            : "relative flex w-full items-center gap-2 rounded-theme px-2 py-1.5 text-left text-sm text-surface-foreground/70 hover:bg-muted hover:text-surface-foreground"
+        }
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
-        <span>{t("notificationsBell")}</span>
+        {!compact && <span>{t("notificationsBell")}</span>}
         {unreadCount > 0 && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-medium text-white">{unreadCount}</span>
+          <span
+            className={
+              compact
+                ? "absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-medium leading-none text-white"
+                : "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-medium text-white"
+            }
+          >
+            {unreadCount}
+          </span>
         )}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 z-10 mb-2 w-72 rounded-theme border border-border bg-surface p-2 shadow-lg">
+        <div
+          className={`absolute left-0 z-10 w-72 rounded-theme border border-border bg-surface p-2 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.3)] ${compact ? "top-full mt-2" : "bottom-full mb-2"}`}
+        >
           <div className="flex items-center justify-between px-2 pb-2">
             <span className="text-xs font-medium text-surface-foreground/70">
               {unreadCount} {t("notificationsUnread")}

@@ -3,7 +3,88 @@
 
 @source "../../../../packages/ui/src";
 
-body {
-  background-color: var(--color-surface);
-  color: var(--color-surface-foreground);
+/*
+ * Admin look: a quiet, work-focused workspace. The page sits on a very light
+ * "canvas" and every card, table and input is a white surface on top of it, so
+ * content reads as raised without heavy borders. Overrides the shared preset
+ * for the admin only (the storefront has its own, see docs/DECISIONS.md).
+ */
+@theme {
+  --color-brand: #111827;
+  --color-canvas: #f5f5f3;
+  --color-muted: #f1f1ee;
+  --color-border: #e4e4df;
+  --color-accent: #b08a4e;
+
+  --font-latin: var(--f-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-bangla: var(--f-hind-siliguri), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-surface-foreground);
+    /* Latin first, Bangla second: the browser picks per glyph, so mixed text renders in the right face for each script. */
+    font-family: var(--font-latin), var(--font-bangla);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Bangla needs more leading than Latin (matras above and below the line). */
+  html:lang(bn) body {
+    line-height: 1.65;
+  }
+
+  h1 {
+    letter-spacing: -0.01em;
+  }
+  html:lang(bn) h1 {
+    letter-spacing: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+
+  /* Native form controls pick up the page typeface instead of the browser's default. */
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  select {
+    cursor: pointer;
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Table headers: calmer than the shouting all-caps each page used to set for itself. */
+  th {
+    font-weight: 500;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

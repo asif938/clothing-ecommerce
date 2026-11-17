@@ -764,7 +764,20 @@
     "navApiKeys": "API কী",
     "navWebhooks": "ওয়েবহুক",
     "navConfigBundle": "কনফিগ বান্ডেল",
-    "navCmsMenus": "মেনু"
+    "navCmsMenus": "মেনু",
+    "navGroupOrders": "অর্ডার",
+    "navGroupShipping": "শিপিং ও পেমেন্ট",
+    "navGroupCatalog": "ক্যাটালগ",
+    "navGroupInventory": "ইনভেন্টরি ও সাপ্লাই",
+    "navGroupMarketing": "মার্কেটিং",
+    "navGroupCustomers": "কাস্টমার ও সাপোর্ট",
+    "navGroupContent": "কনটেন্ট ও SEO",
+    "navGroupReports": "রিপোর্ট",
+    "navGroupSystem": "সেটিংস ও সিস্টেম",
+    "menuSearch": "পেজ খুঁজুন…",
+    "menuNoMatch": "কোনো পেজ মেলেনি",
+    "openMenu": "মেনু খুলুন",
+    "closeMenu": "মেনু বন্ধ করুন"
   },
   "orders": {
     "title": "অর্ডার",

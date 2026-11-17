@@ -2867,3 +2867,51 @@ photo — a second-image hover and quick-add are the next presentation step (§4
 
 **Alternatives.** Changing the shared `packages/config` preset (rejected: would restyle the admin);
 per-block bespoke headings (rejected: three copies of the product card had already drifted).
+
+---
+
+## 2026-11-17 — Brand logo and favicon upload (navbar, footer, browser tab)
+
+**Context.** `brand.logoLight`, `brand.logoDark` and `brand.favicon` existed as settings but the admin showed
+them as plain text boxes and the storefront ignored them (`logoUrl={null}`; the footer had no logo at all).
+
+**Decisions.**
+- Admin → Settings → Brand: every `image` setting now uses the media picker (upload or choose from the
+  library, preview shown whole on a light or dark plate). Pasting a link is off here, because settings save
+  on every change. Bilingual help text states the file expectations.
+- The navbar shows `brand.logoLight`, the footer (brand-colored background) shows `brand.logoDark`, the
+  favicon comes from `brand.favicon`. Any that is unset falls back to the brand name as text, so a missing
+  logo never leaves an empty header or a dark logo on a dark footer.
+- SVG stays refused by the media API (no sanitizer, §12), so logos are transparent PNG/WebP.
+
+**Not done.** PWA/app icons (`icon-192`, `icon-512`) are still generated from the brand color and initial;
+they need a raster-friendly source (the library's WebP variants are not supported by the image renderer used there).
+
+---
+
+## 2026-11-17 — Admin shell: fixed sidebar, grouped menu, canvas look
+
+**Context.** The admin shell was `min-h-screen` with a sidebar that was not height-bound, so the whole page
+grew with the content and the sidebar scrolled away with it. The menu was one flat list of 65 links, no fonts
+were loaded, and white cards sat on a white page.
+
+**Decisions.**
+- **The shell is one window tall (`h-dvh overflow-hidden`).** Only `<main>` scrolls; the sidebar keeps its
+  brand header and account area pinned and scrolls just its menu. Under `lg` the sidebar becomes a drawer
+  behind a top bar (Escape and the backdrop close it; it is `visibility:hidden` when closed so its links are
+  not tab stops).
+- **The menu is grouped** into nine sections plus Dashboard (`apps/admin/lib/admin-nav.ts`), collapsible and
+  remembered per browser, with the section holding the current page always open, a "find a page" filter and
+  longest-prefix active matching (`/orders/123` lights up Orders). Every previous link is kept; labels are
+  bilingual `shell.*` keys.
+- **Brand in the sidebar** comes from the public store config (name, `brand.logoLight`), so the admin is the
+  store's own; "Admin" is the fallback. The notification bell moved to the sidebar header (icon + count) and a
+  bn/English switch was added to the account area (the admin had none).
+- **Look:** admin-only token overrides — a light canvas (`--color-canvas`) with white surfaces for cards,
+  inputs and the sidebar, softer borders, Inter + Hind Siliguri via `next/font`, visible focus rings. Shared
+  `Card/Button/TextField/Toggle/Banner` get a hairline shadow, hover/active feedback, a secondary button with a
+  border, and a Toggle whose "off" track is visible on white.
+
+**Not done.** Individual admin pages keep their own table/filter markup (about 150 tables); they pick up the
+canvas, fonts and tokens but were not restyled one by one. A table/page-header component the pages could adopt
+is the natural next step.

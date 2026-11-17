@@ -1,87 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter, Link } from "../../../i18n/navigation";
+import { usePathname, useRouter } from "../../../i18n/navigation";
 import { useCurrentStaff } from "../../../lib/use-current-staff";
 import { api } from "../../../lib/api";
-import { NotificationBell } from "../../../components/notification-bell";
-import { AdminPwa } from "../../../components/admin-pwa";
-
-const NAV_ITEMS = [
-  { href: "/", labelKey: "navDashboard" },
-  { href: "/orders", labelKey: "navOrders" },
-  { href: "/orders/kanban", labelKey: "navKanban" },
-  { href: "/orders/queue", labelKey: "navMyQueue" },
-  { href: "/approvals", labelKey: "navApprovals" },
-  { href: "/automation", labelKey: "navAutomation" },
-  { href: "/courier-rules", labelKey: "navCourierRules" },
-  { href: "/fulfillment", labelKey: "navFulfillment" },
-  { href: "/returns", labelKey: "navReturns" },
-  { href: "/refunds", labelKey: "navRefunds" },
-  { href: "/finance/cod", labelKey: "navFinance" },
-  { href: "/cms/pages", labelKey: "navCmsPages" },
-  { href: "/cms/announcements", labelKey: "navCmsAnnouncements" },
-  { href: "/cms/menus", labelKey: "navCmsMenus" },
-  { href: "/blog", labelKey: "navBlog" },
-  { href: "/products", labelKey: "navProducts" },
-  { href: "/catalog", labelKey: "navCatalog" },
-  { href: "/catalog/quality", labelKey: "navProductQuality" },
-  { href: "/collections", labelKey: "navCollections" },
-  { href: "/price-schedules", labelKey: "navPriceSchedules" },
-  { href: "/inventory", labelKey: "navInventory" },
-  { href: "/purchase-orders", labelKey: "navPurchaseOrders" },
-  { href: "/suppliers", labelKey: "navSuppliers" },
-  { href: "/materials", labelKey: "navMaterials" },
-  { href: "/shipping", labelKey: "navShipping" },
-  { href: "/payment-rules", labelKey: "navPaymentRules" },
-  { href: "/courier-area-mapping", labelKey: "navCourierAreaMapping" },
-  { href: "/blocklist", labelKey: "navBlocklist" },
-  { href: "/notifications", labelKey: "navNotifications" },
-  { href: "/discounts", labelKey: "navDiscounts" },
-  { href: "/flash-sales", labelKey: "navFlashSales" },
-  { href: "/abandoned-carts", labelKey: "navAbandonedCarts" },
-  { href: "/marketing/broadcasts", labelKey: "navMarketing" },
-  { href: "/loyalty", labelKey: "navLoyalty" },
-  { href: "/gift-cards", labelKey: "navGiftCards" },
-  { href: "/referrals", labelKey: "navReferrals" },
-  { href: "/affiliates", labelKey: "navAffiliates" },
-  { href: "/customers", labelKey: "navCustomers" },
-  { href: "/segments", labelKey: "navSegments" },
-  { href: "/reviews", labelKey: "navReviews" },
-  { href: "/product-questions", labelKey: "navProductQuestions" },
-  { href: "/reports", labelKey: "navReports" },
-  { href: "/reports/scheduled", labelKey: "navScheduledReports" },
-  { href: "/alerts", labelKey: "navAlerts" },
-  { href: "/feeds", labelKey: "navFeeds" },
-  { href: "/import-export", labelKey: "navImportExport" },
-  { href: "/config-bundle", labelKey: "navConfigBundle" },
-  { href: "/search", labelKey: "navSearch" },
-  { href: "/seo", labelKey: "navSeo" },
-  { href: "/ai", labelKey: "navAi" },
-  { href: "/personalization", labelKey: "navPersonalization" },
-  { href: "/experiments", labelKey: "navExperiments" },
-  { href: "/support/inbox", labelKey: "navSupport" },
-  { href: "/support/tickets", labelKey: "navTickets" },
-  { href: "/settings", labelKey: "navSettings" },
-  { href: "/staff", labelKey: "navStaff" },
-  { href: "/staff/field-access", labelKey: "navFieldAccess" },
-  { href: "/media", labelKey: "navMedia" },
-  { href: "/integrations", labelKey: "navIntegrations" },
-  { href: "/api-keys", labelKey: "navApiKeys" },
-  { href: "/webhooks", labelKey: "navWebhooks" },
-  { href: "/system-health", labelKey: "navSystemHealth" },
-  { href: "/push", labelKey: "navPush" },
-  { href: "/launch-checklist", labelKey: "navLaunchChecklist" },
-  { href: "/audit", labelKey: "navAudit" },
-] as const;
+import { AdminSidebar } from "../../../components/admin-sidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("shell");
-  const tAuth = useTranslations("auth");
   const { staff, loading, unauthenticated } = useCurrentStaff();
   const router = useRouter();
   const pathname = usePathname();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerPath, setDrawerPath] = useState(pathname);
+
+  // Close the phone drawer when navigation lands somewhere new (set during render, not in an effect).
+  if (drawerPath !== pathname) {
+    setDrawerPath(pathname);
+    setDrawerOpen(false);
+  }
 
   useEffect(() => {
     if (unauthenticated) router.replace("/login");
@@ -90,6 +28,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (staff && !staff.totpEnabled) router.replace("/totp-setup");
   }, [staff, router]);
+
+  // Escape closes the drawer.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setDrawerOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   if (loading || !staff || !staff.totpEnabled) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-surface-foreground/60">…</div>;
@@ -106,39 +52,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col justify-between border-r border-border bg-surface p-4">
-        <div>
-          <div className="mb-6 px-2 text-lg font-semibold text-surface-foreground">Admin</div>
-          <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-theme px-3 py-2 text-sm ${
-                  pathname === item.href ? "bg-brand text-brand-foreground" : "text-surface-foreground hover:bg-muted"
-                }`}
-              >
-                {t(item.labelKey)}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="flex flex-col gap-2 text-sm">
-          <NotificationBell />
-          <AdminPwa />
-          <div className="flex flex-col gap-2 px-2">
-            <span className="truncate text-surface-foreground/70">{staff.email}</span>
-            <button onClick={handleLogout} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
-              {tAuth("logout")}
-            </button>
-            <button onClick={handleLogoutAll} className="text-left text-surface-foreground/70 hover:text-surface-foreground">
-              {tAuth("logoutAll")}
-            </button>
-          </div>
-        </div>
+    // The shell is exactly one window tall and never scrolls itself: the sidebar stays put and only <main> scrolls.
+    <div className="flex h-dvh overflow-hidden bg-canvas">
+      {drawerOpen && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-72 border-r border-border bg-surface transition-[transform,visibility] duration-200 lg:visible lg:static lg:z-auto lg:w-[17rem] lg:shrink-0 lg:translate-x-0 ${
+          drawerOpen ? "translate-x-0" : "invisible -translate-x-full"
+        }`}
+      >
+        <AdminSidebar staff={staff} onNavigate={() => setDrawerOpen(false)} onLogout={() => void handleLogout()} onLogoutAll={() => void handleLogoutAll()} />
       </aside>
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label={t("openMenu")}
+            aria-expanded={drawerOpen}
+            className="flex h-10 w-10 items-center justify-center rounded-theme text-surface-foreground hover:bg-muted"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="h-5 w-5">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <span className="text-base font-semibold text-surface-foreground">Admin</span>
+        </div>
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="mx-auto w-full max-w-[96rem] p-4 sm:p-6 lg:p-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

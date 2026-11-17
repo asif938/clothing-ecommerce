@@ -764,7 +764,20 @@
     "navApiKeys": "API keys",
     "navWebhooks": "Webhooks",
     "navConfigBundle": "Config bundle",
-    "navCmsMenus": "Menus"
+    "navCmsMenus": "Menus",
+    "navGroupOrders": "Orders",
+    "navGroupShipping": "Shipping & payments",
+    "navGroupCatalog": "Catalog",
+    "navGroupInventory": "Inventory & supply",
+    "navGroupMarketing": "Marketing",
+    "navGroupCustomers": "Customers & support",
+    "navGroupContent": "Content & SEO",
+    "navGroupReports": "Reports",
+    "navGroupSystem": "Settings & system",
+    "menuSearch": "Find a page…",
+    "menuNoMatch": "No page matches",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "orders": {
     "title": "Orders",
