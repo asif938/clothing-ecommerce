@@ -328,6 +328,7 @@ export class CartPricingService {
       hasFlashSaleItem: lines.some((l) => l.flashSaleItemId !== null),
       paymentMethod: context.paymentMethod,
       now: new Date(),
+      timeZone: await this.settings.getValue<string>("locale.timezone"),
       utmSource: (cart.utm as { source?: string } | null)?.source ?? null,
     };
     const paymentRulesOutcome = await this.paymentRules.evaluate({ ...ruleContextBase, riskLevel: null, riskScore: null, phoneBlocked: false });

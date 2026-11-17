@@ -211,7 +211,7 @@ function ProductSearch({ onPick, exclude }: { onPick: (p: ProductOption) => void
   );
 }
 
-function ProductsInput({ value, onChange }: { value: string[] | undefined; onChange: (v: string[]) => void }) {
+export function ProductsInput({ value, onChange }: { value: string[] | undefined; onChange: (v: string[]) => void }) {
   const t = useTranslations("blocks");
   const ids = value ?? [];
   const names = useProductNames(ids);

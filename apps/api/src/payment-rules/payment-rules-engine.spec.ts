@@ -48,8 +48,22 @@ describe("conditionsMatch", () => {
   });
 
   it("supports an overnight hour range", () => {
-    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now: new Date("2026-01-01T23:00:00Z") }))).toBe(true);
-    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now: new Date("2026-01-01T12:00:00Z") }))).toBe(false);
+    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now: new Date("2026-01-01T23:00:00Z"), timeZone: "UTC" }))).toBe(true);
+    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now: new Date("2026-01-01T12:00:00Z"), timeZone: "UTC" }))).toBe(false);
+  });
+
+  it("reads hour and weekday on the store's clock, not the server's", () => {
+    // 2026-01-02 17:30 UTC is Friday 23:30 in Dhaka (UTC+6) but 17:30 on a UTC server.
+    const now = new Date("2026-01-02T17:30:00Z");
+    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now, timeZone: "Asia/Dhaka" }))).toBe(true);
+    expect(conditionsMatch({ hourRange: [22, 6] }, ctx({ now, timeZone: "UTC" }))).toBe(false);
+    // 2026-01-02 20:00 UTC is already Saturday 02:00 in Dhaka.
+    expect(conditionsMatch({ dayOfWeek: [6] }, ctx({ now: new Date("2026-01-02T20:00:00Z"), timeZone: "Asia/Dhaka" }))).toBe(true);
+    expect(conditionsMatch({ dayOfWeek: [6] }, ctx({ now: new Date("2026-01-02T20:00:00Z"), timeZone: "UTC" }))).toBe(false);
+  });
+
+  it("falls back to the server clock for an invalid time zone instead of failing checkout", () => {
+    expect(() => conditionsMatch({ hourRange: [0, 24] }, ctx({ timeZone: "Not/AZone" }))).not.toThrow();
   });
 });
 

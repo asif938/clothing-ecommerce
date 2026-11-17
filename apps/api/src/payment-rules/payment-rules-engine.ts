@@ -56,6 +56,8 @@ export interface RuleContext {
   hasFlashSaleItem: boolean;
   paymentMethod: string | null;
   now: Date;
+  /** Store time zone (`locale.timezone`, e.g. "Asia/Dhaka") for day-of-week and hour conditions; the server's own zone when absent. Hosting runs in UTC, six hours behind Bangladesh. */
+  timeZone?: string;
   utmSource: string | null;
   phoneBlocked: boolean;
 }
@@ -86,12 +88,28 @@ function checks(conditions: RuleConditions, ctx: RuleContext): boolean[] {
     [!!conditions.cartTags, !!conditions.cartTags?.some((t) => ctx.cartTags.includes(t))],
     [conditions.hasFlashSaleItem !== undefined, ctx.hasFlashSaleItem === conditions.hasFlashSaleItem],
     [!!conditions.paymentMethods, !!ctx.paymentMethod && !!conditions.paymentMethods?.includes(ctx.paymentMethod)],
-    [!!conditions.dayOfWeek, !!conditions.dayOfWeek?.includes(ctx.now.getDay())],
-    [!!conditions.hourRange, isWithinHourRange(ctx.now.getHours(), conditions.hourRange)],
+    [!!conditions.dayOfWeek, !!conditions.dayOfWeek?.includes(localDayHour(ctx.now, ctx.timeZone).day)],
+    [!!conditions.hourRange, isWithinHourRange(localDayHour(ctx.now, ctx.timeZone).hour, conditions.hourRange)],
     [!!conditions.utmSources, !!ctx.utmSource && !!conditions.utmSources?.includes(ctx.utmSource)],
     [conditions.phoneBlocked !== undefined, ctx.phoneBlocked === conditions.phoneBlocked],
   ];
   return results.filter(([present]) => present).map(([, matched]) => matched);
+}
+
+const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** Day of week (0 = Sunday) and hour (0–23) of `now` on the store's clock. */
+export function localDayHour(now: Date, timeZone?: string): { day: number; hour: number } {
+  if (!timeZone) return { day: now.getDay(), hour: now.getHours() };
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(now);
+    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? now.getHours());
+    return { day: WEEKDAY_INDEX[weekday] ?? now.getDay(), hour };
+  } catch {
+    // An invalid zone name in settings must not break checkout.
+    return { day: now.getDay(), hour: now.getHours() };
+  }
 }
 
 function isWithinHourRange(hour: number, range?: [number, number]): boolean {
