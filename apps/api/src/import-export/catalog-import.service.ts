@@ -417,6 +417,13 @@ export class CatalogImportService implements OnModuleInit {
       });
     }
     if (Object.keys(data).length === 0) return existing;
+    if (existing.deletedAt) {
+      // A deleted product coming back from the sheet takes its images from this
+      // import. Its old gallery links would otherwise make attachImages skip
+      // every same-named file as "already there", even when those old files
+      // are gone (e.g. stored on a host's wiped local disk) and show broken.
+      await this.prisma.productMedia.deleteMany({ where: { productId: existing.id } });
+    }
     return await this.prisma.product.update({ where: { id: existing.id }, data });
   }
 

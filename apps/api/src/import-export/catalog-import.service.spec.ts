@@ -176,6 +176,11 @@ function makeService(opts: { existingVariant?: Row | null } = {}) {
         productMedia.push(entry);
         return Promise.resolve(entry);
       }),
+      deleteMany: vi.fn(({ where }: { where: { productId: string } }) => {
+        const before = productMedia.length;
+        for (let i = productMedia.length - 1; i >= 0; i--) if (productMedia[i]!.productId === where.productId) productMedia.splice(i, 1);
+        return Promise.resolve({ count: before - productMedia.length });
+      }),
     },
     stockLocation: { findFirst: vi.fn(() => Promise.resolve(null)) },
     inventoryLevel: { findUnique: vi.fn(() => Promise.resolve(null)) },
@@ -394,6 +399,33 @@ describe("CatalogImportService — other cases", () => {
 
     expect(ctx.products).toHaveLength(1);
     expect(ctx.products[0]).toMatchObject({ deletedAt: null, status: "draft" });
+  });
+
+  it("drops a revived product's old gallery so the import uploads its images again", async () => {
+    const ctx = makeService();
+    const first = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,100000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(first.id);
+    const productId = ctx.products[0]!.id as string;
+    ctx.productMedia.push({ id: "pm-old", productId, mediaId: "m-old", originalName: "a1.jpg" });
+    Object.assign(ctx.products[0]!, { deletedAt: new Date(), status: "archived" });
+
+    const second = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,150000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(second.id);
+
+    expect(ctx.productMedia.filter((m) => m.productId === productId && m.id === "pm-old")).toHaveLength(0);
+  });
+
+  it("keeps the gallery of a live product that is simply re-imported", async () => {
+    const ctx = makeService();
+    const first = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,100000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(first.id);
+    const productId = ctx.products[0]!.id as string;
+    ctx.productMedia.push({ id: "pm-keep", productId, mediaId: "m-keep", originalName: "a1.jpg" });
+
+    const second = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,150000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(second.id);
+
+    expect(ctx.productMedia.some((m) => m.id === "pm-keep")).toBe(true);
   });
 
   it("applies an explicit staff mapping and price unit over the auto-suggestion", async () => {
