@@ -26,6 +26,7 @@
     "db:migrate:deploy": "pnpm --filter @clothing/db migrate:deploy",
     "db:seed": "pnpm --filter @clothing/db seed",
     "db:seed:demo": "pnpm --filter @clothing/db seed:demo",
+    "db:reset-staff-password": "pnpm --filter @clothing/db reset-staff-password",
     "sdk:generate": "pnpm --filter @clothing/sdk generate",
     "e2e": "pnpm --filter e2e test"
   },

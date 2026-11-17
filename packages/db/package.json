@@ -15,6 +15,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "tsx src/seed.ts",
     "seed:demo": "tsx src/seed.ts --demo",
+    "reset-staff-password": "tsx --env-file=../../.env src/reset-staff-password.ts",
     "studio": "prisma studio",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
