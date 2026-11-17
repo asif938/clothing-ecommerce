@@ -2803,3 +2803,32 @@ the owner alone.
 panel); hard delete straight from the catalog list (rejected: no undo for a misclick); also deleting
 order-linked products (rejected: breaks order history and accounting); a migration or seed step to
 grant new permissions to Super Admin (rejected: easy to forget on each release).
+
+
+## 2026-11-17 — Owner-facing admin: forms instead of JSON, taka instead of poisha, names instead of ids
+
+**Context.** Several milestones shipped admin screens as "honest MVPs": page-builder sections,
+discount conditions, payment rules, segment rules, blog bodies, A/B variants and five settings were
+raw JSON; collections, flash sales, bundles, price schedules, courier mappings, merges and
+automation asked for database ids; product prices and many money fields were typed in poisha. The
+platform is meant to be run by a clothing-brand owner without a developer, so these screens were
+not usable by the intended user.
+
+**Decisions.**
+- Every owner-facing structured value gets a form. Page-builder blocks are described declaratively in
+  `apps/admin/lib/block-fields.ts` (validated against `@clothing/blocks/schemas`, the API's own
+  source of truth) and rendered by `components/block-form.tsx`; the same editor serves CMS pages,
+  blog posts and A/B variants. Raw JSON remains only as a fallback for a block type with no form
+  description and for the developer-facing config bundle.
+- Records are picked by name: product, variant, customer, order, category, collection, location and
+  staff pickers replace id inputs.
+- Money is typed and shown in taka everywhere in the admin and converted to poisha at the edge;
+  storage stays poisha (golden rule 3). Settings with `widget: "money"` render in taka.
+- Datetime inputs are sent as ISO with the browser's offset, and payment-rule weekday/hour
+  conditions use `locale.timezone`; hosting runs in UTC, six hours behind Bangladesh.
+- PATCH schemas are built with `updateSchemaFrom()` so a toggle never resets unsent fields to their
+  create-time defaults.
+
+**Alternatives.** Generating forms from zod/JSON Schema for blocks (rejected: pickers and
+taka/poisha conversion need per-field intent the schemas don't carry); keeping JSON with better help
+text (rejected: owners still can't use it).
