@@ -8,6 +8,8 @@ import { Banner, Button, Card, TextField } from "../../../../../components/ui";
 import { selectClass, textareaClass } from "../../../../../components/marketing-tabs";
 import { Link, useRouter } from "../../../../../i18n/navigation";
 import { money, pct } from "../../../../../lib/format";
+import { BLOCK_FORMS } from "../../../../../lib/block-fields";
+import { BlockFieldsForm } from "../../../../../components/block-form";
 
 type LocalizedText = { bn?: string; en?: string };
 type Kind = "block" | "announcement" | "offer";
@@ -84,10 +86,23 @@ function textOf(value: LocalizedText | null | undefined): string {
 }
 
 /** Payload editors for one non-control (or offer) variant. */
-function VariantPayloadEditor({ kind, variant, targets, blockProps, onChange }: { kind: Kind; variant: Variant; targets: Targets | null; blockProps: Record<string, unknown> | null; onChange: (payload: unknown) => void }) {
+function VariantPayloadEditor({ kind, variant, targets, blockType, blockProps, onChange }: { kind: Kind; variant: Variant; targets: Targets | null; blockType: string | null; blockProps: Record<string, unknown> | null; onChange: (payload: unknown) => void }) {
   const t = useTranslations("experiments");
   const [jsonText, setJsonText] = useState(() => JSON.stringify((variant.payload as { props?: unknown } | undefined)?.props ?? blockProps ?? {}, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // A known block type gets the same form as the page builder; JSON stays only for a type without one.
+  const blockForm = kind === "block" && blockType ? BLOCK_FORMS[blockType] : undefined;
+  if (blockForm) {
+    const props = ((variant.payload as { props?: Record<string, unknown> } | undefined)?.props ?? blockProps ?? {}) as Record<string, unknown>;
+    return (
+      <div className="flex flex-col gap-2 text-sm">
+        <span className="font-medium">{t("blockProps")}</span>
+        <span className="text-xs text-surface-foreground/60">{t("blockPropsHelp")}</span>
+        <BlockFieldsForm fields={blockForm.fields} props={props} onChange={(next) => onChange({ props: next })} />
+      </div>
+    );
+  }
 
   if (kind === "block") {
     return (
@@ -497,7 +512,7 @@ export default function ExperimentPage() {
                   <p className="text-xs text-surface-foreground/60">{t("controlHelp")}</p>
                 ) : (
                   <fieldset disabled={structuralLocked} className="contents">
-                    <VariantPayloadEditor key={`${form.target?.blockId ?? ""}-${variant.key}`} kind={form.kind} variant={variant} targets={targets} blockProps={block?.props ?? null} onChange={(payload) => patchVariant(index, { payload })} />
+                    <VariantPayloadEditor key={`${form.target?.blockId ?? ""}-${variant.key}`} kind={form.kind} variant={variant} targets={targets} blockType={block?.type ?? null} blockProps={block?.props ?? null} onChange={(payload) => patchVariant(index, { payload })} />
                   </fieldset>
                 )}
               </div>
