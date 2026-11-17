@@ -59,10 +59,10 @@ export function SearchBox({ locale, placeholder, autoFocus = false, fullWidth = 
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
         placeholder={placeholder}
-        className="h-10 w-full rounded-theme border border-border bg-surface px-3 text-sm outline-none focus:border-brand"
+        className="h-10 w-full rounded-full border border-transparent bg-muted px-4 text-sm outline-none transition-colors placeholder:text-surface-foreground/45 focus:border-accent focus:bg-surface"
       />
       {open && hasSuggestions && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-theme border border-border bg-surface p-2 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-2 w-full rounded-theme border border-border bg-surface p-2 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.3)]">
           {results.categories.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
               {results.categories.map((category) => (

@@ -14,6 +14,7 @@ import { UtmCapture } from "../../components/utm-capture";
 import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
+import { fontClassNames, fontStackCss } from "../../lib/fonts";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
 
@@ -51,12 +52,15 @@ export default async function LocaleLayout({
   const brandName = localized(config["brand.name"], locale) || "Store";
   const maintenanceMode = config["features.maintenanceMode"] === true;
 
-  const themeStyle = `:root { --color-brand: ${brandColor}; --color-brand-foreground: ${pickForegroundColor(brandColor)}; }`;
+  const fontLatin = config["theme.fontLatin"];
+  const fontBangla = config["theme.fontBangla"];
+  const fontClasses = fontClassNames(fontLatin, fontBangla);
+  const themeStyle = `:root { --color-brand: ${brandColor}; --color-brand-foreground: ${pickForegroundColor(brandColor)}; ${fontStackCss(fontLatin, fontBangla)} }`;
 
   if (maintenanceMode) {
     const maintenancePage = await getPage("maintenance");
     return (
-      <html lang={locale}>
+      <html lang={locale} className={fontClasses}>
         <body className="flex min-h-screen flex-col items-center justify-center">
           <style dangerouslySetInnerHTML={{ __html: themeStyle }} />
           <NextIntlClientProvider locale={locale} messages={messages}>
@@ -76,7 +80,7 @@ export default async function LocaleLayout({
   ];
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={fontClasses}>
       <body className="flex min-h-screen flex-col">
         <style dangerouslySetInnerHTML={{ __html: themeStyle }} />
         {siteLd.map((data, index) => (

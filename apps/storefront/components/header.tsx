@@ -22,11 +22,13 @@ interface HeaderProps {
   visualSearch?: boolean;
 }
 
-const iconButton = "flex h-11 w-11 items-center justify-center rounded-theme text-surface-foreground hover:bg-muted";
+const iconButton = "flex h-11 w-11 items-center justify-center rounded-full text-surface-foreground transition-colors hover:bg-muted";
 
 /** Desktop dropdown: opens on hover and on keyboard focus inside the item (`focus-within`), so it works without a mouse. */
 function DesktopNavItem({ item, mega }: { item: NavItem; mega: boolean }) {
-  const top = "flex h-16 items-center gap-1 text-sm font-medium text-surface-foreground/80 hover:text-surface-foreground";
+  // The underline grows from the left on hover/focus (and for the open dropdown) — a quiet cue for where you are.
+  const top =
+    "relative flex h-16 items-center gap-1 text-sm font-medium tracking-wide text-surface-foreground/75 transition-colors after:absolute after:inset-x-0 after:bottom-4 after:h-px after:origin-left after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:text-surface-foreground hover:after:scale-x-100 group-hover:after:scale-x-100 group-focus-within:after:scale-x-100";
   if (item.children.length === 0) {
     return (
       <li>
@@ -44,7 +46,7 @@ function DesktopNavItem({ item, mega }: { item: NavItem; mega: boolean }) {
       </NavLink>
       <div
         className={`invisible absolute top-full z-30 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 ${
-          mega ? "inset-x-0 border-y border-border bg-surface shadow-lg" : "left-0 min-w-56 rounded-b-theme border border-border bg-surface py-2 shadow-lg"
+          mega ? "inset-x-0 border-y border-border bg-surface shadow-[0_18px_40px_-24px_rgb(0_0_0/0.25)]" : "left-0 min-w-56 rounded-b-theme border border-border bg-surface py-2 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.25)]"
         }`}
       >
         {mega ? (
@@ -90,7 +92,7 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale, uiStri
   const centered = headerVariant === "centered";
 
   const logo = (
-    <Link href="/" className="flex min-w-0 items-center text-lg font-semibold tracking-tight text-surface-foreground">
+    <Link href="/" className="flex min-w-0 items-center font-display text-2xl leading-none text-surface-foreground lg:text-[1.65rem]">
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- brand logo URL already comes pre-sized from media settings; a custom loader adds nothing here.
         <img src={logoUrl} alt={brandName} className="h-8 w-auto" />
@@ -114,7 +116,7 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale, uiStri
   const placeholder = text("storefront.header.searchPlaceholder");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/90 backdrop-blur-md">
       <div className="relative mx-auto flex h-14 max-w-6xl items-center gap-1 px-4 sm:px-6 lg:h-16 lg:gap-6 lg:px-8">
         <MobileMenu
           items={items}
@@ -151,7 +153,7 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale, uiStri
           <Link href="/account" className={`${iconButton} hidden lg:flex`} aria-label={text("storefront.header.account")} title={text("storefront.header.account")}>
             <UserIcon />
           </Link>
-          <LanguageSwitch label={text("storefront.header.otherLanguage")} className="hidden h-11 items-center rounded-theme px-2 text-sm font-medium text-surface-foreground/80 hover:bg-muted hover:text-surface-foreground lg:flex" />
+          <LanguageSwitch label={text("storefront.header.otherLanguage")} className="hidden h-11 items-center rounded-full px-3 text-sm font-medium text-surface-foreground/75 transition-colors hover:bg-muted hover:text-surface-foreground lg:flex" />
           <CartLink label={text("storefront.header.cart")} />
         </div>
       </div>

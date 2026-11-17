@@ -11,7 +11,95 @@
    overrides (settings) — see docs/PROJECT_SPEC.md §4.4.2. Not wired up
    until Milestone 3. */
 
-body {
-  background-color: var(--color-surface);
-  color: var(--color-surface-foreground);
+/*
+ * Storefront "premium fashion" preset (docs/DECISIONS.md, 2026-11-17).
+ * Overrides the shared fallbacks for the shopper-facing site only — the
+ * admin panel keeps the neutral preset. Colors here are defaults; the brand
+ * color itself still comes from `theme.brandColor` at runtime.
+ */
+@theme {
+  /* A whisper of warmth so product photography (often shot on cream/beige) sits on the page instead of in a white box. */
+  --color-surface: #fcfbf9;
+  --color-muted: #f3f0eb;
+  --color-border: #e7e2da;
+  /* Zari gold — thin ornaments and focus rings only, never body text. */
+  --color-accent: #b08a4e;
+
+  --radius-theme: 0.25rem;
+
+  --font-display: var(--font-display-family, Georgia, serif);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 0.9s var(--ease-out-soft) both;
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-surface-foreground);
+    /* Latin first, Bangla second: the browser picks per glyph, so mixed text such as "ক্লাসিক Panjabi" renders in the right face for each script. */
+    font-family: var(--font-latin), var(--font-bangla);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Bangla needs more leading than Latin (matras above and below the line). */
+  html:lang(bn) body {
+    line-height: 1.7;
+  }
+
+  /* Headlines use the display serif. It has one weight, so a requested bold is ignored rather than faked. */
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-synthesis-weight: none;
+  }
+  html:lang(en) h1,
+  html:lang(en) h2 {
+    letter-spacing: -0.01em;
+  }
+  /* Noto Serif Bengali is lighter-looking than the Latin serif at 400. */
+  html:lang(bn) h1,
+  html:lang(bn) h2 {
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

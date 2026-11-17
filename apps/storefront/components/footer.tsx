@@ -14,10 +14,15 @@ interface FooterProps {
   uiStrings: Record<string, { bn?: string; en?: string }>;
 }
 
+const linkClass = "w-fit text-brand-foreground/70 transition-colors hover:text-brand-foreground";
+const headingClass = "font-medium text-brand-foreground";
+
 /**
  * Footer from the admin "footer" menu (§9.3). "columns": each top-level item is a column
  * heading (a link if it has a target) with its children listed under it; "compact": one row
- * of links. Contact details come from the brand settings.
+ * of links. Contact details come from the brand settings. Painted in the brand color (text
+ * color is picked for contrast in the root layout), so it closes the page with the same
+ * weight as the announcement bar that opens it.
  */
 export function Footer({ brandName, footerVariant, menu, phone, email, locale, uiStrings }: FooterProps) {
   const text = uiText(uiStrings, locale);
@@ -26,15 +31,15 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale, u
   const hasContact = Boolean(phone || email);
 
   const contact = hasContact ? (
-    <div className="flex flex-col gap-2">
-      <span className="font-medium text-surface-foreground">{text("storefront.footer.contact")}</span>
+    <div className="col-span-2 flex flex-col gap-3 sm:col-span-1">
+      <span className={headingClass}>{text("storefront.footer.contact")}</span>
       {phone && (
-        <a href={`tel:${phone.replace(/\s+/g, "")}`} className="hover:text-surface-foreground">
+        <a href={`tel:${phone.replace(/\s+/g, "")}`} className={linkClass}>
           {phone}
         </a>
       )}
       {email && (
-        <a href={`mailto:${email}`} className="break-all hover:text-surface-foreground">
+        <a href={`mailto:${email}`} className={`${linkClass} break-all`}>
           {email}
         </a>
       )}
@@ -42,17 +47,18 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale, u
   ) : null;
 
   return (
-    <footer className="mt-auto border-t border-border bg-muted px-4 py-10 text-sm text-surface-foreground/70 sm:px-8">
+    <footer className="mt-auto bg-brand px-4 pb-8 pt-14 text-sm text-brand-foreground/70 sm:px-8 sm:pt-20">
       <div className="mx-auto max-w-6xl">
+        <p className="mb-10 font-display text-3xl leading-none text-brand-foreground sm:mb-14 sm:text-5xl">{brandName}</p>
         {footerVariant === "columns" ? (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((item) => (
-              <div key={item.id} className="flex flex-col gap-2">
-                <NavLink item={item} className="font-medium text-surface-foreground">
+              <div key={item.id} className="flex flex-col gap-3">
+                <NavLink item={item} className={headingClass}>
                   {item.label}
                 </NavLink>
                 {item.children.map((child) => (
-                  <NavLink key={child.id} item={child} className="hover:text-surface-foreground">
+                  <NavLink key={child.id} item={child} className={linkClass}>
                     {child.label}
                   </NavLink>
                 ))}
@@ -61,10 +67,10 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale, u
             {contact}
           </div>
         ) : (
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <nav className="flex flex-wrap gap-x-5 gap-y-2">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+            <nav className="flex flex-wrap gap-x-6 gap-y-3">
               {items.map((item) => (
-                <NavLink key={item.id} item={item} className="hover:text-surface-foreground">
+                <NavLink key={item.id} item={item} className={linkClass}>
                   {item.label}
                 </NavLink>
               ))}
@@ -72,7 +78,7 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale, u
             {contact}
           </div>
         )}
-        <p className="mt-8 border-t border-border pt-6 text-xs text-surface-foreground/50">
+        <p className="mt-14 border-t border-brand-foreground/15 pt-6 text-xs text-brand-foreground/50">
           © {year} {brandName}
         </p>
       </div>

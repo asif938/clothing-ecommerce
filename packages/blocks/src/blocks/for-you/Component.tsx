@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { t } from "@clothing/shared";
+import { PRODUCT_TILE_CLASS, ProductTileContent } from "../../product-tile.tsx";
 import type { BlockComponentProps } from "../../registry.ts";
+import { SectionHeading } from "../../section-heading.tsx";
 import type { ForYouProps } from "./schema.ts";
 
 interface ProductCard {
@@ -12,10 +14,6 @@ interface ProductCard {
   imageUrl: string | null;
   priceFrom: number;
   compareAtFrom: number | null;
-}
-
-function formatBdt(poisha: number): string {
-  return `৳${(poisha / 100).toLocaleString("en-US")}`;
 }
 
 /** The storefront's recently-viewed list (`apps/storefront/lib/use-local-list.ts`, key "recently-viewed"): product ids, most recent first. */
@@ -60,19 +58,12 @@ export function ForYouBlock({ props, locale }: BlockComponentProps<ForYouProps>)
   const lang = locale as "bn" | "en";
 
   return (
-    <section className="px-6 py-10">
-      {heading && <h2 className="mb-4 text-center text-2xl font-semibold text-surface-foreground">{t(heading, lang)}</h2>}
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+    <section className="px-4 py-12 sm:px-8 sm:py-20">
+      {heading && <SectionHeading>{t(heading, lang)}</SectionHeading>}
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 md:grid-cols-4">
         {state.products.map((product) => (
-          <a key={product.id} href={`${locale === "en" ? "/en" : ""}/p/${product.slug}`} className="group flex flex-col gap-2">
-            <div className="aspect-[3/4] overflow-hidden rounded-theme bg-muted">
-              {product.imageUrl && <img src={product.imageUrl} alt={t(product.title, lang)} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />}
-            </div>
-            <span className="truncate text-sm text-surface-foreground">{t(product.title, lang)}</span>
-            <span className="flex items-center gap-2 text-sm font-medium text-surface-foreground">
-              {formatBdt(product.priceFrom)}
-              {product.compareAtFrom && <span className="text-xs text-surface-foreground/50 line-through">{formatBdt(product.compareAtFrom)}</span>}
-            </span>
+          <a key={product.id} href={`${locale === "en" ? "/en" : ""}/p/${product.slug}`} className={PRODUCT_TILE_CLASS}>
+            <ProductTileContent product={product} locale={locale} />
           </a>
         ))}
       </div>

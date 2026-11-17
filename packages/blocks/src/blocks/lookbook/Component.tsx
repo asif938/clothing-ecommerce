@@ -1,5 +1,6 @@
 import { t } from "@clothing/shared";
 import type { BlockComponentProps } from "../../registry.ts";
+import { SectionHeading } from "../../section-heading.tsx";
 import { storeApiGet } from "../../store-api.ts";
 import { LookbookHotspotOverlay, type LookbookHotspotCard } from "./HotspotOverlay.tsx";
 import type { LookbookProps } from "./schema.ts";
@@ -18,8 +19,8 @@ export async function LookbookBlock({ props, locale }: BlockComponentProps<Lookb
   const cardsByProductId = Object.fromEntries((cards ?? []).map((card) => [card.id, card]));
 
   return (
-    <section className="px-6 py-10">
-      {props.heading && <h2 className="mb-4 text-center text-2xl font-semibold text-surface-foreground">{t(props.heading, locale as "bn" | "en")}</h2>}
+    <section className="px-4 py-12 sm:px-8 sm:py-20">
+      {props.heading && <SectionHeading>{t(props.heading, locale as "bn" | "en")}</SectionHeading>}
       <div className="relative mx-auto max-w-3xl">
         <img src={props.imageUrl} alt={props.imageAlt ? t(props.imageAlt, locale as "bn" | "en") : ""} className="w-full rounded-theme object-cover" />
         <LookbookHotspotOverlay hotspots={props.hotspots} cardsByProductId={cardsByProductId} locale={locale} />

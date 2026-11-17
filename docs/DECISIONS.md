@@ -2832,3 +2832,38 @@ not usable by the intended user.
 **Alternatives.** Generating forms from zod/JSON Schema for blocks (rejected: pickers and
 taka/poisha conversion need per-field intent the schemas don't carry); keeping JSON with better help
 text (rejected: owners still can't use it).
+
+---
+
+## 2026-11-17 — Storefront visual refresh: premium-fashion preset, fonts, shared tiles
+
+**Context.** The storefront rendered in the browser's default sans-serif (no font was being served,
+see M3 "deferred"), on pure white, with plain 2xl headings and identical grey-on-white product
+cards. It read as a wireframe next to the quality of the product photography.
+
+**Decisions.**
+- **Fonts are now served** with `next/font/google` (self-hosted at build time). `theme.fontLatin` and
+  `theme.fontBangla` pick the body pair (defaults Inter + Hind Siliguri, the pair suggested in
+  "Still owed"); this closes the font-pair item. Headlines use a display serif — Instrument Serif for
+  Latin with Noto Serif Bengali for Bangla glyphs — as part of the default look. Bangla headings are
+  set one step smaller and Bangla body gets extra line height, because Bengali glyphs run larger and
+  taller than Latin at the same size.
+- **Tokens are overridden for the storefront only** (`apps/storefront/app/[locale]/globals.css`), so
+  the admin keeps the neutral preset: a faintly warm surface/muted/border so photos sit on the page,
+  a 4px radius, and a zari-gold `--color-accent` used only for hairline ornaments, focus rings and
+  the FAQ marker, never for text. The brand color still comes from `theme.brandColor`.
+- **One product tile.** `ProductTileContent` (in `@clothing/blocks`) now backs the product-grid and
+  for-you blocks and the storefront `ProductCard`; it adds a percent-off tag computed from the two
+  server prices and a two-line title. `SectionHeading` is the shared block heading.
+- Hero text sits on a scrim tinted with the page color (bottom fade on phones, side fade from `sm`),
+  so it stays legible over any photo and for light or dark brands. The footer is painted in the brand
+  color.
+- Product-grid and category-tile links now carry the `/en` prefix in English (the for-you block
+  already did), so an English shopper is no longer sent to the Bangla page.
+
+**Not done / follow-ups.** The display font is not yet an admin setting; a `theme.fontDisplay` option
+(and a radius/accent token editor) belongs with the Design screen. Product cards still show one
+photo — a second-image hover and quick-add are the next presentation step (§4.4.3).
+
+**Alternatives.** Changing the shared `packages/config` preset (rejected: would restyle the admin);
+per-block bespoke headings (rejected: three copies of the product card had already drifted).

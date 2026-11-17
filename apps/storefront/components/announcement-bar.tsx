@@ -10,10 +10,10 @@ function BarContent({ message, linkText, linkUrl, locale }: { message: Localized
   const content = (
     <span>
       {text}
-      {linkUrl && linkText && <span className="ml-2 underline">{t(linkText, locale as "bn" | "en")}</span>}
+      {linkUrl && linkText && <span className="ml-2 underline underline-offset-4 decoration-brand-foreground/50">{t(linkText, locale as "bn" | "en")}</span>}
     </span>
   );
-  return <div className="bg-brand px-4 py-2 text-center text-xs font-medium text-brand-foreground">{linkUrl ? <a href={linkUrl}>{content}</a> : content}</div>;
+  return <div className="bg-brand px-4 py-2.5 text-center text-xs font-medium tracking-wide text-brand-foreground sm:text-[13px]">{linkUrl ? <a href={linkUrl}>{content}</a> : content}</div>;
 }
 
 /**
