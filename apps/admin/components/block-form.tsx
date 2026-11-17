@@ -104,7 +104,7 @@ function Chips({ items, onRemove }: { items: { id: string; label: string }[]; on
   );
 }
 
-function CategorySelect({ value, onChange, multiple }: { value: string | string[] | undefined; onChange: (v: string | string[] | undefined) => void; multiple: boolean }) {
+export function CategorySelect({ value, onChange, multiple }: { value: string | string[] | undefined; onChange: (v: string | string[] | undefined) => void; multiple: boolean }) {
   const t = useTranslations("blocks");
   const locale = useLocale();
   const categories = useAsync(loadCategories, [] as CategoryOption[]);
@@ -135,7 +135,7 @@ function CategorySelect({ value, onChange, multiple }: { value: string | string[
   );
 }
 
-function CollectionSelect({ value, onChange }: { value: string | undefined; onChange: (v: string | undefined) => void }) {
+export function CollectionSelect({ value, onChange }: { value: string | undefined; onChange: (v: string | undefined) => void }) {
   const t = useTranslations("blocks");
   const locale = useLocale();
   const collections = useAsync(loadCollections, [] as CollectionOption[]);

@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
+import { localized, type Localized } from "../../../../lib/format";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { CategorySelect, CollectionSelect } from "../../../../components/block-form";
+import { ProductPicker } from "../../../../components/product-picker";
+import { VariantPicker, variantLabel } from "../../../../components/variant-picker";
 
 interface PriceSchedule {
   id: string;
   targetType: string;
   targetId: string;
+  /** Product title (plus `sku` for a variant), collection/category name, or the tag itself. */
+  targetLabel: (Localized & { sku?: string }) | string | null;
   newPrice: number | null;
   percentChange: number | null;
   startsAt: string;
@@ -16,17 +22,25 @@ interface PriceSchedule {
   status: string;
 }
 
-const TARGET_TYPES = ["variant", "product", "collection", "category", "tag"] as const;
+const TARGET_TYPES = ["product", "variant", "category", "collection", "tag"] as const;
+type TargetType = (typeof TARGET_TYPES)[number];
+type PriceMode = "fixed" | "percent";
 
+/**
+ * Scheduled price changes: pick what to reprice (a product, one size/colour,
+ * a whole category or collection, or everything with a tag), the new price in
+ * taka or a percentage, and when it starts and (optionally) ends.
+ */
 export default function PriceSchedulesPage() {
   const t = useTranslations("priceSchedules");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [schedules, setSchedules] = useState<PriceSchedule[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [targetType, setTargetType] = useState<(typeof TARGET_TYPES)[number]>("variant");
-  const [targetId, setTargetId] = useState("");
-  const [newPrice, setNewPrice] = useState("");
-  const [percentChange, setPercentChange] = useState("");
+  const [targetType, setTargetType] = useState<TargetType>("product");
+  const [target, setTarget] = useState<{ id: string; label: string } | null>(null);
+  const [priceMode, setPriceMode] = useState<PriceMode>("percent");
+  const [priceValue, setPriceValue] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
 
@@ -43,19 +57,37 @@ export default function PriceSchedulesPage() {
     void load();
   }, []);
 
+  function targetText(schedule: PriceSchedule): string {
+    const label = schedule.targetLabel;
+    if (!label) return t("targetMissing");
+    if (typeof label === "string") return label;
+    return label.sku ? `${localized(label, locale)} (${label.sku})` : localized(label, locale);
+  }
+
+  function priceText(schedule: PriceSchedule): string {
+    if (schedule.newPrice !== null) return `৳${(schedule.newPrice / 100).toLocaleString()}`;
+    const pct = schedule.percentChange ?? 0;
+    return pct < 0 ? t("percentDown", { pct: Math.abs(pct) }) : t("percentUp", { pct });
+  }
+
+  const value = Number(priceValue);
+  const valueOk = priceValue !== "" && (priceMode === "fixed" ? value > 0 : value !== 0 && value > -100);
+
   async function handleCreate() {
+    if (!target || !valueOk || !startsAt) return;
     try {
       await api.post("/admin/price-schedules", {
         targetType,
-        targetId,
-        newPrice: newPrice ? Number(newPrice) : null,
-        percentChange: percentChange ? Number(percentChange) : null,
+        targetId: target.id,
+        newPrice: priceMode === "fixed" ? Math.round(value * 100) : null,
+        percentChange: priceMode === "percent" ? value : null,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: endsAt ? new Date(endsAt).toISOString() : null,
       });
-      setTargetId("");
-      setNewPrice("");
-      setPercentChange("");
+      setTarget(null);
+      setPriceValue("");
+      setStartsAt("");
+      setEndsAt("");
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create price schedule");
@@ -63,6 +95,7 @@ export default function PriceSchedulesPage() {
   }
 
   async function handleCancel(id: string) {
+    if (!window.confirm(t("cancelConfirm"))) return;
     try {
       await api.delete(`/admin/price-schedules/${id}`);
       await load();
@@ -74,14 +107,18 @@ export default function PriceSchedulesPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-surface-foreground">{t("title")}</h1>
+      <p className="text-sm text-surface-foreground/70">{t("intro")}</p>
       {error && <Banner kind="error">{error}</Banner>}
 
       <Card className="flex flex-col gap-3">
         <ul className="flex flex-col gap-1">
           {schedules.map((schedule) => (
-            <li key={schedule.id} className="flex items-center justify-between rounded-theme border border-border px-3 py-2 text-sm">
+            <li key={schedule.id} className="flex flex-wrap items-center justify-between gap-2 rounded-theme border border-border px-3 py-2 text-sm">
               <span>
-                {schedule.targetType}:{schedule.targetId} — {schedule.newPrice !== null ? schedule.newPrice : `${schedule.percentChange}%`} ({schedule.status})
+                <span className="text-surface-foreground/60">{t(`type_${schedule.targetType}`)}:</span> {targetText(schedule)} → {priceText(schedule)}
+                <span className="block text-xs text-surface-foreground/50">
+                  {new Date(schedule.startsAt).toLocaleString()} → {schedule.endsAt ? new Date(schedule.endsAt).toLocaleString() : t("noEnd")} · {t(`status_${schedule.status}`)}
+                </span>
               </span>
               {schedule.status !== "cancelled" && schedule.status !== "ended" && (
                 <button onClick={() => void handleCancel(schedule.id)} className="text-xs text-danger">
@@ -90,28 +127,84 @@ export default function PriceSchedulesPage() {
               )}
             </li>
           ))}
-          {schedules.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}
+          {schedules.length === 0 && <li className="text-sm text-surface-foreground/50">{t("empty")}</li>}
         </ul>
 
-        <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
-          <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-3 border-t border-border pt-3">
+          <h2 className="text-sm font-semibold text-surface-foreground">{t("add")}</h2>
+          <label className="flex max-w-md flex-col gap-1 text-sm">
             <span className="font-medium text-surface-foreground">{t("targetType")}</span>
-            <select className="rounded-theme border border-border bg-surface px-3 py-2 text-sm" value={targetType} onChange={(e) => setTargetType(e.target.value as (typeof TARGET_TYPES)[number])}>
+            <select
+              className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+              value={targetType}
+              onChange={(e) => {
+                setTargetType(e.target.value as TargetType);
+                setTarget(null);
+              }}
+            >
               {TARGET_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {t(`type_${type}`)}
                 </option>
               ))}
             </select>
           </label>
-          <TextField label={t("targetId")} value={targetId} onChange={(e) => setTargetId(e.target.value)} />
-          <TextField label={t("newPrice")} type="number" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
-          <TextField label={t("percentChange")} type="number" value={percentChange} onChange={(e) => setPercentChange(e.target.value)} />
-          <TextField label={t("startsAt")} type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
-          <TextField label={t("endsAt")} type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
-          <Button onClick={() => void handleCreate()} disabled={!targetId || !startsAt || (!newPrice && !percentChange)}>
-            {tCommon("create")}
-          </Button>
+
+          <div className="flex max-w-md flex-col gap-1 text-sm">
+            <span className="font-medium text-surface-foreground">{t(`pick_${targetType}`)}</span>
+            {target && targetType !== "category" && targetType !== "collection" && targetType !== "tag" ? (
+              <span className="flex items-center gap-2">
+                {target.label}
+                <button type="button" className="text-xs text-danger" onClick={() => setTarget(null)}>
+                  ×
+                </button>
+              </span>
+            ) : null}
+            {targetType === "product" && !target && <ProductPicker onPick={(p) => setTarget({ id: p.id, label: localized(p.title, locale) || p.slug })} />}
+            {targetType === "variant" && !target && <VariantPicker onPick={(v) => setTarget({ id: v.id, label: variantLabel(v, locale) })} />}
+            {targetType === "category" && (
+              <CategorySelect value={target?.id} multiple={false} onChange={(id) => setTarget(typeof id === "string" ? { id, label: id } : null)} />
+            )}
+            {targetType === "collection" && <CollectionSelect value={target?.id} onChange={(id) => setTarget(id ? { id, label: id } : null)} />}
+            {targetType === "tag" && (
+              <input
+                className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+                placeholder="eid-2026"
+                value={target?.id ?? ""}
+                onChange={(e) => setTarget(e.target.value.trim() ? { id: e.target.value.trim(), label: e.target.value.trim() } : null)}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-surface-foreground">{t("priceMode")}</span>
+              <select className="rounded-theme border border-border bg-surface px-3 py-2 text-sm" value={priceMode} onChange={(e) => setPriceMode(e.target.value as PriceMode)}>
+                <option value="percent">{t("mode_percent")}</option>
+                <option value="fixed">{t("mode_fixed")}</option>
+              </select>
+            </label>
+            <TextField
+              label={priceMode === "fixed" ? t("newPrice") : t("percentChange")}
+              type="number"
+              value={priceValue}
+              placeholder={priceMode === "fixed" ? "1500" : "-15"}
+              onChange={(e) => setPriceValue(e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-surface-foreground/60">{priceMode === "fixed" ? t("fixedHint") : t("percentHint")}</p>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <TextField label={t("startsAt")} type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+            <TextField label={t("endsAt")} type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+          </div>
+          <p className="text-xs text-surface-foreground/60">{t("endsHint")}</p>
+
+          <div>
+            <Button onClick={() => void handleCreate()} disabled={!target || !valueOk || !startsAt}>
+              {tCommon("create")}
+            </Button>
+          </div>
         </div>
       </Card>
     </div>

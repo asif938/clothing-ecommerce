@@ -18,7 +18,8 @@ export class FlashSalesService {
   ) {}
 
   list() {
-    return this.prisma.flashSale.findMany({ include: { items: true }, orderBy: { startsAt: "desc" } });
+    // Variant SKU and product title so the admin list can name what is on sale instead of showing ids.
+    return this.prisma.flashSale.findMany({ include: { items: { include: { variant: { select: { sku: true, product: { select: { title: true } } } } } } }, orderBy: { startsAt: "desc" } });
   }
 
   async get(id: string) {

@@ -22,8 +22,23 @@ export class PriceSchedulesService {
     private readonly audit: AuditService,
   ) {}
 
+  /** Each row carries `targetLabel` (product title, collection/category name, SKU or tag) so the admin list never has to show a raw id. */
   async list() {
-    return await this.prisma.priceSchedule.findMany({ orderBy: { createdAt: "desc" } });
+    const schedules = await this.prisma.priceSchedule.findMany({ orderBy: { createdAt: "desc" } });
+    const idsOf = (type: string) => [...new Set(schedules.filter((s) => s.targetType === type).map((s) => s.targetId))];
+    const [variants, products, collections, categories] = await Promise.all([
+      this.prisma.productVariant.findMany({ where: { id: { in: idsOf("variant") } }, select: { id: true, sku: true, product: { select: { title: true } } } }),
+      this.prisma.product.findMany({ where: { id: { in: idsOf("product") } }, select: { id: true, title: true } }),
+      this.prisma.collection.findMany({ where: { id: { in: idsOf("collection") } }, select: { id: true, name: true } }),
+      this.prisma.category.findMany({ where: { id: { in: idsOf("category") } }, select: { id: true, name: true } }),
+    ]);
+    const labels = new Map<string, Prisma.JsonValue | string>([
+      ...variants.map((v) => [`variant:${v.id}`, { ...(v.product.title as object), sku: v.sku }] as const),
+      ...products.map((p) => [`product:${p.id}`, p.title] as const),
+      ...collections.map((c) => [`collection:${c.id}`, c.name] as const),
+      ...categories.map((c) => [`category:${c.id}`, c.name] as const),
+    ]);
+    return schedules.map((s) => ({ ...s, targetLabel: s.targetType === "tag" ? s.targetId : (labels.get(`${s.targetType}:${s.targetId}`) ?? null) }));
   }
 
   async create(dto: CreatePriceScheduleDto, actor: AuthenticatedStaff) {

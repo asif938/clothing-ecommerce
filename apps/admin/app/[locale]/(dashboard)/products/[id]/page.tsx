@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import type { MediaRef } from "@clothing/shared/media";
 import { useParams } from "next/navigation";
@@ -9,6 +9,7 @@ import { Link } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { mediaImageLoader } from "../../../../../lib/media-image-loader";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { VariantPicker, variantLabel, type VariantOption } from "../../../../../components/variant-picker";
 import { AiAssistPanel } from "../../../../../components/ai-assist-panel";
 
 interface LocalizedText {
@@ -97,6 +98,7 @@ const BUNDLE_DISCOUNT_TYPES = ["none", "percent", "fixed_price"] as const;
 
 export default function ProductEditorPage() {
   const t = useTranslations("products");
+  const locale = useLocale();
   const tCatalog = useTranslations("catalog");
   const tCommon = useTranslations("common");
   const params = useParams<{ id: string }>();
@@ -121,8 +123,7 @@ export default function ProductEditorPage() {
   const [bundleDiscountType, setBundleDiscountType] = useState<(typeof BUNDLE_DISCOUNT_TYPES)[number]>("none");
   const [bundleDiscountValue, setBundleDiscountValue] = useState("");
 
-  const [newBundleProductId, setNewBundleProductId] = useState("");
-  const [newBundleVariantId, setNewBundleVariantId] = useState("");
+  const [newBundleVariant, setNewBundleVariant] = useState<VariantOption | null>(null);
   const [newBundleQuantity, setNewBundleQuantity] = useState("1");
 
   const [newOptionName, setNewOptionName] = useState("");
@@ -323,11 +324,10 @@ export default function ProductEditorPage() {
   }
 
   async function handleAddBundleItem() {
-    if (!newBundleProductId || !newBundleVariantId) return;
+    if (!newBundleVariant) return;
     try {
-      await api.post(`/admin/products/${productId}/bundle-items`, { componentProductId: newBundleProductId, componentVariantId: newBundleVariantId, quantity: Number(newBundleQuantity) || 1 });
-      setNewBundleProductId("");
-      setNewBundleVariantId("");
+      await api.post(`/admin/products/${productId}/bundle-items`, { componentProductId: newBundleVariant.productId, componentVariantId: newBundleVariant.id, quantity: Number(newBundleQuantity) || 1 });
+      setNewBundleVariant(null);
       setNewBundleQuantity("1");
       setBundleItems(await api.get<BundleItemEntry[]>(`/admin/products/${productId}/bundle-items`));
     } catch (err) {
@@ -677,20 +677,21 @@ export default function ProductEditorPage() {
             {bundleItems.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}
           </ul>
           <div className="flex flex-wrap items-end gap-2">
-            <input
-              className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
-              placeholder={t("componentProductId")}
-              value={newBundleProductId}
-              onChange={(e) => setNewBundleProductId(e.target.value)}
-            />
-            <input
-              className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
-              placeholder={t("componentVariantId")}
-              value={newBundleVariantId}
-              onChange={(e) => setNewBundleVariantId(e.target.value)}
-            />
+            <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
+              <span className="font-medium text-surface-foreground">{t("bundleComponent")}</span>
+              {newBundleVariant ? (
+                <span className="flex items-center gap-2">
+                  {variantLabel(newBundleVariant, locale)}
+                  <button type="button" className="text-xs text-danger" onClick={() => setNewBundleVariant(null)}>
+                    ×
+                  </button>
+                </span>
+              ) : (
+                <VariantPicker onPick={setNewBundleVariant} placeholder={t("bundleComponentSearch")} />
+              )}
+            </div>
             <TextField label={t("quantity")} type="number" value={newBundleQuantity} onChange={(e) => setNewBundleQuantity(e.target.value)} />
-            <Button variant="secondary" onClick={() => void handleAddBundleItem()}>
+            <Button variant="secondary" onClick={() => void handleAddBundleItem()} disabled={!newBundleVariant}>
               {tCatalog("add")}
             </Button>
           </div>

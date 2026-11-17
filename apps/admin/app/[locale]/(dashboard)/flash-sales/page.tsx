@@ -1,15 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
+import { localized, type Localized } from "../../../../lib/format";
 import { Banner, Button, Card, TextField, Toggle } from "../../../../components/ui";
+import { VariantPicker, variantLabel, type VariantOption } from "../../../../components/variant-picker";
 
 interface FlashSaleItem {
   variantId: string;
   salePrice: number;
   stockCap: number | null;
   soldCount: number;
+  variant?: { sku: string; product: { title: Localized } };
+}
+
+/** A row being added: the picked variant (shown by name) plus the sale price in taka and an optional quantity cap. */
+interface DraftItem {
+  variant: VariantOption;
+  salePriceTaka: string;
+  stockCap: string;
 }
 interface FlashSale {
   id: string;
@@ -24,13 +34,14 @@ interface FlashSale {
 export default function FlashSalesPage() {
   const t = useTranslations("flashSales");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [sales, setSales] = useState<FlashSale[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [nameEn, setNameEn] = useState("");
   const [nameBn, setNameBn] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [items, setItems] = useState<{ variantId: string; salePrice: string; stockCap: string }[]>([{ variantId: "", salePrice: "0", stockCap: "" }]);
+  const [items, setItems] = useState<DraftItem[]>([]);
 
   async function load() {
     try {
@@ -45,24 +56,31 @@ export default function FlashSalesPage() {
     void load();
   }, []);
 
-  function updateItem(index: number, patch: Partial<{ variantId: string; salePrice: string; stockCap: string }>) {
+  function updateItem(index: number, patch: Partial<DraftItem>) {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
+
+  function addVariant(variant: VariantOption) {
+    setItems((prev) => (prev.some((i) => i.variant.id === variant.id) ? prev : [...prev, { variant, salePriceTaka: String(Math.round(variant.price / 100)), stockCap: "" }]));
+  }
+
+  const invalidItem = items.find((i) => !(Number(i.salePriceTaka) > 0) || Number(i.salePriceTaka) * 100 >= i.variant.price);
 
   async function handleCreate() {
     try {
       await api.post("/admin/flash-sales", {
         name: { en: nameEn, bn: nameBn || undefined },
-        startsAt,
-        endsAt,
+        // datetime-local has no timezone; send the moment the owner meant in their own clock, not the server's (UTC on hosting).
+        startsAt: new Date(startsAt).toISOString(),
+        endsAt: new Date(endsAt).toISOString(),
         status: "scheduled",
-        items: items.filter((i) => i.variantId).map((i) => ({ variantId: i.variantId, salePrice: Number(i.salePrice), stockCap: i.stockCap ? Number(i.stockCap) : undefined })),
+        items: items.map((i) => ({ variantId: i.variant.id, salePrice: Math.round(Number(i.salePriceTaka) * 100), stockCap: i.stockCap ? Number(i.stockCap) : undefined })),
       });
       setNameEn("");
       setNameBn("");
       setStartsAt("");
       setEndsAt("");
-      setItems([{ variantId: "", salePrice: "0", stockCap: "" }]);
+      setItems([]);
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create flash sale");
@@ -79,6 +97,7 @@ export default function FlashSalesPage() {
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm(t("deleteConfirm"))) return;
     try {
       await api.delete(`/admin/flash-sales/${id}`);
       await load();
@@ -97,7 +116,7 @@ export default function FlashSalesPage() {
           <div key={sale.id} className="rounded-theme border border-border p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium text-surface-foreground">
-                {sale.name.en ?? sale.name.bn} <span className="text-xs text-surface-foreground/50">({sale.status})</span>
+                {localized(sale.name, locale)} <span className="text-xs text-surface-foreground/50">({t(`status_${sale.status}`)})</span>
               </span>
               <div className="flex items-center gap-3">
                 <Toggle checked={sale.status !== "disabled"} onChange={() => void handleToggleStatus(sale)} />
@@ -107,7 +126,10 @@ export default function FlashSalesPage() {
             <p className="mt-1 text-xs text-surface-foreground/50">{new Date(sale.startsAt).toLocaleString()} → {new Date(sale.endsAt).toLocaleString()}</p>
             <ul className="mt-2 flex flex-col gap-1 text-xs text-surface-foreground/70">
               {sale.items.map((item) => (
-                <li key={item.variantId}>{item.variantId}: {(item.salePrice / 100).toFixed(2)} ({item.soldCount}{item.stockCap ? `/${item.stockCap}` : ""} sold)</li>
+                <li key={item.variantId}>
+                  {item.variant ? `${localized(item.variant.product.title, locale)} (${item.variant.sku})` : item.variantId} — ৳{(item.salePrice / 100).toLocaleString()} ·{" "}
+                  {t("soldCount", { sold: item.soldCount, cap: item.stockCap ?? 0, hasCap: item.stockCap ? "yes" : "no" })}
+                </li>
               ))}
             </ul>
           </div>
@@ -122,17 +144,25 @@ export default function FlashSalesPage() {
             <TextField label={t("endsAt")} type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
           </div>
           <h3 className="text-sm font-medium text-surface-foreground">{t("items")}</h3>
+          <p className="text-xs text-surface-foreground/60">{t("itemsHint")}</p>
           {items.map((item, index) => (
-            <div key={index} className="flex flex-wrap items-end gap-2">
-              <TextField label={t("variantId")} value={item.variantId} onChange={(e) => updateItem(index, { variantId: e.target.value })} />
-              <TextField label={t("salePrice")} type="number" value={item.salePrice} onChange={(e) => updateItem(index, { salePrice: e.target.value })} />
-              <TextField label={t("stockCap")} type="number" value={item.stockCap} onChange={(e) => updateItem(index, { stockCap: e.target.value })} />
+            <div key={item.variant.id} className="flex flex-wrap items-end gap-2 rounded-theme border border-border p-2">
+              <div className="flex min-w-60 flex-1 flex-col text-sm">
+                <span className="text-surface-foreground">{variantLabel(item.variant, locale)}</span>
+                <span className="text-xs text-surface-foreground/60">{t("regularPrice", { price: (item.variant.price / 100).toLocaleString() })}</span>
+              </div>
+              <TextField label={t("salePrice")} type="number" min={1} value={item.salePriceTaka} onChange={(e) => updateItem(index, { salePriceTaka: e.target.value })} />
+              <TextField label={t("stockCap")} type="number" min={1} value={item.stockCap} placeholder={t("stockCapPlaceholder")} onChange={(e) => updateItem(index, { stockCap: e.target.value })} />
+              <button type="button" className="pb-2 text-xs text-danger" onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}>
+                {tCommon("delete")}
+              </button>
             </div>
           ))}
-          <Button variant="secondary" onClick={() => setItems((prev) => [...prev, { variantId: "", salePrice: "0", stockCap: "" }])} className="self-start">
-            + {t("addItem")}
+          <VariantPicker onPick={addVariant} placeholder={t("addItem")} />
+          {invalidItem && <span className="text-xs text-danger">{t("priceMustBeLower")}</span>}
+          <Button onClick={() => void handleCreate()} disabled={!nameEn || !startsAt || !endsAt || items.length === 0 || Boolean(invalidItem)} className="self-start">
+            {t("add")}
           </Button>
-          <Button onClick={() => void handleCreate()} disabled={!nameEn || !startsAt || !endsAt} className="self-start">{t("add")}</Button>
         </div>
       </Card>
     </div>

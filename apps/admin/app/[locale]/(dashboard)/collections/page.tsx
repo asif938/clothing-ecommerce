@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { ProductPicker } from "../../../../components/product-picker";
 
 interface LocalizedText {
   en?: string;
@@ -28,7 +29,6 @@ export default function CollectionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [nameEn, setNameEn] = useState("");
   const [type, setType] = useState<"manual" | "automatic">("manual");
-  const [productId, setProductId] = useState("");
   const [previewCount, setPreviewCount] = useState<number | null>(null);
 
   async function load() {
@@ -62,11 +62,10 @@ export default function CollectionsPage() {
     }
   }
 
-  async function handleAddProduct() {
-    if (!selected || !productId) return;
+  async function handleAddProduct(productId: string) {
+    if (!selected) return;
     try {
       await api.post(`/admin/collections/${selected.id}/products`, { productId });
-      setProductId("");
       await openCollection(selected.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to add product");
@@ -141,7 +140,7 @@ export default function CollectionsPage() {
               <ul className="flex flex-col gap-1">
                 {selected.products.map((product) => (
                   <li key={product.id} className="flex items-center justify-between rounded-theme border border-border px-3 py-2 text-sm">
-                    <span>{product.title.en}</span>
+                    <span>{product.title.en ?? product.title.bn}</span>
                     <button onClick={() => void handleRemoveProduct(product.id)} className="text-xs text-danger">
                       {tCommon("delete")}
                     </button>
@@ -149,11 +148,9 @@ export default function CollectionsPage() {
                 ))}
                 {selected.products.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}
               </ul>
-              <div className="flex items-end gap-2">
-                <TextField label={t("addProduct")} value={productId} onChange={(e) => setProductId(e.target.value)} />
-                <Button variant="secondary" onClick={() => void handleAddProduct()}>
-                  {tCommon("create")}
-                </Button>
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-surface-foreground">{t("addProduct")}</span>
+                <ProductPicker exclude={selected.products.map((p) => p.id)} onPick={(product) => void handleAddProduct(product.id)} />
               </div>
             </>
           )}
