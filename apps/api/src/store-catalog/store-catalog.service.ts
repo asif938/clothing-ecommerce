@@ -78,13 +78,37 @@ export class StoreCatalogService {
     const ordered = ids.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => !!c);
 
     return await Promise.all(
-      ordered.map(async (category) => ({
-        id: category.id,
-        slug: category.slug,
-        name: category.name,
-        imageUrl: await this.resolveImageUrl(category.imageMediaId ? imageById.get(category.imageMediaId) ?? null : null),
-      })),
+      ordered.map(async (category) => {
+        const own = category.imageMediaId ? imageById.get(category.imageMediaId) ?? null : null;
+        return {
+          id: category.id,
+          slug: category.slug,
+          name: category.name,
+          imageUrl: await this.resolveImageUrl(own ?? (await this.categoryFallbackImage(category.id))),
+        };
+      }),
     );
+  }
+
+  /**
+   * A category tile without its own image shows a photo of a product in it
+   * (or in a direct sub-category), so an owner who hasn't uploaded category
+   * art still gets a real picture instead of an empty box.
+   */
+  private async categoryFallbackImage(categoryId: string): Promise<Media | null> {
+    const children = await this.prisma.category.findMany({ where: { parentId: categoryId, deletedAt: null }, select: { id: true } });
+    const categoryIds = [categoryId, ...children.map((c) => c.id)];
+    const product = await this.prisma.product.findFirst({
+      where: {
+        deletedAt: null,
+        status: "active",
+        media: { some: {} },
+        OR: [{ categoryId: { in: categoryIds } }, { productCategories: { some: { categoryId: { in: categoryIds } } } }],
+      },
+      orderBy: { createdAt: "desc" },
+      include: { media: { orderBy: { position: "asc" }, take: 1, include: { media: true } } },
+    });
+    return product?.media[0]?.media ?? null;
   }
 
   async listProducts(query: ListProductsQuery): Promise<ProductCard[]> {

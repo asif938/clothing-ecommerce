@@ -4,6 +4,9 @@ import { slugify, uniqueSlug, t } from "@clothing/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MediaUsageService } from "../media/media-usage.service";
+import { MediaProvidersService } from "../media/media-providers.service";
+import type { MediaVariantMap } from "../media/media-driver";
+import { getMediaUrl } from "@clothing/shared/media";
 import type { AuthenticatedStaff } from "../common/types";
 import type { CreateCategoryDto, UpdateCategoryDto } from "./dto";
 
@@ -19,13 +22,24 @@ export class CategoriesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly mediaUsage: MediaUsageService,
+    private readonly mediaProviders: MediaProvidersService,
   ) {}
 
+  /** Every category, with a thumbnail URL for its own image so the admin list can show it. */
   async list() {
-    return await this.prisma.category.findMany({
+    const categories = await this.prisma.category.findMany({
       where: { deletedAt: null },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
+    const imageIds = categories.map((c) => c.imageMediaId).filter((id): id is string => !!id);
+    const images = imageIds.length > 0 ? await this.prisma.media.findMany({ where: { id: { in: imageIds }, deletedAt: null } }) : [];
+    const urlById = new Map<string, string>();
+    for (const media of images) {
+      const driver = await this.mediaProviders.resolveDriverForAsset(media);
+      const ref = driver.toMediaRef({ ...media, variants: media.variants as MediaVariantMap | null });
+      urlById.set(media.id, getMediaUrl(ref, { width: 240 }));
+    }
+    return categories.map((category) => ({ ...category, imageUrl: category.imageMediaId ? urlById.get(category.imageMediaId) ?? null : null }));
   }
 
   async get(id: string) {

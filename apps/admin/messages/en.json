@@ -316,7 +316,13 @@
     "unit": "Unit",
     "columns": "Columns (comma-separated)",
     "sizes": "Sizes (comma-separated)",
-    "confirmDelete": "Delete this?"
+    "confirmDelete": "Delete this?",
+    "image": "Tile image",
+    "imageHint": "Square photo works best (e.g. 800×800). Shown on the home page \"Shop by category\" section.",
+    "imageHelp": "Click Edit to give a category a photo. A category without its own photo shows a photo of one of its products on the home page.",
+    "noImage": "No image",
+    "hidden": "Hidden",
+    "visible": "Show this category to shoppers"
   },
   "products": {
     "title": "Products",

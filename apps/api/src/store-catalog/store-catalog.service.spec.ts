@@ -120,3 +120,45 @@ describe("StoreCatalogService.buildCategoryBreadcrumb", () => {
     expect(breadcrumb.length).toBeLessThanOrEqual(2);
   });
 });
+
+describe("StoreCatalogService.listCategories image fallback", () => {
+  function setup(productMedia: unknown) {
+    const prisma = {
+      category: {
+        findMany: vi.fn(({ where }: { where: { id?: unknown; parentId?: string } }) =>
+          Promise.resolve(
+            where.parentId
+              ? [{ id: "child" }]
+              : [
+                  { id: "own", slug: "own", name: {}, imageMediaId: "m-own" },
+                  { id: "bare", slug: "bare", name: {}, imageMediaId: null },
+                ],
+          ),
+        ),
+      },
+      media: { findMany: vi.fn(() => Promise.resolve([{ id: "m-own", variants: null }])) },
+      product: { findFirst: vi.fn(() => Promise.resolve(productMedia)) },
+    };
+    const driver = { toMediaRef: vi.fn((m: { id: string }) => ({ url: `https://img/${m.id}`, variants: null })) };
+    const mediaProviders = { resolveDriverForAsset: vi.fn(() => Promise.resolve(driver)) };
+    const service = new StoreCatalogService(prisma as never, mediaProviders as never, makeCache() as never);
+    return { service, prisma };
+  }
+
+  it("uses a product photo from the category (or its sub-categories) when the category has no image", async () => {
+    const { service, prisma } = setup({ media: [{ media: { id: "m-product", variants: null } }] });
+
+    const cards = await service.listCategories(["own", "bare"]);
+
+    expect(cards.map((c) => c.imageUrl)).toEqual([expect.stringContaining("m-own"), expect.stringContaining("m-product")]);
+    expect(prisma.product.findFirst).toHaveBeenCalledTimes(1);
+    const where = (prisma.product.findFirst.mock.calls[0] as unknown as [{ where: { OR: { categoryId: { in: string[] } }[] } }])[0].where;
+    expect(where.OR[0]!.categoryId.in).toEqual(["bare", "child"]);
+  });
+
+  it("returns no image when the category has no products with photos either", async () => {
+    const { service } = setup(null);
+    const cards = await service.listCategories(["bare"]);
+    expect(cards[0]!.imageUrl).toBeNull();
+  });
+});

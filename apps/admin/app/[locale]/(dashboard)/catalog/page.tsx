@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { MediaPickerField } from "../../../../components/media-picker";
 
 interface LocalizedText {
   en?: string;
@@ -15,6 +16,9 @@ interface Category {
   slug: string;
   parentId: string | null;
   sortOrder: number;
+  isActive: boolean;
+  imageMediaId: string | null;
+  imageUrl: string | null;
 }
 interface AttributeValue {
   id: string;
@@ -43,9 +47,59 @@ interface SizeChart {
 
 const TABS = ["categories", "attributes", "sizeSystems", "sizeCharts"] as const;
 
+/** Inline editor for one category: names in both languages, the tile image and whether shoppers see it. */
+function CategoryEditor({ category, onDone, onCancel }: { category: Category; onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations("catalog");
+  const tCommon = useTranslations("common");
+  const [nameEn, setNameEn] = useState(category.name.en ?? "");
+  const [nameBn, setNameBn] = useState(category.name.bn ?? "");
+  const [imageUrl, setImageUrl] = useState<string | null>(category.imageUrl);
+  const [imageMediaId, setImageMediaId] = useState<string | null>(category.imageMediaId);
+  const [isActive, setIsActive] = useState(category.isActive);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.patch(`/admin/categories/${category.id}`, { name: { en: nameEn, bn: nameBn || undefined }, imageMediaId, isActive });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-3">
+      {error && <Banner kind="error">{error}</Banner>}
+      <div className="flex flex-wrap gap-2">
+        <TextField label={t("name")} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+        <TextField label={t("nameBn")} value={nameBn} onChange={(e) => setNameBn(e.target.value)} />
+      </div>
+      <MediaPickerField label={t("image")} hint={t("imageHint")} value={imageUrl} onChange={setImageUrl} onPick={(item) => setImageMediaId(item?.id ?? null)} allowLink={false} />
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+        {t("visible")}
+      </label>
+      <div className="flex gap-2">
+        <Button onClick={() => void save()} disabled={saving || !nameEn}>
+          {tCommon("save")}
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
+          {tCommon("cancel")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function CategoriesTab({ categories, reload }: { categories: Category[]; reload: () => void }) {
   const t = useTranslations("catalog");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [nameEn, setNameEn] = useState("");
   const [nameBn, setNameBn] = useState("");
   const [parentId, setParentId] = useState("");
@@ -64,6 +118,7 @@ function CategoriesTab({ categories, reload }: { categories: Category[]; reload:
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/admin/categories/${id}`);
       reload();
@@ -72,19 +127,49 @@ function CategoriesTab({ categories, reload }: { categories: Category[]; reload:
     }
   }
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   return (
     <Card className="flex flex-col gap-3">
       {error && <Banner kind="error">{error}</Banner>}
+      <p className="text-xs text-surface-foreground/60">{t("imageHelp")}</p>
       <ul className="flex flex-col gap-1">
         {categories.map((category) => (
-          <li key={category.id} className="flex items-center justify-between rounded-theme border border-border px-3 py-2 text-sm">
-            <span>
-              {category.parentId && "— "}
-              {category.name.en ?? category.name.bn} <span className="text-surface-foreground/50">/{category.slug}</span>
-            </span>
-            <button onClick={() => void handleDelete(category.id)} className="text-xs text-danger">
-              {tCommon("delete")}
-            </button>
+          <li key={category.id} className="flex flex-col gap-2 rounded-theme border border-border px-3 py-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-3">
+                {category.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- arbitrary storage hosts
+                  <img src={category.imageUrl} alt="" className="h-10 w-10 rounded-theme object-cover" />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center rounded-theme border border-dashed border-border text-[10px] text-surface-foreground/40">{t("noImage")}</span>
+                )}
+                <span>
+                  {category.parentId && "— "}
+                  {(locale === "bn" ? category.name.bn ?? category.name.en : category.name.en ?? category.name.bn) ?? category.slug}{" "}
+                  <span className="text-surface-foreground/50">/{category.slug}</span>
+                  {!category.isActive && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px]">{t("hidden")}</span>}
+                </span>
+              </span>
+              <span className="flex gap-3">
+                <button onClick={() => setEditingId(editingId === category.id ? null : category.id)} className="text-xs text-brand">
+                  {tCommon("edit")}
+                </button>
+                <button onClick={() => void handleDelete(category.id)} className="text-xs text-danger">
+                  {tCommon("delete")}
+                </button>
+              </span>
+            </div>
+            {editingId === category.id && (
+              <CategoryEditor
+                category={category}
+                onDone={() => {
+                  setEditingId(null);
+                  reload();
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            )}
           </li>
         ))}
         {categories.length === 0 && <li className="text-sm text-surface-foreground/50">—</li>}

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { api, ApiError } from "../lib/api";
 import { Button } from "./ui";
 
-interface MediaItem {
+export interface MediaItem {
   id: string;
   kind: "image" | "video" | "document" | "font";
   originalName: string;
@@ -24,7 +24,23 @@ function displayUrl(item: MediaItem): string {
  * goes to the active storage provider, e.g. Cloudinary). A pasted image link
  * still works for owners who host images elsewhere.
  */
-export function MediaPickerField({ label, value, onChange, hint }: { label: string; value: string | null | undefined; onChange: (url: string | null) => void; hint?: string }) {
+export function MediaPickerField({
+  label,
+  value,
+  onChange,
+  onPick,
+  hint,
+  allowLink = true,
+}: {
+  label: string;
+  value: string | null | undefined;
+  onChange: (url: string | null) => void;
+  /** Called with the chosen library file (or null when removed) — for records that store a media id rather than a URL. */
+  onPick?: (item: MediaItem | null) => void;
+  hint?: string;
+  /** Records that store a media id can't keep a pasted link, so they hide that option. */
+  allowLink?: boolean;
+}) {
   const t = useTranslations("blocks");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<MediaItem[] | null>(null);
@@ -49,6 +65,7 @@ export function MediaPickerField({ label, value, onChange, hint }: { label: stri
       form.append("file", file);
       const media = await api.upload<MediaItem>("/admin/media", form);
       onChange(displayUrl(media));
+      onPick?.(media);
       setItems((prev) => (prev ? [media, ...prev] : prev));
       setOpen(false);
     } catch (err) {
@@ -77,17 +94,26 @@ export function MediaPickerField({ label, value, onChange, hint }: { label: stri
             {uploading ? t("uploading") : t("uploadImage")}
           </Button>
           {value && (
-            <Button type="button" variant="secondary" onClick={() => onChange(null)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                onChange(null);
+                onPick?.(null);
+              }}
+            >
               {t("removeImage")}
             </Button>
           )}
-          <button type="button" className="text-xs text-surface-foreground/60 underline" onClick={() => setShowLink((v) => !v)}>
-            {t("pasteLink")}
-          </button>
+          {allowLink && (
+            <button type="button" className="text-xs text-surface-foreground/60 underline" onClick={() => setShowLink((v) => !v)}>
+              {t("pasteLink")}
+            </button>
+          )}
         </div>
         <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
       </div>
-      {showLink && (
+      {allowLink && showLink && (
         <input
           className="rounded-theme border border-border bg-surface px-3 py-2 text-sm"
           placeholder="https://"
@@ -109,6 +135,7 @@ export function MediaPickerField({ label, value, onChange, hint }: { label: stri
                 title={item.originalName}
                 onClick={() => {
                   onChange(displayUrl(item));
+                  onPick?.(item);
                   setOpen(false);
                 }}
                 className={`overflow-hidden rounded-theme border ${value === displayUrl(item) ? "border-brand ring-2 ring-brand" : "border-border"}`}
