@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card } from "../../../../components/ui";
 import { JsonSettingEditor } from "../../../../components/json-setting-editor";
+import { MediaPickerField } from "../../../../components/media-picker";
 
 type LocalizedText = { bn?: string; en?: string };
 
@@ -131,6 +132,21 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
           </option>
         ))}
       </select>
+    );
+  } else if (widget === "image") {
+    // Upload or pick from the media library; the setting keeps the image URL (a pasted link works too).
+    control = (
+      <MediaPickerField
+        label=""
+        value={typeof value === "string" ? value : null}
+        fit="contain"
+        allowLink={false}
+        previewTone={setting.key === "brand.logoDark" ? "dark" : "light"}
+        onChange={(url) => {
+          setValue(url);
+          void save(url);
+        }}
+      />
     );
   } else if (widget === "color") {
     control = (

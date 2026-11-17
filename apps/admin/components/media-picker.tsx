@@ -31,6 +31,8 @@ export function MediaPickerField({
   onPick,
   hint,
   allowLink = true,
+  fit = "cover",
+  previewTone = "light",
 }: {
   label: string;
   value: string | null | undefined;
@@ -40,6 +42,10 @@ export function MediaPickerField({
   hint?: string;
   /** Records that store a media id can't keep a pasted link, so they hide that option. */
   allowLink?: boolean;
+  /** Logos and icons use "contain" so a wide or square mark is shown whole instead of cropped to the preview box. */
+  fit?: "cover" | "contain";
+  /** Background behind the preview — "dark" for a light-lettered logo that would vanish on white. */
+  previewTone?: "light" | "dark";
 }) {
   const t = useTranslations("blocks");
   const [open, setOpen] = useState(false);
@@ -78,11 +84,15 @@ export function MediaPickerField({
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <span className="font-medium text-surface-foreground">{label}</span>
+      {label && <span className="font-medium text-surface-foreground">{label}</span>}
       <div className="flex flex-wrap items-center gap-3">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element -- arbitrary storage hosts; next/image would need every host configured
-          <img src={value} alt="" className="h-20 w-32 rounded-theme border border-border object-cover" />
+          <img
+            src={value}
+            alt=""
+            className={`h-20 w-32 rounded-theme border border-border ${fit === "contain" ? "object-contain p-2" : "object-cover"} ${previewTone === "dark" ? "bg-brand" : fit === "contain" ? "bg-muted" : ""}`}
+          />
         ) : (
           <div className="flex h-20 w-32 items-center justify-center rounded-theme border border-dashed border-border text-xs text-surface-foreground/50">{t("noImage")}</div>
         )}

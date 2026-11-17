@@ -18,10 +18,20 @@ import { fontClassNames, fontStackCss } from "../../lib/fonts";
 import { pickForegroundColor } from "../../lib/theme";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Storefront",
-  description: "Fashion Commerce Platform — storefront",
-};
+/** A setting holding an image URL, or null when it is unset or blank. */
+function imageSetting(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  // `brand.favicon` (admin → Settings → Brand); without one the browser keeps its default icon.
+  const favicon = imageSetting((await getStoreConfig())["brand.favicon"]);
+  return {
+    title: "Storefront",
+    description: "Fashion Commerce Platform — storefront",
+    ...(favicon ? { icons: { icon: favicon, apple: favicon } } : {}),
+  };
+}
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -51,6 +61,9 @@ export default async function LocaleLayout({
   const footerVariant = (config["theme.footerVariant"] as "columns" | "compact" | undefined) ?? "columns";
   const brandName = localized(config["brand.name"], locale) || "Store";
   const maintenanceMode = config["features.maintenanceMode"] === true;
+  // Navbar sits on the light page, the footer on the dark brand color — hence two logo files (admin → Settings → Brand).
+  const logoLight = imageSetting(config["brand.logoLight"]);
+  const logoDark = imageSetting(config["brand.logoDark"]);
 
   const fontLatin = config["theme.fontLatin"];
   const fontBangla = config["theme.fontBangla"];
@@ -99,10 +112,11 @@ export default async function LocaleLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AnnouncementBar bars={announcements} locale={locale} />
           {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
-          <Header brandName={brandName} logoUrl={null} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
+          <Header brandName={brandName} logoUrl={logoLight} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
           <main className="flex-1">{children}</main>
           <Footer
             brandName={brandName}
+            logoUrl={logoDark}
             footerVariant={footerVariant}
             menu={footerMenu}
             phone={typeof config["brand.phone"] === "string" ? (config["brand.phone"] as string) : null}

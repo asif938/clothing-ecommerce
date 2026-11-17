@@ -5,6 +5,8 @@ import { NavLink } from "./nav-link";
 
 interface FooterProps {
   brandName: string;
+  /** The "logo for dark backgrounds" (`brand.logoDark`); the brand name is set in type when there isn't one. */
+  logoUrl: string | null;
   footerVariant: "columns" | "compact";
   menu: MenuData | null;
   phone: string | null;
@@ -24,7 +26,7 @@ const headingClass = "font-medium text-brand-foreground";
  * color is picked for contrast in the root layout), so it closes the page with the same
  * weight as the announcement bar that opens it.
  */
-export function Footer({ brandName, footerVariant, menu, phone, email, locale, uiStrings }: FooterProps) {
+export function Footer({ brandName, logoUrl, footerVariant, menu, phone, email, locale, uiStrings }: FooterProps) {
   const text = uiText(uiStrings, locale);
   const year = new Date().getFullYear();
   const items = toNavItems(menu, locale);
@@ -49,7 +51,14 @@ export function Footer({ brandName, footerVariant, menu, phone, email, locale, u
   return (
     <footer className="mt-auto bg-brand px-4 pb-8 pt-14 text-sm text-brand-foreground/70 sm:px-8 sm:pt-20">
       <div className="mx-auto max-w-6xl">
-        <p className="mb-10 font-display text-3xl leading-none text-brand-foreground sm:mb-14 sm:text-5xl">{brandName}</p>
+        {logoUrl ? (
+          <div className="mb-10 sm:mb-14">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo URL already comes from the media library; a custom loader adds nothing here. */}
+            <img src={logoUrl} alt={brandName} className="h-10 w-auto max-w-full sm:h-14" />
+          </div>
+        ) : (
+          <p className="mb-10 font-display text-3xl leading-none text-brand-foreground sm:mb-14 sm:text-5xl">{brandName}</p>
+        )}
         {footerVariant === "columns" ? (
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((item) => (

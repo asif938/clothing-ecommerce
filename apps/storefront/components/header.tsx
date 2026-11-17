@@ -95,7 +95,7 @@ export function Header({ brandName, logoUrl, headerVariant, menu, locale, uiStri
     <Link href="/" className="flex min-w-0 items-center font-display text-2xl leading-none text-surface-foreground lg:text-[1.65rem]">
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- brand logo URL already comes pre-sized from media settings; a custom loader adds nothing here.
-        <img src={logoUrl} alt={brandName} className="h-8 w-auto" />
+        <img src={logoUrl} alt={brandName} className="h-7 w-auto max-w-[11rem] lg:h-8 lg:max-w-[14rem]" />
       ) : (
         <span className="truncate">{brandName}</span>
       )}

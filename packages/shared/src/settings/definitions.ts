@@ -42,6 +42,10 @@ export const BRAND_LOGO_LIGHT = defineSetting({
   type: z.string().nullable(),
   default: null,
   label: { bn: "লোগো (লাইট)", en: "Logo (light background)" },
+  help: {
+    bn: "নেভবারে দেখানো হয় (সাদা/হালকা ব্যাকগ্রাউন্ডের ওপর)। স্বচ্ছ ব্যাকগ্রাউন্ডের PNG বা WebP, চওড়া আকারের (প্রায় ৪:১), কমপক্ষে ৬০০ পিক্সেল চওড়া। SVG গ্রহণযোগ্য নয়। খালি রাখলে ব্র্যান্ডের নাম লেখা দেখাবে।",
+    en: "Shown in the navbar, on a light background. Use a transparent PNG or WebP, wide (about 4:1), at least 600px across. SVG is not accepted. Leave empty to show the brand name as text.",
+  },
   secret: false,
   public: true,
   permission: "settings.brand.write",
@@ -54,6 +58,10 @@ export const BRAND_LOGO_DARK = defineSetting({
   type: z.string().nullable(),
   default: null,
   label: { bn: "লোগো (ডার্ক)", en: "Logo (dark background)" },
+  help: {
+    bn: "ফুটারে দেখানো হয় (ব্র্যান্ড রঙের গাঢ় ব্যাকগ্রাউন্ডের ওপর), তাই হালকা/সাদা রঙের লেটারিং ব্যবহার করুন। স্বচ্ছ PNG বা WebP। খালি রাখলে ব্র্যান্ডের নাম লেখা দেখাবে।",
+    en: "Shown in the footer, on the dark brand-colored background, so use light/ivory lettering. Transparent PNG or WebP. Leave empty to show the brand name as text.",
+  },
   secret: false,
   public: true,
   permission: "settings.brand.write",
@@ -66,6 +74,10 @@ export const BRAND_FAVICON = defineSetting({
   type: z.string().nullable(),
   default: null,
   label: { bn: "ফ্যাভিকন", en: "Favicon" },
+  help: {
+    bn: "ব্রাউজার ট্যাবের ছোট আইকন। বর্গাকার PNG বা WebP, কমপক্ষে ৩২×৩২ (৫১২×৫১২ হলে ভালো)।",
+    en: "The small icon in the browser tab. Square PNG or WebP, at least 32×32 (512×512 is better).",
+  },
   secret: false,
   public: true,
   permission: "settings.brand.write",
