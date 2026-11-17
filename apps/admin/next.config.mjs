@@ -34,7 +34,11 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https: ${apiOrigin}`,
       "font-src 'self' data:",
-      `connect-src 'self'${isDev ? " ws://localhost:3001 ws://127.0.0.1:3001" : ""}`,
+      // The media library uploads straight from the browser to the active
+      // storage provider (direct-upload ticket). Cloudinary's upload API has a
+      // fixed origin; without it here the browser blocks the request and the
+      // upload fails with a bare "Failed to fetch".
+      `connect-src 'self' https://api.cloudinary.com${isDev ? " ws://localhost:3001 ws://127.0.0.1:3001" : ""}`,
       `frame-src 'self' ${storefrontUrl}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",

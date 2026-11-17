@@ -153,6 +153,20 @@ export default function MediaPage() {
   async function handleUpload(file: File) {
     setUploading(true);
     setError(null);
+    const serverUpload = async () => {
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.upload("/admin/media", formData);
+    };
+    /** `fetch` rejects with a TypeError only when the request never got a response (blocked by CSP/CORS, offline, DNS) — nothing was stored, so the server upload is a safe fallback. */
+    const directFetch = async (url: string, init: RequestInit): Promise<Response | null> => {
+      try {
+        return await fetch(url, init);
+      } catch (err) {
+        if (err instanceof TypeError) return null;
+        throw err;
+      }
+    };
     try {
       const ticket = await api.post<DirectUploadTicket>("/admin/media/direct-upload-ticket", {
         mimeType: file.type || "application/octet-stream",
@@ -160,11 +174,14 @@ export default function MediaPage() {
       });
 
       if (!ticket.supported || !ticket.url) {
-        const formData = new FormData();
-        formData.append("file", file);
-        await api.upload("/admin/media", formData);
+        await serverUpload();
       } else if (ticket.method === "PUT") {
-        const putResponse = await fetch(ticket.url, { method: "PUT", headers: ticket.headers, body: file });
+        const putResponse = await directFetch(ticket.url, { method: "PUT", headers: ticket.headers, body: file });
+        if (!putResponse) {
+          await serverUpload();
+          await load();
+          return;
+        }
         if (!putResponse.ok) throw new Error("Direct upload to storage failed");
         await api.post("/admin/media/finalize", {
           storageDriver: ticket.storageDriver,
@@ -178,7 +195,12 @@ export default function MediaPage() {
         const form = new FormData();
         for (const [key, value] of Object.entries(ticket.fields ?? {})) form.append(key, value);
         form.append("file", file);
-        const postResponse = await fetch(ticket.url, { method: "POST", body: form });
+        const postResponse = await directFetch(ticket.url, { method: "POST", body: form });
+        if (!postResponse) {
+          await serverUpload();
+          await load();
+          return;
+        }
         const json = (await postResponse.json().catch(() => ({}))) as Record<string, unknown>;
         if (!postResponse.ok) throw new Error(typeof json.error === "object" && json.error && "message" in json.error ? String(json.error.message) : "Direct upload failed");
         await api.post("/admin/media/finalize", {
