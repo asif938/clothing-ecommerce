@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../components/ui";
+import { CustomerPicker, customerLabel, type CustomerOption } from "../../../../components/record-pickers";
 
 interface PushStatus {
   configured: boolean;
@@ -16,7 +17,7 @@ export default function PushPage() {
   const tCommon = useTranslations("common");
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [customerId, setCustomerId] = useState("");
+  const [testCustomer, setTestCustomer] = useState<CustomerOption | null>(null);
   const [testTitle, setTestTitle] = useState("");
   const [testBody, setTestBody] = useState("");
   const [sent, setSent] = useState(false);
@@ -48,7 +49,8 @@ export default function PushPage() {
     setError(null);
     setSent(false);
     try {
-      await api.post("/admin/push/send-test", { customerId, title: testTitle, body: testBody });
+      if (!testCustomer) return;
+      await api.post("/admin/push/send-test", { customerId: testCustomer.id, title: testTitle, body: testBody });
       setSent(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to send");
@@ -76,10 +78,19 @@ export default function PushPage() {
 
       <Card className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-surface-foreground">{t("sendTestTitle")}</h2>
-        <TextField label={t("customerId")} value={customerId} onChange={(e) => setCustomerId(e.target.value)} />
+        {testCustomer ? (
+          <span className="flex items-center gap-2 text-sm">
+            {customerLabel(testCustomer)}
+            <button type="button" className="text-xs text-danger" onClick={() => setTestCustomer(null)}>
+              ×
+            </button>
+          </span>
+        ) : (
+          <CustomerPicker onPick={setTestCustomer} />
+        )}
         <TextField label={t("testTitle")} value={testTitle} onChange={(e) => setTestTitle(e.target.value)} />
         <TextField label={t("testBody")} value={testBody} onChange={(e) => setTestBody(e.target.value)} />
-        <Button variant="secondary" onClick={() => void handleSendTest()}>
+        <Button variant="secondary" onClick={() => void handleSendTest()} disabled={!testCustomer}>
           {t("send")}
         </Button>
         {sent && <span className="text-sm text-success">{t("sent")}</span>}

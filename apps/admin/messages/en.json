@@ -47,7 +47,28 @@
     "title": "Settings",
     "saved": "Settings saved",
     "secretReplace": "Replace",
-    "mediaProviderEnv": "Default (env-configured S3/R2)"
+    "mediaProviderEnv": "Default (env-configured S3/R2)",
+    "json": {
+      "save": "Save",
+      "invalid": "That is not valid JSON — nothing was saved.",
+      "channel_live_chat": "Website live chat",
+      "channel_whatsapp": "WhatsApp",
+      "channel_messenger": "Facebook Messenger",
+      "channel_instagram": "Instagram",
+      "priority_urgent": "Urgent",
+      "priority_high": "High",
+      "priority_normal": "Normal",
+      "priority_low": "Low",
+      "slaHint": "Minutes for each ticket priority.",
+      "slaMin": "Each value must be at least 5 minutes.",
+      "presetsHint": "Amounts in taka, separated by commas (up to 8).",
+      "presetsInvalid": "Use up to 8 amounts in taka, each at least 1, separated by commas.",
+      "platform_meta": "Facebook / Instagram (Meta)",
+      "platform_google": "Google",
+      "platform_tiktok": "TikTok",
+      "platform_other": "Other",
+      "utmHint": "utm_source values in your ad links that belong to each platform, separated by commas."
+    }
   },
   "staff": {
     "title": "Staff",
@@ -3144,5 +3165,14 @@
       "yPercent": "0 = top edge, 100 = bottom edge of the photo.",
       "html": "Scripts and unsafe tags are removed when saved."
     }
+  },
+  "pickers": {
+    "searchCustomer": "Search by name, phone or email…",
+    "searchOrder": "Search by order number or phone…",
+    "chooseStaff": "Choose a staff member",
+    "mergeCustomerHint": "Find the duplicate account. Its orders, addresses and points move to this customer.",
+    "mergeCustomerConfirm": "Merge {other} into this customer? This cannot be undone.",
+    "mergeOrderHint": "Find another order from the same customer to combine into this one.",
+    "mergeOrderConfirm": "Merge order {other} into this order?"
   }
 }

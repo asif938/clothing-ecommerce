@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Link } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { CustomerPicker, customerLabel, type CustomerOption } from "../../../../../components/record-pickers";
 import { CustomerLoyaltyCard } from "../../../../../components/customer-loyalty-card";
 import { CustomerStoreCreditCard } from "../../../../../components/customer-store-credit-card";
 
@@ -40,7 +41,8 @@ export default function CustomerProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState("");
   const [notes, setNotes] = useState("");
-  const [mergeId, setMergeId] = useState("");
+  const [mergeCustomer, setMergeCustomer] = useState<CustomerOption | null>(null);
+  const tPick = useTranslations("pickers");
 
   async function load() {
     try {
@@ -77,10 +79,11 @@ export default function CustomerProfilePage() {
   }
 
   async function handleMerge() {
-    if (!mergeId) return;
+    if (!mergeCustomer) return;
+    if (!window.confirm(tPick("mergeCustomerConfirm", { other: customerLabel(mergeCustomer) }))) return;
     try {
-      await api.post("/admin/customers/merge", { keepCustomerId: id, mergeCustomerId: mergeId });
-      setMergeId("");
+      await api.post("/admin/customers/merge", { keepCustomerId: id, mergeCustomerId: mergeCustomer.id });
+      setMergeCustomer(null);
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to merge customers");
@@ -142,8 +145,20 @@ export default function CustomerProfilePage() {
       <Card className="flex flex-col gap-3">
         <h2 className="font-medium text-surface-foreground">{t("mergeDuplicate")}</h2>
         <div className="flex flex-wrap items-end gap-2">
-          <TextField label={t("mergeCustomerId")} value={mergeId} onChange={(e) => setMergeId(e.target.value)} />
-          <Button variant="secondary" onClick={() => void handleMerge()} disabled={!mergeId}>{t("merge")}</Button>
+          <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
+            <span className="text-xs text-surface-foreground/60">{tPick("mergeCustomerHint")}</span>
+            {mergeCustomer ? (
+              <span className="flex items-center gap-2">
+                {customerLabel(mergeCustomer)}
+                <button type="button" className="text-xs text-danger" onClick={() => setMergeCustomer(null)}>
+                  ×
+                </button>
+              </span>
+            ) : (
+              <CustomerPicker exclude={[id]} onPick={setMergeCustomer} />
+            )}
+          </div>
+          <Button variant="secondary" onClick={() => void handleMerge()} disabled={!mergeCustomer}>{t("merge")}</Button>
         </div>
       </Card>
 

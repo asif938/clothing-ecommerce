@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { AUTOMATION_ACTION_TYPES, AUTOMATION_TRIGGERS, type AutomationAction, type AutomationRuleInput, type AutomationTemplate, type ConditionGroup } from "@clothing/shared/automation";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card, TextField, Toggle } from "../../../../components/ui";
+import { OrderPicker, StaffSelect, orderLabel } from "../../../../components/record-pickers";
 import { ConditionBuilder } from "../../../../components/condition-builder";
 
 interface RuleRow {
@@ -104,7 +105,12 @@ function ActionEditor({ action, onChange, onRemove }: { action: AutomationAction
           <TextField label={t("reason")} value={action.reason ?? ""} onChange={(e) => onChange({ ...action, reason: e.target.value })} />
         </>
       )}
-      {action.type === "assign_staff" && <TextField label={t("staffId")} value={action.staffId} onChange={(e) => onChange({ ...action, staffId: e.target.value })} />}
+      {action.type === "assign_staff" && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-surface-foreground">{t("staffId")}</span>
+          <StaffSelect value={action.staffId} onChange={(staffId) => onChange({ ...action, staffId })} />
+        </label>
+      )}
       {action.type === "notify_staff" && (
         <>
           <TextField label={t("permission")} value={action.permission} onChange={(e) => onChange({ ...action, permission: e.target.value })} />
@@ -134,6 +140,7 @@ export default function AutomationPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string | null; rule: AutomationRuleInput } | null>(null);
   const [testOrderId, setTestOrderId] = useState("");
+  const [testOrderLabel, setTestOrderLabel] = useState("");
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   const load = useCallback(async () => {
@@ -253,7 +260,31 @@ export default function AutomationPage() {
             <h3 className="text-sm font-semibold text-surface-foreground">{t("testTitle")}</h3>
             <p className="text-xs text-surface-foreground/60">{t("testHelp")}</p>
             <div className="flex items-end gap-2">
-              <TextField label={t("orderId")} value={testOrderId} onChange={(e) => setTestOrderId(e.target.value)} />
+              <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
+                <span className="font-medium text-surface-foreground">{t("orderId")}</span>
+                {testOrderLabel ? (
+                  <span className="flex items-center gap-2">
+                    {testOrderLabel}
+                    <button
+                      type="button"
+                      className="text-xs text-danger"
+                      onClick={() => {
+                        setTestOrderId("");
+                        setTestOrderLabel("");
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ) : (
+                  <OrderPicker
+                    onPick={(o) => {
+                      setTestOrderId(o.id);
+                      setTestOrderLabel(orderLabel(o));
+                    }}
+                  />
+                )}
+              </div>
               <Button type="button" variant="secondary" onClick={() => void runTest()}>
                 {t("runTest")}
               </Button>

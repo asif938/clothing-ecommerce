@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../../lib/api";
 import { Banner, Button, Card } from "../../../../components/ui";
+import { JsonSettingEditor } from "../../../../components/json-setting-editor";
 
 type LocalizedText = { bn?: string; en?: string };
 
@@ -25,8 +26,9 @@ interface SettingRow {
   isOverridden: boolean;
 }
 
-function labelOf(text: LocalizedText | null | undefined): string {
-  return text?.en ?? text?.bn ?? "";
+/** The label in the admin's current language, falling back to the other one. */
+function labelOf(text: LocalizedText | null | undefined, locale: string): string {
+  return (locale === "bn" ? text?.bn || text?.en : text?.en || text?.bn) ?? "";
 }
 
 interface StorageProviderInstance {
@@ -39,6 +41,7 @@ interface StorageProviderInstance {
 function SettingField({ setting, onSaved, storageInstances }: { setting: SettingRow; onSaved: () => void; storageInstances: StorageProviderInstance[] }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [value, setValue] = useState<unknown>(setting.value);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +63,7 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
   }
 
   const widget = setting.ui.widget;
-  const label = labelOf(setting.label) || setting.key;
+  const label = labelOf(setting.label, locale) || setting.key;
 
   let control: React.ReactNode;
   if (setting.key === "media.defaultProvider") {
@@ -124,7 +127,7 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
       >
         {setting.ui.options?.map((option) => (
           <option key={option.value} value={option.value}>
-            {labelOf(option.label) || option.value}
+            {labelOf(option.label, locale) || option.value}
           </option>
         ))}
       </select>
@@ -151,20 +154,29 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
         />
       </div>
     );
-  } else if (widget === "json") {
+  } else if (widget === "money") {
+    // Stored in poisha (golden rule 3), shown and typed in taka; empty means "not set" where the setting allows it.
     control = (
-      <textarea
-        className="h-24 w-full rounded-theme border border-border bg-surface px-3 py-2 font-mono text-xs"
-        defaultValue={JSON.stringify(value ?? null, null, 2)}
-        onBlur={(e) => {
-          try {
-            void save(JSON.parse(e.target.value));
-          } catch {
-            setError("Invalid JSON");
-          }
-        }}
-      />
+      <label className="flex items-center gap-2 text-sm">
+        ৳
+        <input
+          type="number"
+          min={0}
+          step="any"
+          className="w-48 rounded-theme border border-border bg-surface px-3 py-2 text-sm"
+          defaultValue={typeof value === "number" ? value / 100 : ""}
+          onBlur={(e) => {
+            const raw = e.target.value.trim();
+            const next = raw === "" ? null : Math.round(Number(raw) * 100);
+            if (next !== null && !Number.isFinite(next)) return;
+            setValue(next);
+            void save(next);
+          }}
+        />
+      </label>
     );
+  } else if (widget === "json") {
+    control = <JsonSettingEditor settingKey={setting.key} value={value} onSave={(next) => void save(next)} />;
   } else if (widget === "textarea" || widget === "code") {
     control = (
       <textarea
@@ -194,7 +206,7 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
         {busy && <span className="text-xs text-surface-foreground/50">{tCommon("loading")}</span>}
         {saved && !busy && <span className="text-xs text-success">{t("saved")}</span>}
       </div>
-      {setting.help && <p className="text-xs text-surface-foreground/60">{labelOf(setting.help)}</p>}
+      {setting.help && <p className="text-xs text-surface-foreground/60">{labelOf(setting.help, locale)}</p>}
       {control}
       {error && <span className="text-xs text-danger">{error}</span>}
     </div>

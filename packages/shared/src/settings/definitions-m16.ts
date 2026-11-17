@@ -64,7 +64,7 @@ export const GIFT_CARDS_PRESETS = defineSetting({
   group: "rewards",
   type: z.array(z.number().int().min(100)).max(8),
   default: [50_000, 100_000, 200_000, 500_000],
-  label: { bn: "গিফট কার্ডের নির্ধারিত মূল্য (পয়সা)", en: "Gift card preset amounts (poisha)" },
+  label: { bn: "গিফট কার্ডের নির্ধারিত মূল্য (৳)", en: "Gift card preset amounts (৳)" },
   secret: false,
   public: true,
   permission: PERMISSION,

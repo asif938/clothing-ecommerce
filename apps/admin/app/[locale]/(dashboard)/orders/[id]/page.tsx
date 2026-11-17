@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Link, useRouter } from "../../../../../i18n/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { Banner, Button, Card, TextField } from "../../../../../components/ui";
+import { OrderPicker, orderLabel } from "../../../../../components/record-pickers";
 import { useCurrentStaff } from "../../../../../lib/use-current-staff";
 import { CallButton } from "../../../../../components/call-button";
 
@@ -103,7 +104,7 @@ export default function OrderDetailPage() {
   const { hasPermission } = useCurrentStaff();
   const [splitQty, setSplitQty] = useState<Record<string, number>>({});
   const [splitShipping, setSplitShipping] = useState("0");
-  const [mergeWith, setMergeWith] = useState("");
+  const tPick = useTranslations("pickers");
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -163,7 +164,6 @@ export default function OrderDetailPage() {
   async function mergeInto(sourceOrderId: string) {
     if (!order || !sourceOrderId.trim()) return;
     await act("/admin/orders/merge", { targetOrderId: order.id, sourceOrderIds: [sourceOrderId.trim()], reason: null });
-    setMergeWith("");
   }
 
   async function splitOff() {
@@ -303,11 +303,14 @@ export default function OrderDetailPage() {
                 </Button>
               </div>
             ))}
-            <div className="flex items-end gap-2">
-              <TextField label={t("mergeSplit.otherOrderId")} value={mergeWith} onChange={(e) => setMergeWith(e.target.value)} />
-              <Button variant="secondary" disabled={!mergeWith.trim()} onClick={() => void mergeInto(mergeWith)}>
-                {t("mergeSplit.merge")}
-              </Button>
+            <div className="flex flex-col gap-1 text-sm">
+              <span className="text-xs text-surface-foreground/60">{tPick("mergeOrderHint")}</span>
+              <OrderPicker
+                exclude={order ? [order.id] : []}
+                onPick={(other) => {
+                  if (window.confirm(tPick("mergeOrderConfirm", { other: orderLabel(other) }))) void mergeInto(other.id);
+                }}
+              />
             </div>
           </div>
           {canSplit && (
