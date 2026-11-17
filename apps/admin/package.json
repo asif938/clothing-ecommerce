@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clothing/blocks": "workspace:*",
     "@clothing/sdk": "workspace:*",
     "@clothing/shared": "workspace:*",
     "@clothing/ui": "workspace:*",

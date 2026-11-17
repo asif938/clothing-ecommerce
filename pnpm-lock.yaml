@@ -23,6 +23,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@clothing/blocks':
+        specifier: workspace:*
+        version: link:../../packages/blocks
       '@clothing/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
