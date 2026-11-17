@@ -395,6 +395,15 @@ export class CatalogImportService implements OnModuleInit {
     if (row.seoDescription) data.seoDescription = mergeLocalized(existing?.seoDescription, row.seoDescription);
     if (row.isFeatured !== undefined) data.isFeatured = row.isFeatured;
 
+    // Deleting a product in the admin only soft-deletes it (deletedAt + archived),
+    // and slugs stay unique, so a re-import of the same slug lands on that hidden
+    // row. Without reviving it the import reported success while the product
+    // stayed invisible in the admin and the storefront.
+    if (existing?.deletedAt) {
+      data.deletedAt = null;
+      if (!row.status) data.status = "draft";
+    }
+
     if (!existing) {
       return await this.prisma.product.create({
         data: {

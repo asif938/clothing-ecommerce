@@ -383,6 +383,19 @@ describe("CatalogImportService — other cases", () => {
     expect(job).toMatchObject({ updatedRows: 1, createdRows: 0 });
   });
 
+  it("brings back a product that was deleted in the admin when the same slug is imported again", async () => {
+    const ctx = makeService();
+    const first = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,100000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(first.id);
+    Object.assign(ctx.products[0]!, { deletedAt: new Date(), status: "archived" });
+
+    const second = await ctx.service.create({ buffer: csv(OLD_HEADER, ["A1,panjabi,Panjabi,150000,10"]), fileName: "p.csv" }, actor);
+    await ctx.runJob(second.id);
+
+    expect(ctx.products).toHaveLength(1);
+    expect(ctx.products[0]).toMatchObject({ deletedAt: null, status: "draft" });
+  });
+
   it("applies an explicit staff mapping and price unit over the auto-suggestion", async () => {
     const { service, runJob, variants } = makeService();
     const header = "Code,Group,Selling Price\n";
