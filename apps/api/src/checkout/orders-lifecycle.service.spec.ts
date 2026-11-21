@@ -21,10 +21,12 @@ interface FakeOrder {
 
 function makeTx(order: FakeOrder) {
   return {
-    order: { findUniqueOrThrow: vi.fn(() => Promise.resolve(order)), update: vi.fn() },
+    order: { findUniqueOrThrow: vi.fn(() => Promise.resolve(order)), findUnique: vi.fn(() => Promise.resolve(order)), update: vi.fn(), updateMany: vi.fn(() => Promise.resolve({ count: 1 })) },
     orderEvent: { create: vi.fn() },
     refund: { create: vi.fn() },
-    discountUsage: { deleteMany: vi.fn() },
+    discountUsage: { deleteMany: vi.fn(), findMany: vi.fn(() => Promise.resolve([] as { discountId: string; code: string | null }[])) },
+    discount: { updateMany: vi.fn() },
+    discountCode: { updateMany: vi.fn() },
     shipment: { findFirst: vi.fn(() => Promise.resolve(null)) },
   };
 }
@@ -38,10 +40,10 @@ function makeService(order: FakeOrder, settings: Record<string, unknown> = {}) {
   const notifications = { commonVariables: vi.fn(() => Promise.resolve({ brand_name: "Demo Fashion", support_phone: "01700-000000" })), enqueue: vi.fn(() => Promise.resolve()) };
   const tracking = { recordPurchase: vi.fn(() => Promise.resolve()) };
   const automationOutbox = { enqueue: vi.fn(() => Promise.resolve()) };
-  const staffNotifications = { notifyPaymentFailed: vi.fn(() => Promise.resolve()) };
+  const staffNotifications = { notifyPaymentFailed: vi.fn(() => Promise.resolve()), notifyPaymentNeedsRefund: vi.fn(() => Promise.resolve()) };
   const tenders = { restoreInTx: vi.fn(() => Promise.resolve(0)) };
   const service = new OrdersLifecycleService(prisma as never, settingsService as never, audit as never, stock as never, notifications as never, tracking as never, automationOutbox as never, staffNotifications as never, tenders as never);
-  return { service, tx, prisma, audit, stock, notifications, tracking, automationOutbox, tenders };
+  return { service, tx, prisma, audit, stock, notifications, tracking, automationOutbox, tenders, staffNotifications };
 }
 
 function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
@@ -198,5 +200,53 @@ describe("OrdersLifecycleService.transition", () => {
       expect.anything(),
       expect.objectContaining({ event: "order_cancelled", recipientType: "guest", recipientId: null, contacts: { sms: "+8801800000000", whatsapp: "+8801800000000", email: null } }),
     );
+  });
+});
+
+describe("OrdersLifecycleService payment settlement", () => {
+  const paymentOrder = (overrides: Record<string, unknown> = {}) => ({ ...order({ status: "pending_payment", total: 100000 }), riskLevel: "low", advancePaid: 0, ...overrides }) as unknown as FakeOrder;
+
+  it("moves a pending_payment order to pending and credits the payment", async () => {
+    const { service, tx, automationOutbox } = makeService(paymentOrder());
+    await service.onPaymentSucceeded("o1", "full", 100000, "p1");
+    expect(tx.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "o1", status: "pending_payment" }, data: expect.objectContaining({ status: "pending", paidTotal: 100000, paymentStatus: "paid" }) }),
+    );
+    expect(automationOutbox.enqueue).toHaveBeenCalledWith(tx, "order.placed", "o1");
+    expect(tx.refund.create).not.toHaveBeenCalled();
+  });
+
+  it("opens a refund instead of dropping money paid for an expired order", async () => {
+    const { service, tx, staffNotifications, automationOutbox } = makeService(paymentOrder({ status: "expired" }));
+    await service.onPaymentSucceeded("o1", "full", 100000, "p1");
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.order.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ paidTotal: 100000 }) }));
+    expect(tx.refund.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ orderId: "o1", paymentId: "p1", amount: 100000, status: "pending" }) }));
+    expect(staffNotifications.notifyPaymentNeedsRefund).toHaveBeenCalled();
+    expect(automationOutbox.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("treats a payment that lost the race (the order moved meanwhile) as a refund, never a second credit", async () => {
+    const { service, tx } = makeService(paymentOrder());
+    tx.order.updateMany.mockResolvedValueOnce({ count: 0 });
+    await service.onPaymentSucceeded("o1", "full", 100000, "p2");
+    expect(tx.refund.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ paymentId: "p2", amount: 100000 }) }));
+  });
+
+  it("records an amount mismatch and refunds what the gateway actually took", async () => {
+    const { service, tx, staffNotifications } = makeService(paymentOrder());
+    await service.onPaymentAmountMismatch("o1", "p1", 100000, 1000);
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.order.update).not.toHaveBeenCalled();
+    expect(tx.refund.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ amount: 1000, paymentId: "p1" }) }));
+    expect(staffNotifications.notifyPaymentNeedsRefund).toHaveBeenCalled();
+  });
+
+  it("gives discount counters back when a cancellation releases coupon usage", async () => {
+    const { service, tx } = makeService(order({ status: "pending" }), { "orders.releaseCouponUsageOnCancel": true });
+    tx.discountUsage.findMany.mockResolvedValueOnce([{ discountId: "d1", code: "VIPAB12" }]);
+    await service.transition({ orderId: "o1", to: "cancelled", actor: { type: "customer", id: "c1" } });
+    expect(tx.discount.updateMany).toHaveBeenCalledWith({ where: { id: "d1", usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+    expect(tx.discountCode.updateMany).toHaveBeenCalledWith({ where: { code: "VIPAB12", discountId: "d1", usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
   });
 });

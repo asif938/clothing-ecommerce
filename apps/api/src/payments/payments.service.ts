@@ -59,8 +59,10 @@ export class PaymentsService {
       ? await this.prisma.providerInstance.findUnique({ where: { id: instanceId } })
       : await this.prisma.providerInstance.findFirst({ where: { capability: "payment", driver: method, enabled: true } });
 
+    // No silent mock fallback: the mock gateway always reports success, so it
+    // must only ever run when staff deliberately enabled a mock provider
+    // instance in the admin panel (docs/DECISIONS.md 2026-11-22).
     if (!instance) {
-      if (method === "mock") return { driver: createMockPaymentDriver(mockPaymentConfigSchema.parse({})), providerInstanceId: null };
       throw new BadRequestException({ code: "PAYMENT_METHOD_NOT_CONFIGURED", message: `${method} is not currently available.` });
     }
     const config = this.registry.decryptConfig(instance.config);
@@ -132,15 +134,29 @@ export class PaymentsService {
 
     if (result.status === "succeeded") {
       if (result.amount !== undefined && result.amount !== payment.amount) {
-        this.logger.warn(`Payment ${payment.id} verified amount ${result.amount} differs from expected ${payment.amount}`);
+        // Never credit an order with money the gateway didn't confirm. Whatever was actually received goes to staff as a refund to review.
+        this.logger.error(`Payment ${payment.id} verified amount ${result.amount} differs from expected ${payment.amount} — not crediting the order`);
+        const claimed = await this.claimPayment(payment.id, "failed", result.raw);
+        if (claimed) await this.lifecycle.onPaymentAmountMismatch(payment.orderId, payment.id, payment.amount, result.amount);
+        return;
       }
-      await this.prisma.payment.update({ where: { id: payment.id }, data: { status: "succeeded", paidAt: new Date(), raw: toJsonInput(result.raw) } });
-      await this.lifecycle.onPaymentSucceeded(payment.orderId, payment.purpose, payment.amount);
+      // Claim the row atomically: when a callback and a redirect (or the reconciliation job) race, only one of them moves money onto the order.
+      const claimed = await this.claimPayment(payment.id, "succeeded", result.raw);
+      if (claimed) await this.lifecycle.onPaymentSucceeded(payment.orderId, payment.purpose, payment.amount, payment.id);
     } else if (result.status === "failed") {
-      await this.prisma.payment.update({ where: { id: payment.id }, data: { status: "failed", raw: toJsonInput(result.raw) } });
-      await this.lifecycle.onPaymentFailed(payment.orderId);
+      const claimed = await this.claimPayment(payment.id, "failed", result.raw);
+      if (claimed) await this.lifecycle.onPaymentFailed(payment.orderId);
     }
     // "pending" result: leave as-is, the reconciliation job will re-check later.
+  }
+
+  /** Settles a still-open payment row. Returns false when another request already settled it (conditional update, so concurrent callbacks can't both win). */
+  private async claimPayment(paymentId: string, status: "succeeded" | "failed", raw: unknown): Promise<boolean> {
+    const { count } = await this.prisma.payment.updateMany({
+      where: { id: paymentId, status: { in: ["initiated", "pending"] } },
+      data: { status, raw: toJsonInput(raw), ...(status === "succeeded" ? { paidAt: new Date() } : {}) },
+    });
+    return count === 1;
   }
 
   /** Reconciliation (§10.1): "reconcile pending payments older than 15 min by querying the provider." */

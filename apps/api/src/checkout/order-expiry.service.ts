@@ -24,8 +24,12 @@ export class OrderExpiryService {
       include: { items: { select: { variantId: true, locationId: true, quantity: true } } },
     });
 
+    let expiredCount = 0;
     for (const order of expiredOrders) {
-      await this.prisma.$transaction(async (tx) => {
+      const expired = await this.prisma.$transaction(async (tx) => {
+        // Claim the order first: a payment that landed since the query above wins, and this order is left alone.
+        const { count } = await tx.order.updateMany({ where: { id: order.id, status: "pending_payment" }, data: { status: "expired" } });
+        if (count === 0) return false;
         const linesByLocation = new Map<string, { variantId: string; quantity: number }[]>();
         for (const item of order.items) {
           linesByLocation.set(item.locationId, [...(linesByLocation.get(item.locationId) ?? []), { variantId: item.variantId, quantity: item.quantity }]);
@@ -37,10 +41,13 @@ export class OrderExpiryService {
         const restored = await this.tenders.restoreInTx(tx, order, "Order expired unpaid");
         await tx.order.update({ where: { id: order.id }, data: { status: "expired", reservationReleasedAt: new Date(), ...(restored > 0 ? { paidTotal: Math.max(0, order.paidTotal - restored) } : {}) } });
         await tx.orderEvent.create({ data: { orderId: order.id, type: "status_change", data: { from: "pending_payment", to: "expired", reason: "payment_timeout" } } });
+        return true;
       });
+      if (!expired) continue;
+      expiredCount += 1;
       this.logger.log(`Order ${order.orderNumber} expired — stock reservation released`);
     }
 
-    return { expired: expiredOrders.length };
+    return { expired: expiredCount };
   }
 }

@@ -153,7 +153,15 @@ export class OrdersLifecycleService {
       }
 
       const releaseCouponUsage = await this.settings.getValue<boolean>("orders.releaseCouponUsageOnCancel");
-      if (releaseCouponUsage) await tx.discountUsage.deleteMany({ where: { orderId: order.id } });
+      if (releaseCouponUsage) {
+        // Give the counters back too — `totalUses` limits read `discount.usedCount`, and a single-use bulk code becomes usable again.
+        const usages = await tx.discountUsage.findMany({ where: { orderId: order.id }, select: { discountId: true, code: true } });
+        for (const usage of usages) {
+          await tx.discount.updateMany({ where: { id: usage.discountId, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+          if (usage.code) await tx.discountCode.updateMany({ where: { code: usage.code, discountId: usage.discountId, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+        }
+        await tx.discountUsage.deleteMany({ where: { orderId: order.id } });
+      }
     }
     if (input.to === "delivered" || input.to === "partially_delivered") {
       if (!order.deliveredAt) data.deliveredAt = new Date();
@@ -239,30 +247,77 @@ export class OrdersLifecycleService {
   }
 
   /** §6.8 "pending_payment → pending on payment success, or → on_hold instead when high-risk" — unchanged from M5 (this is not a generic `transition()` move since it originates from a payment event, not a staff/courier action). */
-  async onPaymentSucceeded(orderId: string, purpose: PaymentPurpose, amount: number): Promise<void> {
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
-    if (!order || order.status !== "pending_payment") return; // already processed — idempotent no-op
-
+  async onPaymentSucceeded(orderId: string, purpose: PaymentPurpose, amount: number, paymentId: string | null = null): Promise<void> {
     const holdHighRisk = await this.settings.getValue<boolean>("risk.holdHighRisk");
-    const nextStatus = order.riskLevel === "high" && holdHighRisk ? "on_hold" : "pending";
 
-    const advancePaid = purpose === "advance" ? order.advancePaid + amount : order.advancePaid;
-    const paidTotal = order.paidTotal + amount;
-    // `paidTotal` (not just the advance) so gift card / store credit tenders paid at placement (§16 M16) aren't collected twice at the door.
-    const codAmount = purpose === "advance" ? Math.max(0, order.total - paidTotal) : order.codAmount;
-    const paymentStatus = purpose === "full" || paidTotal >= order.total ? "paid" : "partially_paid";
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) return null;
 
-    await this.prisma.$transaction([
-      this.prisma.order.update({
-        where: { id: orderId },
-        data: { status: nextStatus, advancePaid, paidTotal, codAmount, paymentStatus, paymentTimeoutAt: null },
-      }),
-      this.prisma.orderEvent.create({ data: { orderId, type: "payment", data: { purpose, amount, result: "succeeded" } } }),
-      this.prisma.orderEvent.create({ data: { orderId, type: "status_change", data: { from: "pending_payment", to: nextStatus } } }),
-    ]);
-    // The order is only now a real, workable order (§16 M11): fire the placement trigger that checkout deferred.
-    await this.automationOutbox.enqueue(this.prisma, "order.placed", orderId);
-    this.logger.log(`Order ${order.orderNumber} → ${nextStatus} after ${purpose} payment of ${amount}`);
+      if (order.status === "pending_payment") {
+        const nextStatus = order.riskLevel === "high" && holdHighRisk ? "on_hold" : "pending";
+        const advancePaid = purpose === "advance" ? order.advancePaid + amount : order.advancePaid;
+        const paidTotal = order.paidTotal + amount;
+        // `paidTotal` (not just the advance) so gift card / store credit tenders paid at placement (§16 M16) aren't collected twice at the door.
+        const codAmount = purpose === "advance" ? Math.max(0, order.total - paidTotal) : order.codAmount;
+        const paymentStatus = purpose === "full" || paidTotal >= order.total ? "paid" : "partially_paid";
+
+        // Conditional on the status we just read: the expiry sweep (or a second payment) racing us can't both move this order.
+        const { count } = await tx.order.updateMany({
+          where: { id: orderId, status: "pending_payment" },
+          data: { status: nextStatus, advancePaid, paidTotal, codAmount, paymentStatus, paymentTimeoutAt: null },
+        });
+        if (count === 1) {
+          await tx.orderEvent.create({ data: { orderId, type: "payment", data: { purpose, amount, result: "succeeded" } } });
+          await tx.orderEvent.create({ data: { orderId, type: "status_change", data: { from: "pending_payment", to: nextStatus } } });
+          // The order is only now a real, workable order (§16 M11): fire the placement trigger that checkout deferred.
+          await this.automationOutbox.enqueue(tx, "order.placed", orderId);
+          return { kind: "applied" as const, order, nextStatus };
+        }
+      }
+
+      // Money arrived for an order that is no longer waiting for it (expired, cancelled, or already paid by another payment).
+      // The customer has paid, so record the money and open a refund for staff — never drop it silently.
+      const current = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      const paidTotal = current.paidTotal + amount;
+      await tx.order.update({ where: { id: orderId }, data: { paidTotal, paymentStatus: paidTotal >= current.total ? "paid" : "partially_paid" } });
+      await tx.refund.create({
+        data: { orderId, paymentId, amount, method: "original", status: "pending", reason: `Payment received while the order was "${current.status}"` },
+      });
+      await tx.orderEvent.create({ data: { orderId, type: "payment", data: { purpose, amount, result: "succeeded_late", orderStatus: current.status } } });
+      await tx.orderEvent.create({ data: { orderId, type: "refund", data: { reason: "late_payment", amount } } });
+      return { kind: "late" as const, order: current };
+    });
+
+    if (!outcome) return;
+    if (outcome.kind === "applied") {
+      this.logger.log(`Order ${outcome.order.orderNumber} → ${outcome.nextStatus} after ${purpose} payment of ${amount}`);
+      return;
+    }
+    this.logger.warn(`Order ${outcome.order.orderNumber} received a ${amount} payment while "${outcome.order.status}" — refund opened`);
+    await this.staffNotifications
+      .notifyPaymentNeedsRefund(outcome.order)
+      .catch((error: unknown) => this.logger.warn(`Late-payment alert failed: ${error instanceof Error ? error.message : "Unknown error"}`));
+  }
+
+  /** The gateway confirmed a different amount than this payment asked for: the order is not credited, and whatever the gateway did take becomes a refund for staff to review. */
+  async onPaymentAmountMismatch(orderId: string, paymentId: string, expected: number, received: number): Promise<void> {
+    const order = await this.prisma.$transaction(async (tx) => {
+      const found = await tx.order.findUnique({ where: { id: orderId }, select: { id: true, orderNumber: true } });
+      if (!found) return null;
+      await tx.orderEvent.create({ data: { orderId, type: "payment", data: { result: "amount_mismatch", expected, received } } });
+      if (received > 0) {
+        await tx.refund.create({
+          data: { orderId, paymentId, amount: received, method: "original", status: "pending", reason: `Gateway confirmed ${received} instead of ${expected}` },
+        });
+      }
+      return found;
+    });
+    if (order) {
+      await this.staffNotifications
+        .notifyPaymentNeedsRefund(order)
+        .catch((error: unknown) => this.logger.warn(`Amount-mismatch alert failed: ${error instanceof Error ? error.message : "Unknown error"}`));
+    }
   }
 
   /** §7.5: "Failure/cancel → back to checkout with message and a retry button; order remains pending_payment until timeout." No status change — just a record. */

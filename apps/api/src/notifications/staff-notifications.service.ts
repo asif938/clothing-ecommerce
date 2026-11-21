@@ -95,6 +95,20 @@ export class StaffNotificationsService {
     });
   }
 
+  /** A payment arrived that can't be applied to its order (late, duplicate, or a different amount) — staff must review the refund it opened. */
+  async notifyPaymentNeedsRefund(order: { id: string; orderNumber: string }): Promise<void> {
+    await this.notifyStaffWithPermission({
+      type: "payment_failed",
+      permission: "orders.manage",
+      link: `/orders/${order.id}`,
+      title: { bn: "পেমেন্টের রিফান্ড দেখুন", en: "Payment needs a refund review" },
+      body: {
+        bn: `অর্ডার ${order.orderNumber}-এর একটি পেমেন্ট অর্ডারে যোগ করা যায়নি — একটি রিফান্ড খোলা হয়েছে।`,
+        en: `A payment for order ${order.orderNumber} couldn't be applied to the order — a refund was opened.`,
+      },
+    });
+  }
+
   /** Alerts once, at the moment an order's reservation pushes a variant's available stock down to or below its low-stock threshold (so a variant already low doesn't re-alert on every order). */
   async notifyLowStockCrossings(items: { variantId: string; quantity: number }[]): Promise<void> {
     for (const item of items) {

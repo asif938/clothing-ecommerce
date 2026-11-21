@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, type Discount, type DiscountValueType } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
@@ -189,6 +189,11 @@ export class DiscountsService {
         rejectedCodes.push({ code, reasonCode: "NOT_YOURS", message: customerId ? "This code belongs to another customer." : "Log in to use this personal code." });
         continue;
       }
+      // Bulk codes are single-use (§16 M8): one redemption per minted code. Claimed atomically at order placement (`claimBulkCodesInTx`).
+      if (bulkCode && bulkCode.usedCount >= 1) {
+        rejectedCodes.push({ code, reasonCode: "LIMIT_REACHED", message: "This code has already been used." });
+        continue;
+      }
       if (!this.isWithinSchedule(discount, now) || blockedByExperiment(discount.id)) {
         rejectedCodes.push({ code, reasonCode: "NOT_ACTIVE", message: "This code is not currently active." });
         continue;
@@ -264,11 +269,22 @@ export class DiscountsService {
     await this.prisma.$transaction([
       this.prisma.discountUsage.create({ data: { discountId, orderId, customerId, phone, amount, code } }),
       this.prisma.discount.update({ where: { id: discountId }, data: { usedCount: { increment: 1 } } }),
-      // A no-op `updateMany` when `code` isn't one of this discount's bulk
-      // codes (the common case: a shared `Discount.code`) — cheaper than
-      // checking existence first for what's usually a miss.
-      ...(code ? [this.prisma.discountCode.updateMany({ where: { code }, data: { usedCount: { increment: 1 } } })] : []),
+      // Bulk codes' own `usedCount` is not touched here — it was already claimed inside the order transaction (`claimBulkCodesInTx`).
     ]);
+  }
+
+  /**
+   * Claims each single-use bulk code inside the order transaction: `used_count` only moves 0 → 1 under the row lock,
+   * so two checkouts racing with the same code can't both succeed — the loser's whole order rolls back.
+   */
+  async claimBulkCodesInTx(tx: Prisma.TransactionClient, applied: { discountId: string; code: string | null }[]): Promise<void> {
+    for (const { discountId, code } of applied) {
+      if (!code) continue;
+      const row = await tx.discountCode.findUnique({ where: { code }, select: { id: true, discountId: true } });
+      if (!row || row.discountId !== discountId) continue; // a shared `Discount.code`, not a bulk code
+      const { count } = await tx.discountCode.updateMany({ where: { id: row.id, usedCount: { lt: 1 } }, data: { usedCount: { increment: 1 } } });
+      if (count === 0) throw new BadRequestException({ code: "CODE_ALREADY_USED", message: `The code ${code} has already been used.` });
+    }
   }
 
   /** §16 M8 "bulk unique code generator" — e.g. 500 distinct single-use codes for one `code`-type discount, each individually trackable in `discount_codes`. */

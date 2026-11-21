@@ -16,7 +16,7 @@ import { FlashSalesService } from "../discounts/flash-sales.service";
 import { RiskScoringService } from "../risk/risk-scoring.service";
 import { BlocklistService } from "../blocklist/blocklist.service";
 import { PaymentRulesService } from "../payment-rules/payment-rules.service";
-import { PaymentsService, type OnlinePaymentMethod } from "../payments/payments.service";
+import { PaymentsService, isOnlinePaymentMethod, type OnlinePaymentMethod } from "../payments/payments.service";
 import { OtpService } from "../customer-auth/otp.service";
 import { CaptchaProvidersService } from "./captcha-providers.service";
 import { StockReservationService } from "./stock-reservation.service";
@@ -134,6 +134,11 @@ export class CheckoutService {
     if (outcome.disabledMethods.has(dto.paymentMethod)) {
       throw new BadRequestException({ code: "PAYMENT_METHOD_DISABLED", message: "This payment method isn't available for this order." });
     }
+    // Golden rule 6: the client's choice of method is only accepted when it is actually enabled (COD setting / an enabled provider instance in admin).
+    const availableMethods = await this.payments.availableMethods();
+    if (!availableMethods.includes(dto.paymentMethod)) {
+      throw new BadRequestException({ code: "PAYMENT_METHOD_UNAVAILABLE", message: "This payment method isn't available." });
+    }
     if (outcome.otpRequired && !otpVerified) {
       throw new BadRequestException({ code: "OTP_REQUIRED", message: "Please verify your phone number with the code we sent." });
     }
@@ -154,7 +159,7 @@ export class CheckoutService {
     const advanceAmount = Math.min(amountDue, CartPricingService.computeAdvanceAmount(outcome.advanceRequired, quote.total, quote.shippingFee));
     const needsOnlinePayment = (dto.paymentMethod !== "cod" && amountDue > 0) || advanceAmount > 0;
     const paymentPurpose: "full" | "advance" = dto.paymentMethod === "cod" ? "advance" : "full";
-    const onlineMethodForPayment: OnlinePaymentMethod = dto.paymentMethod === "cod" ? (dto.advanceMethod as OnlinePaymentMethod) : (dto.paymentMethod as OnlinePaymentMethod);
+    const onlineMethodForPayment = needsOnlinePayment ? resolveOnlineMethod(dto, availableMethods, outcome.disabledMethods) : null;
     const onlineAmount = paymentPurpose === "advance" ? advanceAmount : amountDue;
     const referralDiscount = quote.referral && !quote.referral.rejection ? quote.referral.discount : 0;
 
@@ -179,6 +184,7 @@ export class CheckoutService {
 
     const order = await this.prisma.$transaction(async (tx) => {
       await this.stock.reserve(tx, location.id, stockLines);
+      await this.discounts.claimBulkCodesInTx(tx, quote.discounts.applied);
 
       const created = await tx.order.create({
         data: {
@@ -342,7 +348,7 @@ export class CheckoutService {
     }
 
     let redirectUrl: string | null = null;
-    if (needsOnlinePayment) {
+    if (needsOnlinePayment && onlineMethodForPayment) {
       const returnUrls = this.buildReturnUrls(order.id);
       const initiated = await this.payments.initiate(
         order.id,
@@ -374,6 +380,24 @@ export class CheckoutService {
   private buildReplayResponse(order: OrderWithPayments) {
     return { order, redirectUrl: null, advanceAmount: order.advanceRequired, codAmount: order.codAmount, replay: true, warnings: [] as string[] };
   }
+}
+
+/**
+ * Which online method collects the money: the chosen method itself, or — for COD with a required advance — the
+ * requested `advanceMethod`, else the first enabled, non-disabled online method. Throws when none is usable, so an
+ * advance can never fall through to a gateway that isn't configured (previously it defaulted to the mock gateway).
+ */
+export function resolveOnlineMethod(dto: Pick<PlaceOrderDto, "paymentMethod" | "advanceMethod">, availableMethods: string[], disabledMethods: Set<string>): OnlinePaymentMethod {
+  if (dto.paymentMethod !== "cod") {
+    if (!isOnlinePaymentMethod(dto.paymentMethod)) throw new BadRequestException({ code: "PAYMENT_METHOD_UNAVAILABLE", message: "This payment method isn't available." });
+    return dto.paymentMethod;
+  }
+  const usable = availableMethods.filter((m): m is OnlinePaymentMethod => isOnlinePaymentMethod(m) && !disabledMethods.has(m));
+  const chosen = dto.advanceMethod ?? usable[0];
+  if (!chosen || !usable.includes(chosen)) {
+    throw new BadRequestException({ code: "ADVANCE_PAYMENT_UNAVAILABLE", message: "An advance payment is required for this order, but no online payment method is available." });
+  }
+  return chosen;
 }
 
 function toJson(value: unknown): Prisma.InputJsonValue {

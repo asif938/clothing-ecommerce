@@ -2915,3 +2915,39 @@ were loaded, and white cards sat on a white page.
 **Not done.** Individual admin pages keep their own table/filter markup (about 150 tables); they pick up the
 canvas, fonts and tokens but were not restyled one by one. A table/page-header component the pages could adopt
 is the natural next step.
+
+---
+
+## 2026-11-22 — Payment and discount integrity fixes (audit)
+
+**Context.** A code audit found ways to get goods without paying: the checkout accepted `paymentMethod: "mock"`
+and a COD advance defaulted to `advanceMethod: "mock"`, and `PaymentsService` built a mock driver (which always
+reports success) even when no mock provider was enabled. A gateway confirming a different amount was only
+logged, single-use bulk codes were never checked for prior use, a payment arriving after its order expired was
+silently dropped, and concurrent callbacks could credit one payment twice.
+
+**Decisions.**
+- **No mock fallback.** The mock gateway only runs when staff enabled a mock provider instance in admin.
+  Checkout rejects any method not in `availableMethods()` (`PAYMENT_METHOD_UNAVAILABLE`), which also makes the
+  `payment.codEnabled` setting authoritative server-side.
+- **COD advance method** is the requested `advanceMethod` if enabled, else the first enabled online method not
+  disabled by a payment rule; with none, the order is refused (`ADVANCE_PAYMENT_UNAVAILABLE`) rather than
+  collected through a gateway that doesn't exist.
+- **Amount mismatch** → the payment is marked failed, the order is not credited, an order event is written, a
+  pending refund is opened for whatever the gateway did take, and staff with `orders.manage` are alerted.
+- **Atomic settlement.** Payment rows are claimed with a conditional `updateMany` (`initiated|pending` only),
+  and the order moves `pending_payment →` only via a conditional update. The expiry sweep claims the order the
+  same way, so a payment and the sweep can't both win.
+- **Late or duplicate payment** (order expired, cancelled or already moved) → the money is recorded in
+  `paidTotal` and a pending refund opened for staff, instead of being dropped.
+- **Bulk codes are single-use.** Rejected at pricing once `used_count ≥ 1`, and claimed `0 → 1` inside the
+  order transaction (`CODE_ALREADY_USED` rolls the order back on a race). Releasing coupon usage on cancel now
+  also decrements `discount.usedCount` and the bulk code's `used_count`.
+- **Mock pay page** only redirects to the storefront's own origin (was an open redirect).
+
+**Alternatives considered.** Keeping the mock fallback outside production only — rejected: `NODE_ENV` defaults
+to `development`, so a misconfigured deploy would reopen the hole. A per-code `maxUses` column for bulk codes —
+not needed yet; the spec describes them as single-use.
+
+**Operational note.** A store that relied on the old behaviour (COD advance rules with no online gateway
+enabled) will now see those orders refused until a real gateway is enabled in admin → Integrations.

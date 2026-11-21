@@ -12,8 +12,8 @@ const bdPhoneSchema = z.string().transform((v, ctx) => {
 
 export const placeOrderSchema = z.object({
   paymentMethod: z.enum(["cod", "mock", "sslcommerz", "bkash", "nagad"]),
-  /** Only used when `paymentMethod: "cod"` and a payment rule requires an advance — which online method collects it. */
-  advanceMethod: z.enum(["mock", "sslcommerz", "bkash", "nagad"]).default("mock"),
+  /** Only used when `paymentMethod: "cod"` and a payment rule requires an advance — which online method collects it. Omitted → the first enabled online method (never a silent "mock"). */
+  advanceMethod: z.enum(["mock", "sslcommerz", "bkash", "nagad"]).optional(),
   otpCode: z.string().min(4).max(6).optional(),
   termsAccepted: z.boolean().default(false),
   turnstileToken: z.string().optional(),
