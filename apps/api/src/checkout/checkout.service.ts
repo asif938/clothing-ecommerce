@@ -1,6 +1,6 @@
 import { AutomationOutboxService } from "../automation/automation-outbox.service";
 import { randomUUID } from "node:crypto";
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { Prisma } from "@clothing/db";
 import { formatTakaFromPoisha } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
@@ -25,6 +25,7 @@ import { LoyaltyService } from "../loyalty/loyalty.service";
 import { ReferralsService } from "../referrals/referrals.service";
 import { AffiliatesService } from "../affiliates/affiliates.service";
 import { OrderTendersService } from "../rewards-core/order-tenders.service";
+import { OrdersLifecycleService } from "./orders-lifecycle.service";
 import type { PlaceOrderDto } from "./dto";
 
 const ORDER_WITH_PAYMENTS_INCLUDE = { items: true, payments: true } as const;
@@ -75,6 +76,7 @@ export class CheckoutService {
     private readonly referrals: ReferralsService,
     private readonly affiliates: AffiliatesService,
     private readonly tenders: OrderTendersService,
+    private readonly lifecycle: OrdersLifecycleService,
   ) {}
 
   async placeOrder(dto: PlaceOrderDto, requestContext: PlaceOrderRequestContext) {
@@ -245,7 +247,8 @@ export class CheckoutService {
               locationId: location.id,
               title: toJson(line.title),
               sku: line.sku,
-              optionsSnapshot: toJson({ optionValueIds: line.optionValueIds }),
+              // `flashSaleItemId` lets a cancellation give the flash-sale unit back (OrdersLifecycleService).
+              optionsSnapshot: toJson({ optionValueIds: line.optionValueIds, ...(line.flashSaleItemId ? { flashSaleItemId: line.flashSaleItemId } : {}) }),
               imageUrl: line.imageUrl,
               unitPrice: line.unitPrice,
               compareAtPrice: line.compareAtPrice,
@@ -284,7 +287,20 @@ export class CheckoutService {
       });
 
       for (const line of priceableLines) {
-        if (line.flashSaleItemId) await this.flashSales.recordSold(line.flashSaleItemId, line.quantity);
+        if (line.flashSaleItemId) await this.flashSales.recordSoldInTx(tx, line.flashSaleItemId, line.quantity);
+      }
+
+      // Bookkeeping that belongs to the order: all or nothing with it, so a failure can never leave a half-recorded order behind.
+      for (const applied of quote.discounts.applied) {
+        await this.discounts.recordUsageInTx(tx, applied.discountId, created.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);
+      }
+      // Symmetric: the orders found above don't yet list this new order as one of their duplicates.
+      for (const otherId of possibleDuplicateOrderIds) {
+        await tx.order.update({ where: { id: otherId }, data: { possibleDuplicateOrderIds: { push: created.id } } });
+      }
+      await tx.cart.update({ where: { id: cartRow.id }, data: { status: "converted", recoveredAt: new Date() } });
+      if (requestContext.identity.customerId) {
+        await tx.customer.update({ where: { id: requestContext.identity.customerId }, data: { ordersCount: { increment: 1 }, totalSpent: { increment: created.total } } });
       }
 
       await this.notifications.enqueue(tx, {
@@ -313,56 +329,67 @@ export class CheckoutService {
       return created;
     });
 
-    await this.staffNotifications.notifyNewOrder(order);
-    // M11 admin PWA push events. Best effort: an alert failing must never fail an order that was already placed.
+    let redirectUrl: string | null = null;
+    if (needsOnlinePayment && onlineMethodForPayment) {
+      const returnUrls = this.buildReturnUrls(order.id);
+      try {
+        const initiated = await this.payments.initiate(
+          order.id,
+          onlineMethodForPayment,
+          paymentPurpose,
+          onlineAmount,
+          returnUrls,
+          { name: cartRow.contactName, phone: cartRow.contactPhone, email: cartRow.contactEmail ?? undefined },
+          order.orderNumber,
+        );
+        redirectUrl = initiated.redirectUrl;
+      } catch (error) {
+        // The gateway never opened, so the customer has no way to pay this order. Undo it (stock, tenders, coupons, counters)
+        // and give the cart back, so retrying checkout works instead of leaving a stuck pending_payment order and an empty cart.
+        this.logger.error(`Payment start failed for order ${order.orderNumber}: ${error instanceof Error ? error.message : "Unknown error"}`);
+        await this.abandonUnpayableOrder(order.id, cartRow.id);
+        throw new ServiceUnavailableException({ code: "PAYMENT_START_FAILED", message: "We couldn't open the payment page. Your order was not placed — please try again." });
+      }
+    }
+
+    // M11 admin PWA push events — only once the order is final (after its payment page opened). Best effort: an alert failing must never fail a placed order.
     try {
+      await this.staffNotifications.notifyNewOrder(order);
       if (order.riskLevel === "high") await this.staffNotifications.notifyHighRiskOrder(order);
       await this.staffNotifications.notifyLowStockCrossings(order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })));
     } catch (error) {
       this.logger.warn(`Staff alert after order ${order.orderNumber} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
 
+    // Best effort, after the order is final: tracking must never fail a placed order.
     const purchaseEventTiming = await this.settings.getValue<"placement" | "confirmation">("tracking.purchaseEventTiming");
     if (purchaseEventTiming === "placement" && order.trackingEventId) {
-      await this.tracking.recordPurchase({
-        eventId: order.trackingEventId,
-        orderId: order.id,
-        total: order.total,
-        currency: order.currency,
-        items: order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice })),
-        userData: { phone: cartRow.contactPhone, email: cartRow.contactEmail, clientIp: requestContext.ip, userAgent: requestContext.userAgent, fbc: dto.fbc, fbp: dto.fbp },
-        sourceUrl: dto.sourceUrl,
-      });
-    }
-
-    for (const applied of quote.discounts.applied) {
-      await this.discounts.recordUsage(applied.discountId, order.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);
-    }
-    // Symmetric: the orders found above don't yet list this new order as one of their duplicates.
-    for (const otherId of possibleDuplicateOrderIds) {
-      await this.prisma.order.update({ where: { id: otherId }, data: { possibleDuplicateOrderIds: { push: order.id } } });
-    }
-    await this.cart.markConverted(cartRow.id);
-    if (requestContext.identity.customerId) {
-      await this.prisma.customer.update({ where: { id: requestContext.identity.customerId }, data: { ordersCount: { increment: 1 }, totalSpent: { increment: order.total } } });
-    }
-
-    let redirectUrl: string | null = null;
-    if (needsOnlinePayment && onlineMethodForPayment) {
-      const returnUrls = this.buildReturnUrls(order.id);
-      const initiated = await this.payments.initiate(
-        order.id,
-        onlineMethodForPayment,
-        paymentPurpose,
-        onlineAmount,
-        returnUrls,
-        { name: cartRow.contactName, phone: cartRow.contactPhone, email: cartRow.contactEmail ?? undefined },
-        order.orderNumber,
-      );
-      redirectUrl = initiated.redirectUrl;
+      try {
+        await this.tracking.recordPurchase({
+          eventId: order.trackingEventId,
+          orderId: order.id,
+          total: order.total,
+          currency: order.currency,
+          items: order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice })),
+          userData: { phone: cartRow.contactPhone, email: cartRow.contactEmail, clientIp: requestContext.ip, userAgent: requestContext.userAgent, fbc: dto.fbc, fbp: dto.fbp },
+          sourceUrl: dto.sourceUrl,
+        });
+      } catch (error) {
+        this.logger.warn(`Purchase tracking for order ${order.orderNumber} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
     }
 
     return { order, redirectUrl, advanceAmount, codAmount: order.codAmount, replay: false, warnings: quote.warnings };
+  }
+
+  private async abandonUnpayableOrder(orderId: string, cartId: string): Promise<void> {
+    try {
+      await this.lifecycle.transition({ orderId, to: "cancelled", actor: { type: "system" }, reason: "Payment could not be started", releaseCouponUsage: true });
+      await this.prisma.cart.update({ where: { id: cartId }, data: { status: "active", recoveredAt: null } });
+    } catch (error) {
+      // The expiry sweep still releases it at the payment timeout; nothing is lost, the cart just stays converted.
+      this.logger.error(`Could not undo unpayable order ${orderId}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   }
 
   private buildReturnUrls(orderId: string): { success: string; fail: string; cancel: string } {

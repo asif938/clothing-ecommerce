@@ -851,6 +851,22 @@ export const AUTH_OTP_MAX_SENDS_PER_PHONE_PER_10_MIN = defineSetting({
   ui: { widget: "text" },
 });
 
+export const AUTH_OTP_MAX_SENDS_PER_IP_PER_10_MIN = defineSetting({
+  key: "auth.otpMaxSendsPerIpPer10Min",
+  group: "auth",
+  type: z.number().int().min(1).max(500),
+  default: 10,
+  label: { bn: "প্রতি IP থেকে ১০ মিনিটে সর্বোচ্চ OTP প্রেরণ", en: "Max OTP sends per IP address per 10 minutes" },
+  help: {
+    bn: "একটি ডিভাইস/নেটওয়ার্ক থেকে অনেক নম্বরে SMS পাঠিয়ে খরচ বাড়ানো ঠেকায়।",
+    en: "Stops one device or network from sending SMS to many numbers and running up your SMS bill.",
+  },
+  secret: false,
+  public: false,
+  permission: "settings.auth.write",
+  ui: { widget: "text" },
+});
+
 export const AUTH_GOOGLE_ENABLED = defineSetting({
   key: "auth.googleEnabled",
   group: "auth",

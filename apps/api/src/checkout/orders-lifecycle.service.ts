@@ -11,6 +11,7 @@ import { TrackingService } from "../tracking/tracking.service";
 import { STATUS_TO_TRIGGER } from "@clothing/shared/automation";
 import { AutomationOutboxService } from "../automation/automation-outbox.service";
 import { OrderTendersService } from "../rewards-core/order-tenders.service";
+import { reverseOrderBookkeepingInTx } from "./order-bookkeeping";
 
 export type TransitionActor = { type: "staff"; id: string } | { type: "customer"; id: string } | { type: "system" };
 
@@ -19,6 +20,8 @@ export interface TransitionInput {
   to: OrderStatus;
   actor: TransitionActor;
   reason?: string;
+  /** Cancellation only: release coupon usage regardless of `orders.releaseCouponUsageOnCancel` (an order that never really happened, e.g. its payment page never opened). */
+  releaseCouponUsage?: boolean;
 }
 
 /**
@@ -152,16 +155,9 @@ export class OrdersLifecycleService {
         await tx.orderEvent.create({ data: { orderId: order.id, type: "refund", data: { reason: "cancelled", amount: cashPaid } } });
       }
 
-      const releaseCouponUsage = await this.settings.getValue<boolean>("orders.releaseCouponUsageOnCancel");
-      if (releaseCouponUsage) {
-        // Give the counters back too — `totalUses` limits read `discount.usedCount`, and a single-use bulk code becomes usable again.
-        const usages = await tx.discountUsage.findMany({ where: { orderId: order.id }, select: { discountId: true, code: true } });
-        for (const usage of usages) {
-          await tx.discount.updateMany({ where: { id: usage.discountId, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
-          if (usage.code) await tx.discountCode.updateMany({ where: { code: usage.code, discountId: usage.discountId, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
-        }
-        await tx.discountUsage.deleteMany({ where: { orderId: order.id } });
-      }
+      const releaseCouponUsage = input.releaseCouponUsage === true || (await this.settings.getValue<boolean>("orders.releaseCouponUsageOnCancel")) === true;
+      // Customer counters, flash-sale units and (per setting) coupon usage go back with the order.
+      await reverseOrderBookkeepingInTx(tx, order, { releaseCoupons: releaseCouponUsage });
     }
     if (input.to === "delivered" || input.to === "partially_delivered") {
       if (!order.deliveredAt) data.deliveredAt = new Date();

@@ -4,7 +4,7 @@ import { hashPassword, verifyPassword } from "@clothing/shared/crypto";
 import type { OtpPurpose } from "@clothing/db";
 import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
-import { SmsProvidersService } from "../sms/sms-providers.service";
+import { NotificationDriversService } from "../notifications/notification-drivers.service";
 import { NotificationsService } from "../notifications/notifications.service";
 
 /**
@@ -18,7 +18,7 @@ import { NotificationsService } from "../notifications/notifications.service";
  * placeholder, but the send itself stays synchronous and outside the
  * queued/retried dispatch pipeline used for order events — the customer is
  * waiting for this code right now, so it still goes straight through
- * `SmsProvidersService`, unchanged from M5. Locale isn't threaded from the
+ * the active SMS gateway (`NotificationDriversService.resolveSms`). Locale isn't threaded from the
  * storefront request into this call yet, so it always renders the `bn`
  * copy — a reasonable simplification until a real need to localize OTP by
  * request locale shows up.
@@ -30,16 +30,17 @@ export class OtpService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
-    private readonly sms: SmsProvidersService,
+    private readonly drivers: NotificationDriversService,
     private readonly notifications: NotificationsService,
   ) {}
 
   async send(phone: string, purpose: OtpPurpose, ip: string | null): Promise<{ sent: true; devCode?: string }> {
-    const [length, ttlMinutes, resendSeconds, maxSendsPer10Min] = await Promise.all([
+    const [length, ttlMinutes, resendSeconds, maxSendsPer10Min, maxSendsPerIpPer10Min] = await Promise.all([
       this.settings.getValue<number>("auth.otpLength"),
       this.settings.getValue<number>("auth.otpTtlMinutes"),
       this.settings.getValue<number>("auth.otpResendSeconds"),
       this.settings.getValue<number>("auth.otpMaxSendsPerPhonePer10Min"),
+      this.settings.getValue<number>("auth.otpMaxSendsPerIpPer10Min"),
     ]);
 
     const latest = await this.prisma.otpCode.findFirst({ where: { phone, purpose }, orderBy: { createdAt: "desc" } });
@@ -52,6 +53,13 @@ export class OtpService {
     if (recentCount >= maxSendsPer10Min) {
       throw new HttpException({ code: "OTP_RATE_LIMITED", message: "Too many codes requested for this number recently." }, HttpStatus.TOO_MANY_REQUESTS);
     }
+    // §6.13 "rate-limited per phone/IP": one client spraying codes at many different numbers is SMS-cost abuse, not a forgotten code.
+    if (ip) {
+      const recentFromIp = await this.prisma.otpCode.count({ where: { ip, createdAt: { gte: tenMinutesAgo } } });
+      if (recentFromIp >= maxSendsPerIpPer10Min) {
+        throw new HttpException({ code: "OTP_RATE_LIMITED", message: "Too many codes requested from this device recently." }, HttpStatus.TOO_MANY_REQUESTS);
+      }
+    }
 
     const code = Array.from({ length }, () => randomInt(0, 10)).join("");
     const codeHash = await hashPassword(code);
@@ -60,7 +68,8 @@ export class OtpService {
 
     const locale = "bn";
     const message = await this.notifications.renderOtpMessage(locale, code);
-    const driver = await this.sms.resolveActiveDriver();
+    // The real gateway configured in admin (sslwireless / bulksmsbd / generic HTTP). OTP used to always go through the mock driver.
+    const { driver, driverName } = await this.drivers.resolveSms();
     try {
       await driver.send(phone, message.body);
       await this.notifications.logImmediate({ event: "otp_verification", channel: "sms", recipientType: "guest", to: phone, locale, body: message.body, status: "sent" });
@@ -70,9 +79,10 @@ export class OtpService {
       this.logger.warn(`OTP send failed for ${phone}: ${errorMessage}`);
     }
 
-    // Dev/demo convenience only (no real SMS gateway is configured yet in
-    // this environment) — never expose the code in production.
-    return { sent: true, devCode: process.env.NODE_ENV === "production" ? undefined : code };
+    // Dev/demo convenience only: the code is echoed back only when no real SMS gateway is active AND this isn't production.
+    // Both, because NODE_ENV defaults to "development" — a deploy that forgot to set it must still never leak codes once a gateway is configured.
+    const exposeCode = driverName === "mock" && process.env.NODE_ENV !== "production";
+    return { sent: true, devCode: exposeCode ? code : undefined };
   }
 
   async verify(phone: string, purpose: OtpPurpose, code: string): Promise<boolean> {
@@ -83,18 +93,19 @@ export class OtpService {
     });
     if (!otp) throw new BadRequestException({ code: "OTP_INVALID_OR_EXPIRED", message: "No valid code found. Please request a new one." });
 
-    if (otp.attempts >= maxAttempts) {
-      await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
+    // Take an attempt atomically BEFORE checking the code: parallel guesses can no longer all read "0 attempts" and
+    // try far more codes than the limit allows.
+    const claimed = await this.prisma.otpCode.updateMany({ where: { id: otp.id, consumedAt: null, attempts: { lt: maxAttempts } }, data: { attempts: { increment: 1 } } });
+    if (claimed.count === 0) {
+      await this.prisma.otpCode.updateMany({ where: { id: otp.id, consumedAt: null }, data: { consumedAt: new Date() } });
       throw new BadRequestException({ code: "OTP_MAX_ATTEMPTS", message: "Too many incorrect attempts. Please request a new code." });
     }
 
     const matches = await verifyPassword(otp.codeHash, code);
-    if (!matches) {
-      await this.prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
-      return false;
-    }
+    if (!matches) return false;
 
-    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
-    return true;
+    // Consume once: two correct submissions racing can't both log in (or place an order) with the same code.
+    const consumed = await this.prisma.otpCode.updateMany({ where: { id: otp.id, consumedAt: null }, data: { consumedAt: new Date() } });
+    return consumed.count === 1;
   }
 }

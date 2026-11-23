@@ -265,12 +265,11 @@ export class DiscountsService {
     }
   }
 
-  async recordUsage(discountId: string, orderId: string, customerId: string | null, phone: string | null, amount: number, code: string | null): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.discountUsage.create({ data: { discountId, orderId, customerId, phone, amount, code } }),
-      this.prisma.discount.update({ where: { id: discountId }, data: { usedCount: { increment: 1 } } }),
-      // Bulk codes' own `usedCount` is not touched here — it was already claimed inside the order transaction (`claimBulkCodesInTx`).
-    ]);
+  /** Runs inside the order-creation transaction, so a usage row can never outlive (or go missing from) its order. */
+  async recordUsageInTx(tx: Prisma.TransactionClient, discountId: string, orderId: string, customerId: string | null, phone: string | null, amount: number, code: string | null): Promise<void> {
+    await tx.discountUsage.create({ data: { discountId, orderId, customerId, phone, amount, code } });
+    await tx.discount.update({ where: { id: discountId }, data: { usedCount: { increment: 1 } } });
+    // Bulk codes' own `usedCount` is not touched here — it was already claimed in the same transaction (`claimBulkCodesInTx`).
   }
 
   /**

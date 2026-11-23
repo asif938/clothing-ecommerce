@@ -80,7 +80,8 @@ export class FlashSalesService {
   }
 
   /** Called once a line with a flash-sale price is actually ordered — the stock-cap counter is separate from inventory (§5.8 `flash_sales.items.stock_cap`), tracked here, not in `inventory_levels`. */
-  async recordSold(itemId: string, quantity: number): Promise<void> {
-    await this.prisma.flashSaleItem.update({ where: { id: itemId }, data: { soldCount: { increment: quantity } } });
+  /** Inside the order transaction: a rolled-back order no longer leaves the sale's sold count inflated. Cancellation gives it back (`reverseOrderBookkeepingInTx`). */
+  async recordSoldInTx(tx: Prisma.TransactionClient, itemId: string, quantity: number): Promise<void> {
+    await tx.flashSaleItem.update({ where: { id: itemId }, data: { soldCount: { increment: quantity } } });
   }
 }

@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { StockReservationService } from "./stock-reservation.service";
 import { OrderTendersService } from "../rewards-core/order-tenders.service";
+import { reverseOrderBookkeepingInTx } from "./order-bookkeeping";
 
 /**
  * §6.7: "`pending_payment` orders hold a reservation with `expires_at`
@@ -21,7 +22,7 @@ export class OrderExpiryService {
   async runSweep(): Promise<{ expired: number }> {
     const expiredOrders = await this.prisma.order.findMany({
       where: { status: "pending_payment", paymentTimeoutAt: { lte: new Date() } },
-      include: { items: { select: { variantId: true, locationId: true, quantity: true } } },
+      include: { items: { select: { variantId: true, locationId: true, quantity: true, optionsSnapshot: true } } },
     });
 
     let expiredCount = 0;
@@ -40,6 +41,8 @@ export class OrderExpiryService {
         // §16 M16 — a gift card / store credit spent on an order that was never paid goes back to its owner.
         const restored = await this.tenders.restoreInTx(tx, order, "Order expired unpaid");
         await tx.order.update({ where: { id: order.id }, data: { status: "expired", reservationReleasedAt: new Date(), ...(restored > 0 ? { paidTotal: Math.max(0, order.paidTotal - restored) } : {}) } });
+        // An unpaid order never really happened: customer counters, flash-sale units and coupon usage all go back.
+        await reverseOrderBookkeepingInTx(tx, order, { releaseCoupons: true });
         await tx.orderEvent.create({ data: { orderId: order.id, type: "status_change", data: { from: "pending_payment", to: "expired", reason: "payment_timeout" } } });
         return true;
       });

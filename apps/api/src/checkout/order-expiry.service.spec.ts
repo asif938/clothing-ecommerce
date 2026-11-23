@@ -5,7 +5,14 @@ function makePrisma(orders: { id: string; orderNumber: string; items: { variantI
   const orderUpdate = vi.fn();
   const eventCreate = vi.fn();
   const orderUpdateMany = vi.fn(() => Promise.resolve({ count: claimCount }));
-  const tx = { order: { update: orderUpdate, updateMany: orderUpdateMany }, orderEvent: { create: eventCreate } };
+  const tx = {
+    order: { update: orderUpdate, updateMany: orderUpdateMany },
+    orderEvent: { create: eventCreate },
+    $executeRaw: vi.fn(() => Promise.resolve(1)),
+    discountUsage: { findMany: vi.fn(() => Promise.resolve([])), deleteMany: vi.fn() },
+    discount: { updateMany: vi.fn() },
+    discountCode: { updateMany: vi.fn() },
+  };
   return {
     order: { findMany: vi.fn(() => Promise.resolve(orders)) },
     $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(tx)),

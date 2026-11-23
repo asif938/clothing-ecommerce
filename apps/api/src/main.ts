@@ -2,13 +2,20 @@ import "reflect-metadata";
 import cookieParser from "cookie-parser";
 import { json } from "express";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
+import { parseTrustProxy } from "./config/trust-proxy";
 
 async function bootstrap() {
   // `rawBody` keeps the exact request bytes on `req.rawBody` — Meta webhook signatures (§16 M15) are an HMAC of them.
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
+  // Behind Render/Vercel the TCP peer is the platform proxy, so without this every `req.ip` is the proxy: the staff IP
+  // allowlist, IP blocklist, risk scoring and OTP per-IP limits all saw one address. TRUST_PROXY = number of proxy hops
+  // in front of the API (Render alone: 1; storefront/admin calls arriving through the Next.js rewrite: 2) — see
+  // docs/DECISIONS.md 2026-11-23. Too high a value lets a client spoof X-Forwarded-For, so it is never guessed upward.
+  app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
   app.useLogger(app.get(Logger));
   app.use(cookieParser());
 

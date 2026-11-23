@@ -14,6 +14,9 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   DATABASE_DIRECT_URL: z.string().min(1).optional(),
 
+  /** Proxy hops in front of the API (Express `trust proxy`). See main.ts. */
+  TRUST_PROXY: z.string().optional().default("1"),
+
   STOREFRONT_URL: z.string().url(),
   ADMIN_URL: z.string().url(),
   API_URL: z.string().url(),

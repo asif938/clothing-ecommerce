@@ -2951,3 +2951,43 @@ not needed yet; the spec describes them as single-use.
 
 **Operational note.** A store that relied on the old behaviour (COD advance rules with no online gateway
 enabled) will now see those orders refused until a real gateway is enabled in admin → Integrations.
+
+---
+
+## 2026-11-23 — Order bookkeeping, client IPs, OTP and 2FA hardening (audit, part 2)
+
+**Context.** Follow-up to the 2026-11-22 audit fixes. (The audit's claim that loyalty points were never returned
+on cancel was wrong: `LoyaltyService.reversalSweep` already gives them back — no change made there.)
+
+**Decisions.**
+- **Cancel / expiry reverse the order's bookkeeping** (`checkout/order-bookkeeping.ts`, inside the same
+  transaction): the customer's `ordersCount`/`totalSpent` (web orders only — the only channel that increments
+  them; clamped at 0), flash-sale `sold_count` (order lines now keep `flashSaleItemId` in `optionsSnapshot`), and
+  coupon usage with its counters. Cancel follows `orders.releaseCouponUsageOnCancel`; an order that expires
+  unpaid always releases its coupons, since it never really happened.
+- **Everything an order records is written inside its transaction:** discount usage, flash-sale sold count,
+  duplicate links, cart conversion and the customer counters. Staff alerts and purchase tracking stay outside,
+  best effort, and now run only after the payment page opened.
+- **Payment page fails to open** → the order is cancelled by the system (stock, tenders, coupons, counters
+  back), the cart is reactivated, and the customer gets `PAYMENT_START_FAILED` and can simply retry. Previously
+  the order sat in `pending_payment` with an emptied cart and no way to pay.
+- **`TRUST_PROXY` env (default 1)** sets Express `trust proxy`, so `req.ip` is the client, not the platform
+  proxy. Render alone is 1 hop; requests reaching the API through the storefront/admin Next.js `/api` rewrite on
+  Vercel are 2. Not guessed higher by default: too many hops lets a client spoof `X-Forwarded-For` (and with it
+  the staff IP allowlist).
+- **OTP:** a per-IP send limit (`auth.otpMaxSendsPerIpPer10Min`, default 10, admin-editable; new
+  `otp_codes(ip, created_at)` index). Attempts are claimed atomically *before* the code is compared, and a code
+  is consumed with a conditional update, so parallel requests can't exceed the attempt limit or reuse a code.
+  OTP now sends through `NotificationDriversService.resolveSms()` — the gateway configured in admin — instead of
+  the M5 `SmsProvidersService`, which always resolved to the mock driver (real customers never received a code).
+  `devCode` is returned only when the active driver is the mock **and** `NODE_ENV` isn't production.
+- **2FA:** `POST /auth/totp/setup` is refused while 2FA is on (`TOTP_ALREADY_ENABLED`); it used to replace the
+  secret and switch 2FA off immediately, without a code.
+
+**Alternatives considered.** A global request rate limiter — deferred: the free-tier stack has no shared store
+(golden rule 8), and an in-memory limiter is per instance. Keeping post-order writes outside the transaction
+with retries — rejected; a single transaction is simpler and the writes are small.
+
+**Operational note.** Set `TRUST_PROXY=2` on Render once it is confirmed that storefront/admin traffic reaches
+the API through the Vercel rewrite with the client in `X-Forwarded-For`. Apply the new migration
+(`pnpm db:migrate:deploy`) — the index is not required for correctness, only for the per-IP count's speed.

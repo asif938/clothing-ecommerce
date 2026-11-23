@@ -110,6 +110,11 @@ export class AuthService {
   /** Step 1 of enabling 2FA: generate a secret and QR, but don't persist `totpEnabled` yet. */
   async setupTotp(staffUserId: string) {
     const staffUser = await this.prisma.staffUser.findUniqueOrThrow({ where: { id: staffUserId } });
+    // Re-running setup used to replace the secret and switch 2FA off on the spot — anyone holding a session (a stolen one
+    // included) could disable it without ever entering a code. Once 2FA is on, this is refused.
+    if (staffUser.totpEnabled) {
+      throw new ForbiddenException({ code: "TOTP_ALREADY_ENABLED", message: "Two-factor authentication is already turned on for this account." });
+    }
     const secret = generateTotpSecret();
     await this.prisma.staffUser.update({ where: { id: staffUserId }, data: { totpSecret: secret, totpEnabled: false } });
 
