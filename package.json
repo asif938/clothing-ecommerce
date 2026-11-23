@@ -31,9 +31,9 @@
     "e2e": "pnpm --filter e2e test"
   },
   "devDependencies": {
-    "turbo": "2.11.10",
-    "rimraf": "6.1.3",
-    "prettier": "3.9.10",
-    "typescript": "6.0.3"
+    "turbo": "2.11.13",
+    "rimraf": "6.1.4",
+    "prettier": "3.10.1",
+    "typescript": "7.0.2"
   }
 }
