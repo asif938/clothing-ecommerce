@@ -43,9 +43,9 @@
     "@clothing/config": "workspace:*",
     "@types/nodemailer": "8.0.2",
     "@types/qrcode": "1.5.6",
-    "@vitest/coverage-v8": "5.0.5",
-    "eslint": "10.13.0",
-    "typescript": "6.0.3",
-    "vitest": "5.0.5"
+    "@vitest/coverage-v8": "5.1.1",
+    "eslint": "10.15.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
   }
 }
