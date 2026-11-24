@@ -3171,5 +3171,8 @@ screen, out of thumb reach.
 - Floating elements read `--bottom-nav-offset` (set through a body class while the bar shows, below `lg`) instead of
   each knowing about the bar. The product page's sticky bar sets the same variable, which fixes the chat button
   covering its "Add to cart" button (that overlap was there before this change).
+- The look follows a reference the owner chose over a "floating pill" option: every tab keeps a visible name (icons
+  alone are harder to read for many shoppers), and the current tab rises into a brand-coloured circle. Colours come
+  from the theme tokens (`brand`, `accent`, `surface`) so each store's palette applies.
 - `useCart()` instances that load at the same moment now share one request (the header badge, the bar and the cart
   page used to fetch separately). Settled requests are never reused, so prices stay the server's current answer.

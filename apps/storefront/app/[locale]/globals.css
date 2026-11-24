@@ -112,7 +112,7 @@
  */
 @media (max-width: 1023.98px) {
   body.has-bottom-nav {
-    --bottom-nav-offset: calc(3.5rem + env(safe-area-inset-bottom));
+    --bottom-nav-offset: calc(4.75rem + env(safe-area-inset-bottom));
   }
 }
 

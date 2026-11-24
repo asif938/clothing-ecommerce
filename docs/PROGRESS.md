@@ -3069,6 +3069,10 @@ in a browser at 360 px and 1280 px, in Bangla and English, against the dev datab
 
 The admin tab picker compiles but hasn't been clicked through (staff login needs the owner's 2FA).
 
+- **Design** (the owner's reference, in the store's own colours): a floating rounded card in which
+  every tab shows its name. The current tab lifts into a circle in the brand colour, ringed in the
+  page colour so it looks cut out of the bar. Counts show in the accent colour. All colours come
+  from the theme, nothing is hard-coded. Checked at 360 px, in Bangla, on Home and Shop.
 - Storefront: `components/bottom-nav.tsx`, `lib/bottom-nav.ts` (tabs, active tab, hidden routes),
   new icons, and `--bottom-nav-offset` in `globals.css` used by the chat button, the live chat box
   and the "Added to cart" note. `MobileMenu` and `MobileSearch` open on the bar's events. `useCart`
