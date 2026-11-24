@@ -391,6 +391,12 @@ export interface AiToolCall {
   id: string;
   name: string;
   input: Record<string, unknown>;
+  /**
+   * Opaque token some providers attach to a tool call and require back,
+   * unchanged, with the next request (Gemini's `thoughtSignature`). Other
+   * drivers ignore it.
+   */
+  signature?: string;
 }
 
 export type AiChatMessage =

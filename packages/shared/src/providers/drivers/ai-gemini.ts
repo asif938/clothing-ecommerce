@@ -65,7 +65,8 @@ export function toGeminiContents(messages: AiChatMessage[]): Record<string, unkn
     else if (message.role === "assistant") {
       const parts: Record<string, unknown>[] = [];
       if (message.text) parts.push({ text: message.text });
-      for (const call of message.toolCalls ?? []) parts.push({ functionCall: { name: call.name, args: call.input } });
+      // Gemini 3 rejects a follow-up turn unless each function call carries back the `thoughtSignature` it came with.
+      for (const call of message.toolCalls ?? []) parts.push({ functionCall: { name: call.name, args: call.input }, ...(call.signature ? { thoughtSignature: call.signature } : {}) });
       if (parts.length > 0) push("model", parts);
     } else {
       push(
@@ -129,7 +130,7 @@ export function createGeminiDriver(config: GeminiConfig): AiDriver {
         }),
       });
       const body = (await response.json().catch(() => ({}))) as {
-        candidates?: { content?: { parts?: { text?: string; functionCall?: { name?: string; args?: Record<string, unknown> } }[] }; finishReason?: string }[];
+        candidates?: { content?: { parts?: { text?: string; functionCall?: { name?: string; args?: Record<string, unknown> }; thoughtSignature?: string }[] }; finishReason?: string }[];
         promptFeedback?: { blockReason?: string };
         usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
         modelVersion?: string;
@@ -141,7 +142,7 @@ export function createGeminiDriver(config: GeminiConfig): AiDriver {
       const parts = candidate?.content?.parts ?? [];
       const toolCalls = parts
         .filter((p) => p.functionCall?.name)
-        .map((p, i) => ({ id: `gemini_${i}_${p.functionCall!.name!}`, name: p.functionCall!.name!, input: p.functionCall!.args ?? {} }));
+        .map((p, i) => ({ id: `gemini_${i}_${p.functionCall!.name!}`, name: p.functionCall!.name!, input: p.functionCall!.args ?? {}, ...(p.thoughtSignature ? { signature: p.thoughtSignature } : {}) }));
       return {
         text: parts.map((p) => p.text ?? "").join(""),
         toolCalls,
