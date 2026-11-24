@@ -1,9 +1,9 @@
 /**
  * MVP block library (docs/PROJECT_SPEC.md §9.1). This is a representative
  * subset, not the full list the spec names — flash-sale countdown,
- * testimonials/reviews, trust badges, Instagram/UGC gallery, size guide
+ * trust badges, Instagram/UGC gallery, size guide
  * table, contact+map, order form and video each depend on a system this
- * milestone doesn't build yet (flash sales/reviews are M8, size charts'
+ * milestone doesn't build yet (flash sales are M8, size charts'
  * storefront rendering is M4). Every block type here follows the same
  * schema.ts/defaults.ts/Component.tsx shape, so adding one of those later
  * is additive, not a redesign — see docs/DECISIONS.md.
@@ -45,6 +45,9 @@ import { LookbookBlock } from "./blocks/lookbook/Component.tsx";
 import { forYouSchema } from "./blocks/for-you/schema.ts";
 import { forYouDefaults } from "./blocks/for-you/defaults.ts";
 import { ForYouBlock } from "./blocks/for-you/Component.tsx";
+import { reviewsSchema } from "./blocks/reviews/schema.ts";
+import { reviewsDefaults } from "./blocks/reviews/defaults.ts";
+import { ReviewsBlock } from "./blocks/reviews/Component.tsx";
 
 registerBlock({ type: "hero", label: { bn: "হিরো", en: "Hero" }, schema: heroSchema, defaults: heroDefaults, component: HeroBlock });
 registerBlock({ type: "rich_text", label: { bn: "টেক্সট", en: "Rich text" }, schema: richTextSchema, defaults: richTextDefaults, component: RichTextBlock });
@@ -65,3 +68,4 @@ registerBlock({
 });
 registerBlock({ type: "lookbook", label: { bn: "লুকবুক হটস্পট", en: "Lookbook hotspots" }, schema: lookbookSchema, defaults: lookbookDefaults, component: LookbookBlock });
 registerBlock({ type: "for_you", label: { bn: "আপনার জন্য (পার্সোনালাইজড)", en: "For you (personalized)" }, schema: forYouSchema, defaults: forYouDefaults, component: ForYouBlock });
+registerBlock({ type: "reviews", label: { bn: "গ্রাহক রিভিউ", en: "Customer reviews" }, schema: reviewsSchema, defaults: reviewsDefaults, component: ReviewsBlock });

@@ -4,10 +4,12 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { StoreCatalogService } from "./store-catalog.service";
 import {
   listCategoriesQuerySchema,
+  listFeaturedReviewsQuerySchema,
   listProductsQuerySchema,
   listingQuerySchema,
   suggestQuerySchema,
   type ListCategoriesQueryDto,
+  type ListFeaturedReviewsQueryDto,
   type ListProductsQueryDto,
   type ListingQuery,
   type ListingQueryDto,
@@ -67,6 +69,12 @@ export class StoreCatalogController {
     }
     const fullQuery: ListingQuery = { ...query, attributes };
     return this.catalog.listForListing(fullQuery);
+  }
+
+  /** Approved reviews across the store, for the home page `reviews` block (§9.1). */
+  @Get("reviews")
+  listFeaturedReviews(@Query(new ZodValidationPipe(listFeaturedReviewsQuerySchema)) query: ListFeaturedReviewsQueryDto) {
+    return this.catalog.listFeaturedReviews(query);
   }
 
   @Get("suggest")

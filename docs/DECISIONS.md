@@ -3044,3 +3044,24 @@ widget or sent a token, so turning it on blocked every order with `CAPTCHA_REQUI
 
 **Alternatives considered.** Exposing the site key through the public `/store/config` payload — rejected: it lives
 in the provider instance, not in settings, and only checkout needs it.
+
+---
+
+## 2026-11-24 — Home page reviews block
+
+**Context.** The spec's default home layout (§7.3, §9.1) includes testimonials, but the M3 block library left the
+block out because reviews did not exist yet. Reviews were added in M8.
+
+**Decisions.**
+- One `reviews` block covers both kinds of content: testimonials the owner types in (bn/en, shown first) and live
+  approved reviews (`recent` / `top_rated` / `with_photos`, or `none` to show testimonials only). There is no picker
+  for individual reviews; an owner who wants a specific quote can paste it in as a testimonial.
+- Names are shortened server-side to first name plus last initial, because the home page is seen by every visitor.
+  The product page keeps its existing behaviour.
+- Only reviews of active, not-deleted products are shown, so a card never links to a product that returns 404.
+- The block is server-rendered and cached like `product_grid` (60 s revalidate), and renders nothing when it has
+  nothing to show. That is why it is safe in the seeded home layout of a brand-new store.
+
+**Alternatives considered.** Separate `testimonials` and `reviews` blocks. Rejected because owners would have to
+manage two sections that look the same. Picking individual reviews was also rejected for now, because it needs a
+review picker in the admin and testimonials already cover that need.

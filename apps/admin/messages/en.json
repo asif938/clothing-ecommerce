@@ -3101,7 +3101,8 @@
       "spacer": "Empty space",
       "custom_html": "Custom HTML (advanced)",
       "lookbook": "Shoppable photo (lookbook)",
-      "for_you": "Recommended for you"
+      "for_you": "Recommended for you",
+      "reviews": "Customer reviews"
     },
     "descriptions": {
       "hero": "Large image across the top of the page with a heading and a button.",
@@ -3115,7 +3116,8 @@
       "spacer": "Blank space between two sections.",
       "custom_html": "Raw HTML for embeds. Super Admin only; unsafe code is removed when saved.",
       "lookbook": "A photo with tappable dots that open the products in it.",
-      "for_you": "Products picked for each shopper from what they viewed (best sellers for new visitors)."
+      "for_you": "Products picked for each shopper from what they viewed (best sellers for new visitors).",
+      "reviews": "Star reviews from your customers, plus testimonials you write yourself."
     },
     "fields": {
       "imageUrl": "Image",
@@ -3146,7 +3148,15 @@
       "productId": "Product",
       "xPercent": "Across (%)",
       "yPercent": "Down (%)",
-      "html": "HTML"
+      "html": "HTML",
+      "minRating": "Lowest star rating to show",
+      "reviewLimit": "How many customer reviews",
+      "testimonials": "Your own testimonials",
+      "name": "Name",
+      "quote": "What they said",
+      "rating": "Stars (1–5)",
+      "verifiedLabel": "Verified-buyer badge text",
+      "fallbackName": "Name when the reviewer has none"
     },
     "options": {
       "left": "Left",
@@ -3162,7 +3172,11 @@
       "sm": "Small",
       "md": "Medium",
       "lg": "Large",
-      "xl": "Extra large"
+      "xl": "Extra large",
+      "recent": "Newest reviews",
+      "top_rated": "Highest rated",
+      "with_photos": "Reviews with photos",
+      "none": "Only my own testimonials"
     },
     "items": {
       "banner": "Banner",
@@ -3170,7 +3184,9 @@
       "question": "Question",
       "add_question": "Add question",
       "hotspot": "Dot",
-      "add_hotspot": "Add product dot"
+      "add_hotspot": "Add product dot",
+      "testimonial": "Testimonial",
+      "add_testimonial": "Add testimonial"
     },
     "hints": {
       "heroImage": "Best size: 2400 × 900 px. Keep the left side plain — the heading sits there.",
@@ -3180,7 +3196,11 @@
       "fallbackHeading": "Shown when the visitor is new and there is nothing to personalise yet.",
       "xPercent": "0 = left edge, 100 = right edge of the photo.",
       "yPercent": "0 = top edge, 100 = bottom edge of the photo.",
-      "html": "Scripts and unsafe tags are removed when saved."
+      "html": "Scripts and unsafe tags are removed when saved.",
+      "reviewsSource": "Only approved reviews of products that are live are shown. Names are shortened, e.g. \"Rahim K.\".",
+      "minRating": "4 = show 4 and 5 star reviews only.",
+      "testimonials": "Shown before the customer reviews, e.g. quotes from WhatsApp or Facebook.",
+      "fallbackName": "Used when a customer account has no name."
     }
   },
   "pickers": {

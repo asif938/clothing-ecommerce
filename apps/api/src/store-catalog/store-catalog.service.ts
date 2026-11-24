@@ -5,9 +5,26 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MediaProvidersService } from "../media/media-providers.service";
 import { CacheService } from "../cache/cache.service";
 import type { MediaVariantMap } from "../media/media-driver";
-import type { ListingQuery } from "./dto";
+import { excerptReview, maskReviewerName } from "@clothing/shared";
+import type { ListFeaturedReviewsQueryDto, ListingQuery } from "./dto";
 
 const CARD_IMAGE_WIDTH = 480;
+const REVIEW_EXCERPT_CHARS = 320;
+const REVIEW_PRODUCT_IMAGE_WIDTH = 160;
+
+export interface FeaturedReview {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  photoUrl: string | null;
+  /** Written against a delivered order item (§5.5 verified purchase). */
+  verified: boolean;
+  /** Shortened for a public showcase, e.g. "Rahim K."; null when the customer has no name. */
+  authorName: string | null;
+  createdAt: string;
+  product: { id: string; slug: string; title: unknown; imageUrl: string | null };
+}
 const PDP_IMAGE_WIDTH = 1200;
 // §13.1 "facet counts cached per category". A short TTL rather than
 // precise invalidation on every product/category mutation — this is the
@@ -147,6 +164,59 @@ export class StoreCatalogService {
   private reorderByIds<T extends { id: string }>(items: T[], ids: string[]): T[] {
     const byId = new Map(items.map((item) => [item.id, item]));
     return ids.map((id) => byId.get(id)).filter((item): item is T => !!item);
+  }
+
+  /**
+   * Approved reviews from across the store for the home page `reviews`
+   * block (§9.1 "testimonials/reviews"). Only products that are live on the
+   * storefront; names are shortened ("Rahim K.") because this is shown to
+   * every visitor, and bodies are trimmed to a card-sized excerpt.
+   */
+  async listFeaturedReviews(query: ListFeaturedReviewsQueryDto): Promise<FeaturedReview[]> {
+    const where: Prisma.ReviewWhereInput = {
+      status: "approved",
+      rating: { gte: query.minRating },
+      product: { deletedAt: null, status: "active" },
+      ...(query.sort === "with_photos" ? { mediaUrls: { isEmpty: false } } : {}),
+    };
+    const orderBy: Prisma.ReviewOrderByWithRelationInput[] =
+      query.sort === "top_rated" ? [{ rating: "desc" }, { helpfulCount: "desc" }, { createdAt: "desc" }] : [{ createdAt: "desc" }];
+
+    const reviews = await this.prisma.review.findMany({
+      where,
+      orderBy,
+      take: query.limit,
+      select: {
+        id: true,
+        rating: true,
+        title: true,
+        body: true,
+        mediaUrls: true,
+        orderItemId: true,
+        createdAt: true,
+        customer: { select: { name: true } },
+        product: { select: { id: true, slug: true, title: true, media: { take: 1, orderBy: { position: "asc" }, include: { media: true } } } },
+      },
+    });
+
+    return await Promise.all(
+      reviews.map(async (review) => ({
+        id: review.id,
+        rating: review.rating,
+        title: review.title,
+        body: excerptReview(review.body, REVIEW_EXCERPT_CHARS),
+        photoUrl: review.mediaUrls[0] ?? null,
+        verified: review.orderItemId !== null,
+        authorName: maskReviewerName(review.customer?.name),
+        createdAt: review.createdAt.toISOString(),
+        product: {
+          id: review.product.id,
+          slug: review.product.slug,
+          title: review.product.title,
+          imageUrl: await this.resolveImageUrl(review.product.media[0]?.media ?? null, REVIEW_PRODUCT_IMAGE_WIDTH),
+        },
+      })),
+    );
   }
 
   private async buildProductWhere(query: ListProductsQuery): Promise<Prisma.ProductWhereInput | null> {

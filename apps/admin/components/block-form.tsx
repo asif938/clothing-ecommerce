@@ -244,7 +244,7 @@ function FieldInput({ field, props, onChange }: { field: BlockField; props: Prop
     for (const key of field.clears ?? []) delete next[key];
     onChange(next);
   };
-  const labelKey = field.key === "sourceId" ? `sourceId_${field.kind}` : field.key;
+  const labelKey = field.labelKey ?? (field.key === "sourceId" ? `sourceId_${field.kind}` : field.key);
   const label = t(`fields.${labelKey}`);
   const hint = field.hint ? t(`hints.${field.hint}`) : undefined;
 

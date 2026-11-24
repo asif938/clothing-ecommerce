@@ -2932,6 +2932,31 @@ owner's 2FA); the starter menus were created through `MenusService` server-side.
 
 ---
 
+## Home page reviews block (§9.1 testimonials/reviews, 2026-11-24)
+
+Status: built; typecheck, lint and unit tests pass (shared 278, blocks 16, admin 21, API 877).
+The block was checked in a browser at 375 px and 1280 px with sample testimonials on a temporary
+route that has since been removed. Cards for real customer reviews have only been covered by unit
+tests, because the dev database has no approved reviews yet. The admin form compiles but has not
+been clicked through, because staff login needs the owner's 2FA.
+
+- **`packages/blocks`**: new `reviews` block (`blocks/reviews/`). The owner's own testimonials come
+  first, then approved customer reviews from `source` (`recent`, `top_rated`, `with_photos`, or
+  `none` for testimonials only), filtered by `minRating` and capped by `limit`. Each card shows stars,
+  the reviewer's name, a verified-purchase badge, the first review photo and a link to the product.
+  On phones the cards scroll sideways in one row; from `sm` up they form a 2- or 3-column grid. The
+  heading, badge text and fallback name are all bn/en props.
+- **`apps/api`**: public `GET /store/catalog/reviews?sort&minRating&limit`. It returns only
+  approved reviews of live products, with the reviewer's name shortened ("Rahim K.") and the body
+  trimmed to 320 characters. It never returns customer ids, emails or phone numbers (+3 tests).
+- **`packages/shared`**: `maskReviewerName` and `excerptReview` (+6 tests).
+- **`apps/admin`**: form for the block, with an optional `labelKey` on block fields so `limit`
+  reads "How many customer reviews". bn/en strings live under `blocks.*`.
+- **Seed**: new installs get the block on the home page after Best sellers. Existing home pages
+  are unchanged, so add the block from CMS → Pages → Home.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

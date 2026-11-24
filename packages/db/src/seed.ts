@@ -194,9 +194,23 @@ async function seedDefaultPages() {
     type: "product_grid",
     props: { heading: { bn: "নতুন পণ্য", en: "New arrivals" }, source: "new_arrivals", limit: 8 },
   };
+  // §9.1 testimonials/reviews — renders nothing until the store has approved reviews.
+  const reviewsBlock = {
+    id: "seed-reviews",
+    type: "reviews",
+    props: {
+      heading: { bn: "গ্রাহকরা যা বলছেন", en: "What our customers say" },
+      source: "recent",
+      minRating: 4,
+      limit: 6,
+      testimonials: [],
+      verifiedLabel: { bn: "যাচাইকৃত ক্রেতা", en: "Verified purchase" },
+      fallbackName: { bn: "গ্রাহক", en: "Customer" },
+    },
+  };
 
   const systemPages: { slug: string; title: string; blocks: object[] }[] = [
-    { slug: "home", title: "Home", blocks: [heroBlock, newArrivalsBlock, bestSellersBlock] },
+    { slug: "home", title: "Home", blocks: [heroBlock, newArrivalsBlock, bestSellersBlock, reviewsBlock] },
     { slug: "404", title: "Not found", blocks: [{ id: "seed-404", type: "rich_text", props: { content: { bn: "পেজটি খুঁজে পাওয়া যায়নি।", en: "This page could not be found." }, align: "center" } }] },
     { slug: "500", title: "Server error", blocks: [{ id: "seed-500", type: "rich_text", props: { content: { bn: "কিছু ভুল হয়েছে। পরে আবার চেষ্টা করুন।", en: "Something went wrong. Please try again shortly." }, align: "center" } }] },
     { slug: "maintenance", title: "Maintenance", blocks: [{ id: "seed-maintenance", type: "rich_text", props: { content: { bn: "আমরা রক্ষণাবেক্ষণের জন্য সাময়িকভাবে বন্ধ আছি।", en: "We're down for maintenance — back shortly." }, align: "center" } }] },

@@ -80,6 +80,22 @@ lock prevents two staff from clobbering each other's draft.
 পাবলিশড আলাদা কপি — "Publish" ড্রাফট ব্লক পাবলিশড স্লটে কপি করে। ভার্সন
 হিস্টরি থেকে আগের পাবলিশড ভার্সনে ফিরে যাওয়া যায়।
 
+### Customer reviews section
+
+**EN** — Add *Customer reviews* to a page (for example, the home page) to show star reviews from your
+customers. In *Which reviews*, choose the newest reviews, the highest rated, reviews with photos, or
+only your own testimonials. You can also hide reviews below a star rating and set how many reviews
+to show. Only approved reviews of products that are on sale appear, and names are shortened (for
+example, "Rahim K."). Under *Your own testimonials* you can type quotes from WhatsApp or Facebook in
+both languages; they appear first. If there is nothing to show, the section stays hidden.
+
+**BN** — পেজে (যেমন হোম পেজে) *গ্রাহক রিভিউ* সেকশন যোগ করলে গ্রাহকদের স্টার রিভিউ দেখাবে।
+*কোন রিভিউ*-তে বেছে নিন: সর্বশেষ রিভিউ, সবচেয়ে বেশি রেটিং, ছবিসহ রিভিউ, নাকি শুধু আপনার নিজের
+টেস্টিমোনিয়াল। কত স্টারের নিচের রিভিউ লুকাবে আর কয়টা রিভিউ দেখাবে, সেটাও ঠিক করতে পারবেন।
+শুধু অনুমোদিত রিভিউ আর বিক্রিতে থাকা পণ্যের রিভিউ দেখায়, আর নাম ছোট করে দেখায় (যেমন "Rahim K.")।
+*আপনার নিজের টেস্টিমোনিয়াল*-এ WhatsApp বা Facebook থেকে পাওয়া মন্তব্য দুই ভাষায় লিখে দিতে পারবেন;
+এগুলো সবার আগে দেখাবে। দেখানোর মতো কিছু না থাকলে সেকশনটা লুকানো থাকে।
+
 ## CMS announcements (`cms.manage`)
 
 **EN** — Top-of-page bars with a start/end schedule and optional link.

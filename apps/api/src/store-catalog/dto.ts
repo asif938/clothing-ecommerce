@@ -38,3 +38,11 @@ export interface ListingQuery extends ListingQueryDto {
 
 export const suggestQuerySchema = z.object({ q: z.string().min(1) });
 export type SuggestQueryDto = z.infer<typeof suggestQuerySchema>;
+
+/** Home page `reviews` block (docs/PROJECT_SPEC.md §9.1): approved reviews from across the store. */
+export const listFeaturedReviewsQuerySchema = z.object({
+  sort: z.enum(["recent", "top_rated", "with_photos"]).default("recent"),
+  minRating: z.coerce.number().int().min(1).max(5).default(4),
+  limit: z.coerce.number().int().min(1).max(12).default(6),
+});
+export type ListFeaturedReviewsQueryDto = z.infer<typeof listFeaturedReviewsQuerySchema>;

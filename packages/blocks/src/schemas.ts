@@ -32,6 +32,8 @@ import { lookbookSchema } from "./blocks/lookbook/schema.ts";
 import { lookbookDefaults } from "./blocks/lookbook/defaults.ts";
 import { forYouSchema } from "./blocks/for-you/schema.ts";
 import { forYouDefaults } from "./blocks/for-you/defaults.ts";
+import { reviewsSchema } from "./blocks/reviews/schema.ts";
+import { reviewsDefaults } from "./blocks/reviews/defaults.ts";
 
 export interface BlockSchemaEntry {
   type: string;
@@ -53,6 +55,7 @@ export const BLOCK_SCHEMAS: Record<string, BlockSchemaEntry> = {
   custom_html: { type: "custom_html", schema: customHtmlSchema, defaults: customHtmlDefaults, superAdminOnly: true },
   lookbook: { type: "lookbook", schema: lookbookSchema, defaults: lookbookDefaults },
   for_you: { type: "for_you", schema: forYouSchema, defaults: forYouDefaults },
+  reviews: { type: "reviews", schema: reviewsSchema, defaults: reviewsDefaults },
 };
 
 export interface BlockInstanceLike {

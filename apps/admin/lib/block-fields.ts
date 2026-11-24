@@ -18,6 +18,8 @@ interface BaseField {
   showIf?: (props: Props) => boolean;
   /** i18n key under `blocks.hints` shown under the input. */
   hint?: string;
+  /** i18n key under `blocks.fields` when the prop name's usual label doesn't fit this block (e.g. `limit` counting reviews, not products). */
+  labelKey?: string;
   /** Other props reset when this field changes (e.g. the picked category when the product source changes). */
   clears?: string[];
 }
@@ -148,6 +150,30 @@ export const BLOCK_FORMS: Record<string, BlockFormSpec> = {
       { key: "limit", kind: "number", min: 2, max: 24 },
     ],
   },
+  reviews: {
+    description: "reviews",
+    fields: [
+      { key: "heading", kind: "localizedText" },
+      { key: "source", kind: "select", options: ["recent", "top_rated", "with_photos", "none"], hint: "reviewsSource" },
+      { key: "minRating", kind: "number", min: 1, max: 5, showIf: (p) => p.source !== "none", hint: "minRating" },
+      { key: "limit", kind: "number", min: 1, max: 12, labelKey: "reviewLimit", showIf: (p) => p.source !== "none" },
+      {
+        key: "testimonials",
+        kind: "list",
+        max: 12,
+        itemLabel: "testimonial",
+        hint: "testimonials",
+        newItem: () => ({ name: "", quote: { bn: "", en: "" }, rating: 5 }),
+        itemFields: [
+          { key: "name", kind: "text" },
+          { key: "quote", kind: "localizedTextarea" },
+          { key: "rating", kind: "number", min: 1, max: 5 },
+        ],
+      },
+      { key: "verifiedLabel", kind: "localizedText" },
+      { key: "fallbackName", kind: "localizedText", hint: "fallbackName" },
+    ],
+  },
   lookbook: {
     description: "lookbook",
     fields: [
@@ -174,4 +200,4 @@ export const BLOCK_FORMS: Record<string, BlockFormSpec> = {
 };
 
 /** Order of the "Add a section" menu: the blocks an owner reaches for first come first. */
-export const BLOCK_ORDER = ["hero", "product_grid", "category_tiles", "banner_strip", "image_text", "rich_text", "faq_accordion", "newsletter_signup", "for_you", "lookbook", "spacer", "custom_html"];
+export const BLOCK_ORDER = ["hero", "product_grid", "category_tiles", "banner_strip", "image_text", "rich_text", "faq_accordion", "newsletter_signup", "reviews", "for_you", "lookbook", "spacer", "custom_html"];

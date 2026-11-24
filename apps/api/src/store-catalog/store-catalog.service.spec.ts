@@ -162,3 +162,49 @@ describe("StoreCatalogService.listCategories image fallback", () => {
     expect(cards[0]!.imageUrl).toBeNull();
   });
 });
+
+describe("StoreCatalogService.listFeaturedReviews", () => {
+  function setup(rows: unknown[]) {
+    const findMany = vi.fn().mockResolvedValue(rows);
+    const prisma = { review: { findMany } };
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, makeCache() as never);
+    return { service, findMany };
+  }
+
+  const row = {
+    id: "r1",
+    rating: 5,
+    title: "Lovely",
+    body: "Soft fabric",
+    mediaUrls: ["https://cdn.example/r1.jpg"],
+    orderItemId: "oi1",
+    createdAt: new Date("2026-11-01T00:00:00Z"),
+    customer: { name: "Rahim Uddin Khan" },
+    product: { id: "p1", slug: "panjabi", title: { en: "Panjabi" }, media: [] },
+  };
+
+  it("only reads approved reviews of live products at or above the minimum rating", async () => {
+    const { service, findMany } = setup([]);
+    await service.listFeaturedReviews({ sort: "recent", minRating: 4, limit: 6 });
+    const args = findMany.mock.calls[0]![0] as { where: Record<string, unknown>; take: number };
+    expect(args.where).toMatchObject({ status: "approved", rating: { gte: 4 }, product: { deletedAt: null, status: "active" } });
+    expect(args.where).not.toHaveProperty("mediaUrls");
+    expect(args.take).toBe(6);
+  });
+
+  it("filters to photo reviews and orders top-rated by rating first", async () => {
+    const { service, findMany } = setup([]);
+    await service.listFeaturedReviews({ sort: "with_photos", minRating: 1, limit: 3 });
+    expect((findMany.mock.calls[0]![0] as { where: Record<string, unknown> }).where).toMatchObject({ mediaUrls: { isEmpty: false } });
+    await service.listFeaturedReviews({ sort: "top_rated", minRating: 1, limit: 3 });
+    expect((findMany.mock.calls[1]![0] as { orderBy: unknown[] }).orderBy[0]).toEqual({ rating: "desc" });
+  });
+
+  it("masks the reviewer's name and marks verified purchases", async () => {
+    const { service } = setup([row, { ...row, id: "r2", orderItemId: null, customer: null, mediaUrls: [] }]);
+    const [first, second] = await service.listFeaturedReviews({ sort: "recent", minRating: 4, limit: 6 });
+    expect(first).toMatchObject({ authorName: "Rahim K.", verified: true, photoUrl: "https://cdn.example/r1.jpg", product: { slug: "panjabi", imageUrl: null } });
+    expect(first).not.toHaveProperty("customer");
+    expect(second).toMatchObject({ authorName: null, verified: false, photoUrl: null });
+  });
+});
