@@ -3025,3 +3025,22 @@ makes every checkout fail with `CAPTCHA_REQUIRED` — leave it off until the wid
 
 **Operational note.** Apply migration `20261124090000_review_helpful_votes` (`pnpm db:migrate:deploy`) before or
 right after deploying; until then the helpful button returns an error (nothing else is affected).
+
+---
+
+## 2026-11-24 — Turnstile widget at checkout
+
+**Context.** `checkout.turnstileEnabled` made the API require a captcha token, but the storefront never rendered a
+widget or sent a token, so turning it on blocked every order with `CAPTCHA_REQUIRED`.
+
+**Decisions.**
+- `GET /store/checkout/captcha` returns `{ enabled, provider, siteKey }` — Turnstile's public site key only; the
+  secret key never leaves the API.
+- The checkout page loads Cloudflare's script on demand (`components/turnstile-widget.tsx`, explicit render, bn/en
+  language), keeps "Place order" disabled until a token arrives, and remounts the widget after a failed attempt,
+  since tokens are single-use. With the mock captcha provider no widget is shown and a placeholder token is sent.
+  If the script can't load, the page says so instead of failing silently.
+- The storefront CSP (`proxy.ts`) allows `https://challenges.cloudflare.com` for scripts and frames.
+
+**Alternatives considered.** Exposing the site key through the public `/store/config` payload — rejected: it lives
+in the provider instance, not in settings, and only checkout needs it.

@@ -8,8 +8,11 @@ import { readCookie } from "../lib/analytics";
 import { useCart } from "../lib/use-cart";
 import { readUtm } from "../lib/utm";
 import { CheckoutCredits, CreditTotals } from "./checkout-credits";
+import { TurnstileWidget } from "./turnstile-widget";
 import {
   availablePaymentMethods,
+  checkoutCaptchaConfig,
+  type CheckoutCaptchaConfig,
   areas as fetchAreas,
   districts as fetchDistricts,
   divisions as fetchDivisions,
@@ -62,13 +65,26 @@ export function CheckoutView() {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
   const idempotencyKey = useRef(crypto.randomUUID());
+  // Captcha at checkout (setting `checkout.turnstileEnabled`): Turnstile renders a widget; the mock provider needs no widget.
+  const [captcha, setCaptcha] = useState<CheckoutCaptchaConfig | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const [captchaLoadFailed, setCaptchaLoadFailed] = useState(false);
 
   useEffect(() => {
     fetchDivisions().then(setDivisions).catch(() => undefined);
     availablePaymentMethods()
       .then((r) => setMethods(r.methods))
       .catch(() => undefined);
+    checkoutCaptchaConfig()
+      .then(setCaptcha)
+      .catch(() => undefined);
   }, []);
+
+  const needsTurnstile = captcha?.enabled === true && captcha.provider === "turnstile";
+  // A token for the order request: the widget's for Turnstile, a placeholder the mock provider accepts, none when off.
+  const turnstileToken = captcha?.enabled ? (needsTurnstile ? captchaToken : "mock") : null;
+  const captchaPending = needsTurnstile && !captchaToken;
 
   useEffect(() => {
     if (!divisionId) return;
@@ -124,7 +140,7 @@ export function CheckoutView() {
       // the same id for platform-side dedup.
       const trackingEventId = crypto.randomUUID();
       const result = await placeOrder(
-        { paymentMethod, otpCode: otpCode || undefined, termsAccepted, trackingEventId, fbc: readCookie("_fbc"), fbp: readCookie("_fbp"), sourceUrl: window.location.href, ...readUtm() },
+        { paymentMethod, otpCode: otpCode || undefined, termsAccepted, turnstileToken: turnstileToken ?? undefined, trackingEventId, fbc: readCookie("_fbc"), fbp: readCookie("_fbp"), sourceUrl: window.location.href, ...readUtm() },
         idempotencyKey.current,
       );
       if (result.redirectUrl) {
@@ -135,6 +151,11 @@ export function CheckoutView() {
     } catch (error) {
       setPlaceError(error instanceof Error ? error.message : "Could not place order");
       idempotencyKey.current = crypto.randomUUID();
+      // Turnstile tokens are single-use, and the server already spent this one: get a fresh widget.
+      if (needsTurnstile) {
+        setCaptchaToken(null);
+        setCaptchaKey((k) => k + 1);
+      }
     } finally {
       setPlacing(false);
     }
@@ -306,8 +327,20 @@ export function CheckoutView() {
         </div>
       )}
 
+      {needsTurnstile && (
+        <section className="mb-4">
+          {captcha?.siteKey && !captchaLoadFailed ? (
+            <TurnstileWidget key={captchaKey} siteKey={captcha.siteKey} locale={locale} onToken={setCaptchaToken} onLoadError={() => setCaptchaLoadFailed(true)} />
+          ) : (
+            <p className="text-sm text-danger">
+              {locale === "bn" ? "যাচাইকরণ লোড করা যায়নি — পেজটি রিফ্রেশ করুন বা পরে চেষ্টা করুন।" : "The verification check could not load — refresh the page or try again later."}
+            </p>
+          )}
+        </section>
+      )}
+
       {placeError && <p className="mb-3 text-sm text-danger">{placeError}</p>}
-      <button onClick={handlePlaceOrder} disabled={placing || !addressComplete} className="w-full rounded-theme bg-brand px-6 py-3 text-sm font-medium text-brand-foreground disabled:opacity-60">
+      <button onClick={handlePlaceOrder} disabled={placing || !addressComplete || captchaPending} className="w-full rounded-theme bg-brand px-6 py-3 text-sm font-medium text-brand-foreground disabled:opacity-60">
         {placing ? "…" : locale === "bn" ? "অর্ডার করুন" : "Place order"}
       </button>
     </div>

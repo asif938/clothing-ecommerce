@@ -175,3 +175,10 @@ export const getShippingQuote = (divisionId: string, districtId: string, areaId:
   callApi<{ zoneId: string | null; rates: ShippingRateOption[] }>(
     `/store/shipping/quote?divisionId=${divisionId}&districtId=${districtId}&areaId=${areaId}&weightGrams=${weightGrams}&subtotal=${subtotal}`,
   );
+
+export interface CheckoutCaptchaConfig {
+  enabled: boolean;
+  provider: "turnstile" | "mock" | null;
+  siteKey: string | null;
+}
+export const checkoutCaptchaConfig = () => callApi<CheckoutCaptchaConfig>("/store/checkout/captcha");

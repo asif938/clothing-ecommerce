@@ -35,11 +35,13 @@ function withSecurityHeaders(response: NextResponse): NextResponse {
   const csp = [
     "default-src 'self'",
     // Dev only: React's debug tooling needs eval, and Next's HMR client needs its websocket.
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: ${apiOrigin}`,
     "font-src 'self' data:",
     `connect-src 'self'${isDev ? " ws://localhost:3000 ws://127.0.0.1:3000" : ""} https://www.google-analytics.com https://analytics.tiktok.com https://connect.facebook.net https://www.facebook.com`,
+    // Cloudflare Turnstile (checkout captcha) runs in an iframe from its own origin.
+    "frame-src 'self' https://challenges.cloudflare.com",
     `frame-ancestors ${frameAncestors}`,
     "base-uri 'self'",
     "form-action 'self'",
