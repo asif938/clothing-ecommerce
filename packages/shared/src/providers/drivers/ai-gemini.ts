@@ -22,6 +22,32 @@ function modelPath(model: string): string {
   return model.startsWith("models/") ? model : `models/${model}`;
 }
 
+/** Schema keywords Gemini's `functionDeclarations[].parameters` accepts (its OpenAPI 3.0 subset). */
+const GEMINI_SCHEMA_KEYS = new Set(["type", "format", "title", "description", "nullable", "enum", "required", "minItems", "maxItems", "minLength", "maxLength", "pattern", "minimum", "maximum", "propertyOrdering"]);
+
+/**
+ * Tool input schema (JSON Schema, shared with the other AI drivers) → the
+ * subset Gemini accepts. Gemini rejects the whole request on an unknown
+ * keyword (e.g. `additionalProperties: false`, which the chat assistant's
+ * tools use for the stricter providers), so anything outside the subset is
+ * dropped; `properties`, `items` and `anyOf` are converted recursively.
+ */
+export function toGeminiSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema as Record<string, unknown>)) {
+    if (key === "properties" && value && typeof value === "object") {
+      out.properties = Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([name, child]) => [name, toGeminiSchema(child)]));
+    } else if (key === "items" || key === "anyOf") {
+      out[key] = toGeminiSchema(value);
+    } else if (GEMINI_SCHEMA_KEYS.has(key)) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 /**
  * Neutral transcript → Gemini `contents`. Gemini function calls carry no
  * id, so ours are minted as `gemini_<n>_<name>` and the function name for
@@ -95,7 +121,7 @@ export function createGeminiDriver(config: GeminiConfig): AiDriver {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: input.system }] },
           contents: toGeminiContents(input.messages),
-          tools: [{ functionDeclarations: input.tools.map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema })) }],
+          tools: [{ functionDeclarations: input.tools.map((t) => ({ name: t.name, description: t.description, parameters: toGeminiSchema(t.inputSchema) })) }],
           generationConfig: {
             maxOutputTokens: input.maxTokens,
             ...(input.temperature !== null && input.temperature !== undefined ? { temperature: input.temperature } : {}),
