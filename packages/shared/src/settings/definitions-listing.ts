@@ -119,3 +119,36 @@ export const LISTING_FILTER_ATTRIBUTES = filterToggle("listing.filters.attribute
 export const LISTING_FILTER_PRICE = filterToggle("listing.filters.price", { bn: "ফিল্টার: দাম", en: "Filter: price" });
 export const LISTING_FILTER_SALE = filterToggle("listing.filters.onSale", { bn: "ফিল্টার: শুধু ছাড়ে", en: "Filter: on sale" });
 export const LISTING_FILTER_STOCK = filterToggle("listing.filters.inStock", { bn: "ফিল্টার: শুধু স্টকে আছে", en: "Filter: in stock" });
+
+/** Tabs the phone bottom navigation bar can show (`theme.bottomNav.items`). `categories` opens the menu drawer, `search` the search field. */
+export const BOTTOM_NAV_ITEMS = ["home", "shop", "categories", "search", "wishlist", "cart", "account", "track"] as const;
+export type BottomNavItem = (typeof BOTTOM_NAV_ITEMS)[number];
+
+export const THEME_BOTTOM_NAV_ENABLED = defineSetting({
+  key: "theme.bottomNav.enabled",
+  group: "theme",
+  type: z.boolean(),
+  default: true,
+  label: { bn: "মোবাইলে নিচের ন্যাভিগেশন বার", en: "Bottom navigation bar on phones" },
+  help: { bn: "ফোন ও ছোট ট্যাবলেটে নিচে স্থায়ী বার; প্রোডাক্ট ও চেকআউট পেজে লুকানো থাকে", en: "A fixed bar at the bottom on phones and small tablets; hidden on product and checkout pages" },
+  secret: false,
+  public: true,
+  permission: THEME,
+  ui: { widget: "toggle" },
+});
+
+export const THEME_BOTTOM_NAV_ITEMS = defineSetting({
+  key: "theme.bottomNav.items",
+  group: "theme",
+  type: z
+    .array(z.enum(BOTTOM_NAV_ITEMS))
+    .min(2)
+    .max(5)
+    .refine((items) => new Set(items).size === items.length, { message: "Each tab can appear only once" }),
+  default: ["home", "shop", "wishlist", "cart", "account"],
+  label: { bn: "নিচের বারের ট্যাব (বাঁ থেকে ডানে)", en: "Bottom bar tabs (left to right)" },
+  secret: false,
+  public: true,
+  permission: THEME,
+  ui: { widget: "json" },
+});

@@ -3153,3 +3153,23 @@ link needed a login.
 **Alternatives considered.** Linking guest orders to auto-created customer accounts (a bigger change to how
 customers are identified), and a new `review_request` notification event with an editable template (needs a
 migration; the message is editable in Settings instead).
+
+---
+
+## 2026-11-24 — Phone bottom navigation bar
+
+**Context.** On phones the header hid wishlist and account (desktop only), and everything sat at the top of the
+screen, out of thumb reach.
+
+**Decisions.**
+- A fixed bottom bar below `lg`, on by default, with up to five tabs chosen in Settings → Theme from Home, Shop,
+  Categories (opens the menu drawer), Search (opens the search field), Wishlist, Cart, Account and Track. The default
+  is Home · Shop · Wishlist · Cart · Account; search and the menu stay in the header. Wishlist and Cart show live
+  counts. Labels are UI strings `storefront.bottomNav.*`.
+- Hidden on product pages, where their own sticky "Add to cart" bar takes that spot, and on checkout and order
+  confirmation, which are pages for finishing a purchase.
+- Floating elements read `--bottom-nav-offset` (set through a body class while the bar shows, below `lg`) instead of
+  each knowing about the bar. The product page's sticky bar sets the same variable, which fixes the chat button
+  covering its "Add to cart" button (that overlap was there before this change).
+- `useCart()` instances that load at the same moment now share one request (the header badge, the bar and the cart
+  page used to fetch separately). Settled requests are never reused, so prices stay the server's current answer.

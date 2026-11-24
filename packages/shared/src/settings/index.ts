@@ -15,4 +15,4 @@ export { AD_PLATFORMS, type AdPlatform, type AdSpendSourceMap } from "./definiti
 import "./definitions-m17.ts";
 // Product listing pages (/shop, categories, collections).
 import "./definitions-listing.ts";
-export { LISTING_PAGE_SIZES, LISTING_SORTS, LISTING_VIEWS, type ListingSort, type ListingView } from "./definitions-listing.ts";
+export { BOTTOM_NAV_ITEMS, LISTING_PAGE_SIZES, LISTING_SORTS, LISTING_VIEWS, type BottomNavItem, type ListingSort, type ListingView } from "./definitions-listing.ts";

@@ -10,6 +10,23 @@ function broadcast(data: CartResponse) {
   window.dispatchEvent(new CustomEvent<CartResponse>(CART_UPDATED_EVENT, { detail: data }));
 }
 
+/**
+ * One shared request for components that load the cart at the same moment
+ * (header badge, bottom bar, cart page all mount together), instead of one
+ * each. Cleared as soon as it settles, so a later `refresh()` always asks
+ * the server again — never a stale cache (golden rule 6).
+ */
+let inflight: Promise<CartResponse> | null = null;
+
+function loadCart(): Promise<CartResponse> {
+  if (!inflight) {
+    inflight = getCart().finally(() => {
+      inflight = null;
+    });
+  }
+  return inflight;
+}
+
 /** Adds to the cart without loading it first — for product-card quick add, where a full `useCart()` per card would fetch the cart once per card. Every `useCart()` on the page still updates. */
 export async function addToCart(variantId: string, quantity: number): Promise<CartResponse> {
   const data = await addCartItem(variantId, quantity);
@@ -25,7 +42,7 @@ export function useCart() {
 
   const refresh = useCallback(() => {
     setLoading(true);
-    getCart()
+    loadCart()
       .then(setData)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));

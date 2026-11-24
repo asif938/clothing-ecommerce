@@ -103,3 +103,22 @@
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Phone bottom navigation (components/bottom-nav.tsx adds `has-bottom-nav`
+ * to <body> while it shows). Floating elements — chat button, live chat
+ * box, "Added to cart" note — add this to their `bottom` so they sit above
+ * the bar. From `lg` up the bar is hidden, so the offset is zero there.
+ */
+@media (max-width: 1023.98px) {
+  body.has-bottom-nav {
+    --bottom-nav-offset: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Product page's sticky "Add to cart" bar (phones, below `sm`) takes the same space. */
+@media (max-width: 639.98px) {
+  body.has-sticky-cta {
+    --bottom-nav-offset: 4.25rem;
+  }
+}

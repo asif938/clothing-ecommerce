@@ -15,6 +15,8 @@ import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { ProductActionsProvider } from "../../components/product-actions-provider";
 import { resolveCardText } from "../../lib/card-text";
+import { BottomNav } from "../../components/bottom-nav";
+import { readBottomNavConfig, resolveBottomNavLabels } from "../../lib/bottom-nav";
 import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
 import { fontClassNames, fontStackCss } from "../../lib/fonts";
 import { pickForegroundColor, safeHexColor, serializeJsonLd } from "../../lib/theme";
@@ -88,6 +90,7 @@ export default async function LocaleLayout({
 
   const [announcements, headerMenu, footerMenu, uiStrings] = await Promise.all([getAnnouncements(), getMenu("header"), getMenu("footer"), getUiStrings()]);
   const baseUrl = process.env.STOREFRONT_URL ?? "http://localhost:3000";
+  const bottomNav = readBottomNavConfig(config);
   // Organization + WebSite(SearchAction) structured data (§13.2) — site-wide, so it lives here rather than on any one page.
   const siteLd = [
     { "@context": "https://schema.org", "@type": "Organization", name: brandName, url: baseUrl },
@@ -128,6 +131,7 @@ export default async function LocaleLayout({
             locale={locale}
             uiStrings={uiStrings}
           />
+          {bottomNav.enabled && <BottomNav items={bottomNav.items} labels={resolveBottomNavLabels(uiStrings, locale)} />}
           <ChatButtons
             liveChatEnabled={config["support.liveChat.enabled"] === true}
             locale={locale}

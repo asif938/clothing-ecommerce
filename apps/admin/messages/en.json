@@ -67,7 +67,19 @@
       "platform_google": "Google",
       "platform_tiktok": "TikTok",
       "platform_other": "Other",
-      "utmHint": "utm_source values in your ad links that belong to each platform, separated by commas."
+      "utmHint": "utm_source values in your ad links that belong to each platform, separated by commas.",
+      "tab_home": "Home",
+      "tab_shop": "Shop",
+      "tab_categories": "Categories (opens menu)",
+      "tab_search": "Search",
+      "tab_wishlist": "Wishlist",
+      "tab_cart": "Cart",
+      "tab_account": "Account",
+      "tab_track": "Track order",
+      "tabNone": "— (none)",
+      "tabSlot": "Tab {n}",
+      "tabsHint": "2 to 5 tabs, each once. Saved as soon as you change one.",
+      "tabsInvalid": "Pick at least 2 different tabs."
     }
   },
   "staff": {

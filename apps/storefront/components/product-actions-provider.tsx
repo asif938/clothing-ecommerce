@@ -57,7 +57,7 @@ export function ProductActionsProvider({ text, children }: { text: CardText; chi
   return (
     <CardActionsContext.Provider value={{ text, showToast }}>
       <ProductActionsContext.Provider value={renderCardActions}>{children}</ProductActionsContext.Provider>
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+var(--bottom-nav-offset,0px))] z-[60] flex justify-center px-4">
         {toast && (
           <div key={toast.id} className="pointer-events-auto flex max-w-sm items-center gap-4 rounded-theme bg-surface-foreground px-4 py-3 text-sm text-surface shadow-lg">
             <span>{toast.message}</span>

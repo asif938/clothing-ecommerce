@@ -3056,6 +3056,29 @@ to try them on.
 
 ---
 
+## Phone bottom navigation bar (2026-11-24)
+
+Status: built; typecheck, lint and tests pass (storefront 42, +5 in `bottom-nav.test.ts`). Checked
+in a browser at 360 px and 1280 px, in Bangla and English, against the dev database:
+- The bar shows with the current page's tab highlighted (Home, Shop on `/shop`, Cart on `/cart`).
+- The wishlist badge updates when a heart is tapped.
+- The Categories and Search actions open the menu drawer and the search field.
+- The bar is hidden on product pages and on desktop.
+- The chat button sits above the bar, and on product pages above the sticky "Add to cart" bar.
+- The footer's last line isn't covered.
+
+The admin tab picker compiles but hasn't been clicked through (staff login needs the owner's 2FA).
+
+- Storefront: `components/bottom-nav.tsx`, `lib/bottom-nav.ts` (tabs, active tab, hidden routes),
+  new icons, and `--bottom-nav-offset` in `globals.css` used by the chat button, the live chat box
+  and the "Added to cart" note. `MobileMenu` and `MobileSearch` open on the bar's events. `useCart`
+  now shares one request between components loading at the same moment (6 → 1 cart request per page
+  load in dev).
+- Settings → Theme: `theme.bottomNav.enabled` (on) and `theme.bottomNav.items` (2 to 5 tabs,
+  picked in five dropdowns in the admin). UI strings live under `storefront.bottomNav.*`.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { OPEN_SEARCH_EVENT } from "../lib/bottom-nav";
 import { SearchIcon } from "./icons";
 import { SearchBox } from "./search-box";
 
 /** Below `md` the search field is hidden behind an icon; tapping it opens a full-width row under the header. */
 export function MobileSearch({ locale, label, placeholder }: { locale: string; label: string; placeholder: string }) {
   const [open, setOpen] = useState(false);
+
+  // The bottom navigation's "Search" tab: open this row on phones; from `md` up the header's own field is visible, so focus it.
+  useEffect(() => {
+    const onOpen = () => {
+      if (window.matchMedia("(min-width: 768px)").matches) document.querySelector<HTMLInputElement>("header input")?.focus();
+      else setOpen(true);
+    };
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
+  }, []);
+
   return (
     <>
       <button

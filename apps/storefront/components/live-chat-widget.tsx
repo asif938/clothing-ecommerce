@@ -106,7 +106,7 @@ export function LiveChatWidget({ locale }: { locale: string }) {
       </button>
 
       {open && (
-        <div role="dialog" aria-label={bn ? "লাইভ চ্যাট" : "Live chat"} className="fixed bottom-20 right-4 z-50 flex h-[min(30rem,calc(100vh-7rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-theme border border-border bg-surface shadow-xl">
+        <div role="dialog" aria-label={bn ? "লাইভ চ্যাট" : "Live chat"} className="fixed bottom-[calc(5rem+var(--bottom-nav-offset,0px))] right-4 z-50 flex h-[min(30rem,calc(100vh-7rem-var(--bottom-nav-offset,0px)))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-theme border border-border bg-surface shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-sm font-semibold text-surface-foreground">{bn ? "আমাদের সাথে চ্যাট করুন" : "Chat with us"}</p>
             {started && !thread?.waitingForAgent && (

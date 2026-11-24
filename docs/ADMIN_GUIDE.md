@@ -161,6 +161,20 @@ The page's wording is UI strings under `storefront.listing.*`.
 একবার base seed চালান)। মেনুতে `/shop` লিংক যোগ করুন CMS → Menus থেকে। লেখাগুলো UI strings
 (`storefront.listing.*`)।
 
+### Phone bottom navigation bar
+
+**EN** — On phones and small tablets a bar with five tabs is fixed to the bottom of the screen (Home, Shop, Wishlist,
+Cart and Account by default). It is hidden on product pages, which have their own "Add to cart" bar, and on
+checkout. In **Settings → Theme** you can turn it off, or choose which tabs appear and in what order: Home, Shop,
+Categories (opens the menu), Search, Wishlist, Cart, Account, Track order. You need 2 to 5 tabs. The tab names are UI
+strings under `storefront.bottomNav.*`.
+
+**BN** — ফোন আর ছোট ট্যাবলেটে স্ক্রিনের নিচে পাঁচটা ট্যাবের একটা বার থাকে। ডিফল্টে থাকে হোম, শপ, উইশলিস্ট, কার্ট আর
+অ্যাকাউন্ট। প্রোডাক্ট পেজে (ওখানে নিজস্ব "কার্টে যোগ করুন" বার আছে) আর চেকআউটে এটা লুকানো থাকে। **সেটিংস →
+Theme**-এ বারটা বন্ধ করা যায়, অথবা কোন ট্যাব কোন ক্রমে থাকবে বাছা যায়: হোম, শপ, ক্যাটাগরি (মেনু খোলে), সার্চ,
+উইশলিস্ট, কার্ট, অ্যাকাউন্ট, অর্ডার ট্র্যাক। কমপক্ষে ২টা, সর্বোচ্চ ৫টা ট্যাব রাখা যায়। ট্যাবের নাম UI strings
+(`storefront.bottomNav.*`)।
+
 ### Product card buttons
 
 **EN** — Each product card has a heart (save to wishlist) and a bag button (add to cart) on its

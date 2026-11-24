@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { OPEN_MENU_EVENT } from "../lib/bottom-nav";
 import { usePathname } from "../i18n/navigation";
 import type { NavItem } from "../lib/nav-items";
 import { ChevronDownIcon, CloseIcon, HeartIcon, MenuIcon, UserIcon } from "./icons";
@@ -65,6 +66,13 @@ export function MobileMenu({ items, labels, brandName }: { items: NavItem[]; lab
   const pathname = usePathname();
   const closeButton = useRef<HTMLButtonElement>(null);
   const openButton = useRef<HTMLButtonElement>(null);
+
+  // The bottom navigation's "Categories" tab opens this drawer.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_MENU_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_MENU_EVENT, onOpen);
+  }, []);
 
   // Close whenever the route changes (a link inside the drawer was followed).
   useEffect(() => {

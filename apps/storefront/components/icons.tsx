@@ -68,3 +68,40 @@ export function CameraIcon({ className = "h-5 w-5" }: { className?: string }) {
     </svg>
   );
 }
+
+export function HomeIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" />
+    </svg>
+  );
+}
+
+export function StoreIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 9l1.5-4.5h13L20 9M4 9h16M4 9v1.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0V9M5.5 13.5V20h13v-6.5M10 20v-4h4v4" />
+    </svg>
+  );
+}
+
+export function GridIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.2" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2" />
+    </svg>
+  );
+}
+
+export function TruckIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3 6.5h11v9H3zM14 9.5h3.5L21 13v2.5h-7" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17" cy="17.5" r="1.8" />
+    </svg>
+  );
+}

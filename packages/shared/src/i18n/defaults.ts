@@ -184,4 +184,14 @@ export const UI_STRING_DEFAULTS: UiStringDefault[] = [
   { key: "storefront.review.allDone", bn: "এই অর্ডারের সব পণ্যের রিভিউ দেওয়া হয়ে গেছে। ধন্যবাদ!", en: "You've reviewed everything in this order. Thank you!" },
   { key: "storefront.review.failed", bn: "জমা দেওয়া যায়নি, আবার চেষ্টা করুন", en: "Could not submit, please try again" },
   { key: "storefront.review.continueShopping", bn: "কেনাকাটা চালিয়ে যান", en: "Continue shopping" },
+  // Phone bottom navigation bar (Settings → Theme picks which tabs show).
+  { key: "storefront.bottomNav.label", bn: "প্রধান ন্যাভিগেশন", en: "Main navigation" },
+  { key: "storefront.bottomNav.home", bn: "হোম", en: "Home" },
+  { key: "storefront.bottomNav.shop", bn: "শপ", en: "Shop" },
+  { key: "storefront.bottomNav.categories", bn: "ক্যাটাগরি", en: "Categories" },
+  { key: "storefront.bottomNav.search", bn: "খুঁজুন", en: "Search" },
+  { key: "storefront.bottomNav.wishlist", bn: "উইশলিস্ট", en: "Wishlist" },
+  { key: "storefront.bottomNav.cart", bn: "কার্ট", en: "Cart" },
+  { key: "storefront.bottomNav.account", bn: "অ্যাকাউন্ট", en: "Account" },
+  { key: "storefront.bottomNav.track", bn: "ট্র্যাক", en: "Track" },
 ];

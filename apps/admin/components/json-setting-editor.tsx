@@ -8,6 +8,8 @@ import { Button } from "./ui";
 const inputClass = "rounded-theme border border-border bg-surface px-3 py-2 text-sm text-surface-foreground";
 const ASSISTANT_CHANNELS = ["live_chat", "whatsapp", "messenger", "instagram"] as const;
 const SLA_PRIORITIES = ["urgent", "high", "normal", "low"] as const;
+/** Mirrors `BOTTOM_NAV_ITEMS` in `@clothing/shared/settings`. */
+const BOTTOM_NAV_TABS = ["home", "shop", "categories", "search", "wishlist", "cart", "account", "track"] as const;
 
 /**
  * Plain inputs for the settings whose value is structured (stored as JSON).
@@ -33,6 +35,10 @@ export function JsonSettingEditor({ settingKey, value, onSave }: { settingKey: s
         ))}
       </div>
     );
+  }
+
+  if (settingKey === "theme.bottomNav.items") {
+    return <BottomNavTabs value={Array.isArray(value) ? (value as string[]) : []} onSave={onSave} />;
   }
 
   if (settingKey === "support.sla.firstResponseMinutes" || settingKey === "support.sla.resolutionMinutes") {
@@ -70,6 +76,43 @@ export function JsonSettingEditor({ settingKey, value, onSave }: { settingKey: s
   }
 
   return <RawJson value={value} onSave={onSave} />;
+}
+
+/** Five slots, left to right; empty slots are dropped. Saves on every change once at least two different tabs are chosen (the API validates again). */
+function BottomNavTabs({ value, onSave }: { value: string[]; onSave: (next: unknown) => void }) {
+  const t = useTranslations("settings.json");
+  const [slots, setSlots] = useState<string[]>(() => Array.from({ length: 5 }, (_, i) => value[i] ?? ""));
+  const chosen = slots.filter(Boolean);
+  const valid = chosen.length >= 2 && new Set(chosen).size === chosen.length;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid gap-2 sm:grid-cols-5">
+        {slots.map((slot, index) => (
+          <label key={index} className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-surface-foreground/70">{t("tabSlot", { n: index + 1 })}</span>
+            <select
+              className={inputClass}
+              value={slot}
+              onChange={(e) => {
+                const next = slots.map((s, i) => (i === index ? e.target.value : s));
+                setSlots(next);
+                const picked = next.filter(Boolean);
+                if (picked.length >= 2 && new Set(picked).size === picked.length) onSave(picked);
+              }}
+            >
+              <option value="">{t("tabNone")}</option>
+              {BOTTOM_NAV_TABS.map((tab) => (
+                <option key={tab} value={tab} disabled={tab !== slot && chosen.includes(tab)}>
+                  {t(`tab_${tab}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <span className={`text-xs ${valid ? "text-surface-foreground/60" : "text-danger"}`}>{valid ? t("tabsHint") : t("tabsInvalid")}</span>
+    </div>
+  );
 }
 
 function SlaEditor({ value, onSave }: { value: Record<string, number>; onSave: (next: unknown) => void }) {

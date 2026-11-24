@@ -15,7 +15,7 @@ export function ChatButtons({ liveChatEnabled = false, locale = "bn", whatsappEn
   if (!liveChatEnabled && (!whatsappEnabled || !whatsappNumber) && (!messengerEnabled || !messengerPageUrl)) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
+    <div className="fixed bottom-[calc(1rem+var(--bottom-nav-offset,0px))] right-4 z-40 flex flex-col gap-2">
       {liveChatEnabled && <LiveChatWidget locale={locale} />}
       {whatsappEnabled && whatsappNumber && (
         <a

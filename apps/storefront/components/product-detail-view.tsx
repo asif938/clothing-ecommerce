@@ -129,6 +129,13 @@ export function ProductDetailView({
     }
   }
 
+  // The phone sticky "Add to cart" bar (below `sm`): lift floating buttons (chat) above it — see `has-sticky-cta` in globals.css.
+  useEffect(() => {
+    if (isBundle) return;
+    document.body.classList.add("has-sticky-cta");
+    return () => document.body.classList.remove("has-sticky-cta");
+  }, [isBundle]);
+
   // Set after mount (not during the initial server-rendered pass) so the
   // href never differs between server and client markup — `window.location`
   // doesn't exist on the server at all.
