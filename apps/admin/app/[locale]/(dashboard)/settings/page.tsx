@@ -192,7 +192,18 @@ function SettingField({ setting, onSaved, storageInstances }: { setting: Setting
       </label>
     );
   } else if (widget === "json") {
-    control = <JsonSettingEditor settingKey={setting.key} value={value} onSave={(next) => void save(next)} />;
+    // Keep the on-screen value in step with what was saved: the editors (e.g. the assistant-channel checkboxes) draw from `value`,
+    // and `setting` doesn't re-seed this field's state after a save, so without this a tick saved but the box never changed.
+    control = (
+      <JsonSettingEditor
+        settingKey={setting.key}
+        value={value}
+        onSave={(next) => {
+          setValue(next);
+          void save(next);
+        }}
+      />
+    );
   } else if (widget === "textarea" || widget === "code") {
     control = (
       <textarea
