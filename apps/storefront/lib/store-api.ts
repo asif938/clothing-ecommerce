@@ -1,4 +1,5 @@
 import "server-only";
+import { buildListingQuery } from "./listing-params";
 
 /**
  * Server-only fetches against the real API (`API_URL`, infra-only env,
@@ -225,10 +226,19 @@ export interface ListingFacetAttribute {
   values: ListingFacetValue[];
 }
 
+/** A category in the listing's category filter; counts include every category below it. */
+export interface ListingFacetCategory {
+  id: string;
+  slug: string;
+  name: LocalizedText;
+  depth: number;
+  count: number;
+}
+
 export interface ListingResult {
   data: ProductCard[];
   meta: { page: number; pageSize: number; total: number };
-  facets: { attributes: ListingFacetAttribute[]; priceRange: { min: number; max: number } | null };
+  facets: { attributes: ListingFacetAttribute[]; categories?: ListingFacetCategory[]; priceRange: { min: number; max: number } | null };
 }
 
 export interface ListingParams {
@@ -238,26 +248,21 @@ export interface ListingParams {
   priceMin?: number;
   priceMax?: number;
   inStockOnly?: boolean;
+  onSale?: boolean;
+  /** Search inside the listing (`/shop?q=`). */
+  q?: string;
+  /** Category filter; each also matches the categories below it. */
+  categoryIds?: string[];
   sort?: "relevance" | "newest" | "price_asc" | "price_desc" | "bestselling";
   page?: number;
+  pageSize?: number;
   attributes?: Record<string, string[]>;
 }
 
 const EMPTY_LISTING: ListingResult = { data: [], meta: { page: 1, pageSize: 24, total: 0 }, facets: { attributes: [], priceRange: null } };
 
 export async function getListing(params: ListingParams): Promise<ListingResult> {
-  const query = new URLSearchParams();
-  if (params.categoryId) query.set("categoryId", params.categoryId);
-  if (params.collectionId) query.set("collectionId", params.collectionId);
-  if (params.tag) query.set("tag", params.tag);
-  if (params.priceMin !== undefined) query.set("priceMin", String(params.priceMin));
-  if (params.priceMax !== undefined) query.set("priceMax", String(params.priceMax));
-  if (params.inStockOnly) query.set("inStockOnly", "true");
-  if (params.sort) query.set("sort", params.sort);
-  if (params.page) query.set("page", String(params.page));
-  for (const [attributeId, valueIds] of Object.entries(params.attributes ?? {})) {
-    query.set(`attr_${attributeId}`, valueIds.join(","));
-  }
+  const query = buildListingQuery(params);
   const tag = params.categoryId ? `category:${params.categoryId}` : params.collectionId ? `collection:${params.collectionId}` : "listing";
   return (await storeGet<ListingResult>(`/store/catalog/listing?${query.toString()}`, [tag, "listing"])) ?? EMPTY_LISTING;
 }

@@ -67,7 +67,7 @@ export class StoreContentController {
   @Get("sitemap")
   async getSitemap() {
     const [pages, products, categories, collections] = await Promise.all([
-      this.prisma.page.findMany({ where: { status: "published", deletedAt: null, noindex: false }, select: { slug: true, updatedAt: true } }),
+      this.prisma.page.findMany({ where: { status: "published", deletedAt: null, noindex: false, isSystem: false }, select: { slug: true, updatedAt: true } }),
       this.prisma.product.findMany({ where: { status: "active", deletedAt: null }, select: { slug: true, updatedAt: true } }),
       this.prisma.category.findMany({ where: { isActive: true, deletedAt: null }, select: { slug: true, updatedAt: true } }),
       this.prisma.collection.findMany({ where: { isActive: true, deletedAt: null }, select: { slug: true, updatedAt: true } }),

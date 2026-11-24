@@ -43,6 +43,30 @@ export class SearchService {
     return getMediaUrl(ref, { width: CARD_IMAGE_WIDTH });
   }
 
+  /**
+   * Ids of every live product matching `q`, best match first, capped at
+   * `limit`. Used by the catalog listing (`/shop?q=`), which applies its own
+   * filters, facets and paging on top. Returns null when the query has no
+   * searchable words (the listing then ignores it).
+   */
+  async rankedProductIds(q: string, limit = 1000): Promise<string[] | null> {
+    const synonyms = await this.prisma.searchSynonym.findMany();
+    const tsquery = buildTsQuery(q, synonyms);
+    if (!tsquery) return null;
+    const rows = await this.prisma.$queryRaw<RankedRow[]>`
+      SELECT "id" FROM "products"
+      WHERE "deleted_at" IS NULL AND "status" = 'active'
+      AND (
+        "search_document" @@ to_tsquery('simple', ${tsquery})
+        OR similarity(COALESCE("title"->>'en', ''), ${q}) > 0.3
+        OR similarity(COALESCE("title"->>'bn', ''), ${q}) > 0.3
+      )
+      ORDER BY ts_rank_cd("search_document", to_tsquery('simple', ${tsquery})) DESC NULLS LAST, "sales_count" DESC
+      LIMIT ${limit}
+    `;
+    return rows.map((row) => row.id);
+  }
+
   async search(query: SearchQueryDto) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;

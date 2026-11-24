@@ -5,6 +5,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MediaProvidersService } from "../media/media-providers.service";
 import { CacheService } from "../cache/cache.service";
 import type { MediaVariantMap } from "../media/media-driver";
+import { SearchService } from "../search/search.service";
+import { buildCategoryFacet, expandWithDescendants, type CategoryNode } from "./category-facets";
 import { excerptReview, maskReviewerName } from "@clothing/shared";
 import type { ListFeaturedReviewsQueryDto, ListingQuery } from "./dto";
 
@@ -34,6 +36,7 @@ const PDP_IMAGE_WIDTH = 1200;
 // invalidation into every place a product's price/attributes/stock can
 // change.
 const FACETS_CACHE_TTL_SECONDS = 60;
+const CATEGORY_TREE_CACHE_KEY = "listing:category-tree";
 
 export interface CategoryCard {
   id: string;
@@ -72,6 +75,7 @@ export class StoreCatalogService {
     private readonly prisma: PrismaService,
     private readonly mediaProviders: MediaProvidersService,
     private readonly cache: CacheService,
+    private readonly search: SearchService,
   ) {}
 
   private async resolveImageUrl(media: Media | null, width: number = CARD_IMAGE_WIDTH): Promise<string | null> {
@@ -308,15 +312,19 @@ export class StoreCatalogService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 24;
 
-    const scope = await this.buildListingScope(query);
-    if (!scope) return { data: [], meta: { page, pageSize, total: 0 }, facets: { attributes: [], priceRange: null } };
+    // `/shop?q=`: search narrows the scope (so facets count only matching products) and, under the default sort, sets the order.
+    const ranked = query.q ? await this.search.rankedProductIds(query.q) : null;
+    const scope = await this.buildListingScope(query, ranked);
+    if (!scope) return { data: [], meta: { page, pageSize, total: 0 }, facets: { attributes: [], categories: [], priceRange: null } };
 
-    const where = this.applyListingFilters(scope, query);
+    const where = await this.applyListingFilters(scope, query);
 
     const [{ products, total }, facets] = await Promise.all([
       query.sort === "price_asc" || query.sort === "price_desc"
         ? this.listPriceSorted(where, query.sort, page, pageSize)
-        : this.listOrdered(where, this.listingOrderBy(query.sort), page, pageSize),
+        : ranked && query.sort === "relevance"
+          ? this.listRanked(where, ranked, page, pageSize)
+          : this.listOrdered(where, this.listingOrderBy(query.sort), page, pageSize),
       this.computeFacetsCached(query, scope),
     ]);
 
@@ -376,16 +384,39 @@ export class StoreCatalogService {
     return { products: this.reorderByIds(rows, pageIds), total: withMinPrice.length };
   }
 
+  /** Search results in relevance order: keep the ranked ids that pass the other filters, then page through them. */
+  private async listRanked(where: Prisma.ProductWhereInput, rankedIds: string[], page: number, pageSize: number) {
+    const matching = await this.prisma.product.findMany({ where, select: { id: true } });
+    const matchingIds = new Set(matching.map((p) => p.id));
+    const ordered = rankedIds.filter((id) => matchingIds.has(id));
+    const pageIds = ordered.slice((page - 1) * pageSize, page * pageSize);
+    const rows = await this.prisma.product.findMany({
+      where: { id: { in: pageIds } },
+      include: { variants: { select: { price: true, compareAtPrice: true } }, media: { take: 1, orderBy: { position: "asc" }, include: { media: true } } },
+    });
+    return { products: this.reorderByIds(rows, pageIds), total: ordered.length };
+  }
+
+  /** Active categories, cached briefly — the category filter needs the whole tree to roll counts up and to match sub-categories. */
+  private async loadCategoryTree(): Promise<CategoryNode[]> {
+    const cached = this.cache.get<CategoryNode[]>(CATEGORY_TREE_CACHE_KEY);
+    if (cached) return cached;
+    const rows = await this.prisma.category.findMany({ where: { deletedAt: null, isActive: true }, select: { id: true, parentId: true, name: true, slug: true, sortOrder: true } });
+    this.cache.set(CATEGORY_TREE_CACHE_KEY, rows, { ttlSeconds: FACETS_CACHE_TTL_SECONDS, tags: ["facets"] });
+    return rows;
+  }
+
   /** The category/collection/tag scope alone — shared by the listing query and the facet-count query (facets never re-filter by the attribute they're counting, so a shopper can still broaden a selection). */
-  private async buildListingScope(query: ListingQuery): Promise<Prisma.ProductWhereInput | null> {
-    const base: Prisma.ProductWhereInput = { deletedAt: null, status: "active" };
+  private async buildListingScope(query: ListingQuery, rankedIds: string[] | null = null): Promise<Prisma.ProductWhereInput | null> {
+    const base: Prisma.ProductWhereInput = { deletedAt: null, status: "active", ...(rankedIds ? { id: { in: rankedIds } } : {}) };
     if (query.categoryId) return { ...base, categoryId: query.categoryId };
     if (query.collectionId) {
       const collection = await this.prisma.collection.findUnique({ where: { id: query.collectionId } });
       if (!collection) return null;
       if (collection.type === "manual") {
         const rows = await this.prisma.collectionProduct.findMany({ where: { collectionId: query.collectionId }, select: { productId: true } });
-        return { ...base, id: { in: rows.map((r) => r.productId) } };
+        const collectionIds = rows.map((r) => r.productId);
+        return { ...base, id: { in: rankedIds ? collectionIds.filter((id) => rankedIds.includes(id)) : collectionIds } };
       }
       return base;
     }
@@ -393,8 +424,16 @@ export class StoreCatalogService {
     return base;
   }
 
-  private applyListingFilters(scope: Prisma.ProductWhereInput, query: ListingQuery): Prisma.ProductWhereInput {
+  private async applyListingFilters(scope: Prisma.ProductWhereInput, query: ListingQuery): Promise<Prisma.ProductWhereInput> {
     const and: Prisma.ProductWhereInput[] = [scope];
+
+    const categoryIds = (query.categoryIds ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+    if (categoryIds.length > 0) {
+      and.push({ categoryId: { in: expandWithDescendants(await this.loadCategoryTree(), categoryIds) } });
+    }
+
+    // Same "on sale" rule as the product_grid block: a compare-at price is set.
+    if (query.onSale) and.push({ variants: { some: { isActive: true, compareAtPrice: { not: null } } } });
 
     for (const [attributeId, valueIds] of Object.entries(query.attributes ?? {})) {
       and.push({ attributeValues: { some: { attributeId, attributeValueId: { in: valueIds } } } });
@@ -431,7 +470,7 @@ export class StoreCatalogService {
 
   /** Cache key is the scope identity alone (category/collection/tag id) — the same facet counts serve every shopper browsing that same listing regardless of their own filter selections (facets never re-filter by themselves, see `buildListingScope`). */
   private async computeFacetsCached(query: ListingQuery, scope: Prisma.ProductWhereInput) {
-    const key = `facets:${query.categoryId ?? ""}:${query.collectionId ?? ""}:${query.tag ?? ""}`;
+    const key = `facets:${query.categoryId ?? ""}:${query.collectionId ?? ""}:${query.tag ?? ""}:${(query.q ?? "").toLowerCase()}`;
     const cached = this.cache.get<Awaited<ReturnType<typeof this.computeFacets>>>(key);
     if (cached) return cached;
     const facets = await this.computeFacets(scope);
@@ -447,14 +486,17 @@ export class StoreCatalogService {
    * logic. Price range is the scope's min/max variant price.
    */
   private async computeFacets(scope: Prisma.ProductWhereInput) {
-    const [attributeCounts, priceAgg] = await Promise.all([
+    const [attributeCounts, priceAgg, categoryCounts, categoryTree] = await Promise.all([
       this.prisma.productAttributeValue.groupBy({
         by: ["attributeId", "attributeValueId"],
         where: { attributeValueId: { not: null }, product: scope },
         _count: { _all: true },
       }),
       this.prisma.productVariant.aggregate({ where: { product: scope }, _min: { price: true }, _max: { price: true } }),
+      this.prisma.product.groupBy({ by: ["categoryId"], where: { ...scope, categoryId: { not: null } }, _count: { _all: true } }),
+      this.loadCategoryTree(),
     ]);
+    const directCategoryCounts = new Map(categoryCounts.filter((row) => row.categoryId).map((row) => [row.categoryId!, row._count._all]));
 
     const attributeValueIds = attributeCounts.map((c) => c.attributeValueId).filter((id): id is string => !!id);
     const [attributes, values] = await Promise.all([
@@ -477,6 +519,7 @@ export class StoreCatalogService {
 
     return {
       attributes: [...byAttribute.values()],
+      categories: buildCategoryFacet(categoryTree, directCategoryCounts),
       priceRange: priceAgg._min.price !== null ? { min: priceAgg._min.price, max: priceAgg._max.price } : null,
     };
   }

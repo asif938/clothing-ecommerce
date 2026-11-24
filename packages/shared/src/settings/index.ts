@@ -13,3 +13,6 @@ import "./definitions-m16.ts";
 export { AD_PLATFORMS, type AdPlatform, type AdSpendSourceMap } from "./definitions-m13.ts";
 // Milestone 17 (§16 M17) - forecasting, materials, expenses, report builder, public API, webhooks.
 import "./definitions-m17.ts";
+// Product listing pages (/shop, categories, collections).
+import "./definitions-listing.ts";
+export { LISTING_PAGE_SIZES, LISTING_SORTS, LISTING_VIEWS, type ListingSort, type ListingView } from "./definitions-listing.ts";

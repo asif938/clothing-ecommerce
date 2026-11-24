@@ -2983,6 +2983,49 @@ checked visually or tapped through in a browser.
 
 ---
 
+## All-products page /shop, new listing UI and view switch (§7.3, 2026-11-24)
+
+Status: built; typecheck, lint and unit tests pass (API 883, storefront 37, shared 278). Checked
+against the dev database:
+- The API returns all 10 live products, the category tree with rolled-up counts, and 2 results
+  for "panjabi".
+- `/en/shop` renders at 360 px with no sideways scroll.
+- `/products?q=x` redirects (308) to `/shop?q=x`.
+
+**Not clicked through yet.** The browser pane can only reach the storefront through 127.0.0.1,
+because another dev server holds port 3000, and Next.js dev blocks hydration from that origin. The
+filter sheet, chips, view switch, load more and search box are untested in a browser.
+
+- **`/shop`** (`/en/shop`) lists every live product. It has a search box (Bangla, English and
+  Banglish, the same search as the header), sort options (Featured or Best match while searching,
+  Newest, Best selling, price up or down), filters and a large / grid / list view switch. "Load
+  more" adds the next page and updates `?page=`, with plain previous/next links for crawlers. A
+  banner from CMS → Pages → "shop" shows above the grid, and its SEO title is used. `/products`
+  redirects here.
+- **Category and collection pages** use the same new layout. Before this change they had a plain
+  sidebar and ← / → paging.
+- **Filters**: category (on `/shop` only; counts roll up the tree, and picking a parent includes its
+  sub-categories), size, colour and other attributes, price in taka, on sale, and in stock. Desktop
+  shows a sidebar that applies each change at once. Phones get a "Filter (n)" button that opens a
+  bottom sheet with "Clear all" and "Show results". Active filters show as chips with ✕.
+- **View switch**: Large (1 per row on phones), Grid (default, 2 per row up to 4) and List (small
+  photo, name, price, with the heart and quick-add buttons). The shopper's choice is remembered in
+  their browser.
+- **Admin**: Settings → **shop** (page on/off, search box) and Settings → **listing** (products per
+  load 12/24/36/48, default sort, default view, view switch on/off, and each filter on/off). All
+  wording is UI strings `storefront.listing.*` (40 keys, bn/en).
+- **API**: `/store/catalog/listing` accepts `q`, `categoryIds` and `onSale`, and returns a
+  `categories` facet. `inStockOnly=false` no longer counts as true. `SearchService.rankedProductIds`
+  was added. `category-facets.ts` (+3 tests) and listing search/filter tests (+3) were added.
+- **SEO**: filtered and searched listing URLs are `noindex, follow`. `/shop` is in the sitemap.
+  System pages are no longer listed there as `/pages/<slug>`.
+- **Seed**: a "shop" system page (no blocks) for new installs. On an existing database `/shop`
+  works without it; run `pnpm db:seed` to create it so a banner can be added.
+- Removed `catalog-filters.tsx` and `pagination.tsx`, which were replaced by `listing-browser.tsx`
+  and `listing-filters.tsx`.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

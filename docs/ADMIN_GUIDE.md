@@ -131,6 +131,36 @@ words such as "Cart" or "Account" are UI strings (`storefront.*`).
 মধ্যে স্টোরফ্রন্টে দেখাবে। হেডার/ফুটারের "কার্ট", "অ্যাকাউন্ট"-এর মতো লেখাগুলো
 UI strings (`storefront.*`)।
 
+### All-products page (/shop) and product listings
+
+**EN** — `/shop` lists every product on sale, with a search box, sort, filters and a choice of
+three views (large photos, grid, list). Category and collection pages use the same layout. Products
+load a batch at a time; shoppers tap "Load more" for the next batch. Control it in
+**Settings → shop** (turn the page and its search box on or off) and **Settings → listing**:
+- products per batch
+- default sort
+- default view
+- whether shoppers can switch the view
+- which filters show (category, size/colour, price, on sale, in stock)
+
+To put a banner above the products, or set the page's Google title, edit the **shop** page in
+CMS → Pages (if it is missing, run the base seed once). Add a link to `/shop` from CMS → Menus.
+The page's wording is UI strings under `storefront.listing.*`.
+
+**BN** — `/shop` পেজে বিক্রিতে থাকা সব পণ্য দেখায়। সাথে সার্চ বক্স, সাজানোর অপশন, ফিল্টার আর তিন
+রকম ভিউ (বড় ছবি, গ্রিড, লিস্ট) থাকে। ক্যাটাগরি আর কালেকশন পেজও একই রকম দেখায়। পণ্য অল্প অল্প করে
+লোড হয়; ক্রেতা "আরও দেখুন" চাপলে পরের ব্যাচ আসে। **সেটিংস → shop**-এ পেজ আর সার্চ বক্স চালু বা
+বন্ধ করুন। **সেটিংস → listing**-এ ঠিক করুন:
+- প্রতিবার কয়টি পণ্য আসবে
+- শুরুতে কোন ক্রমে সাজানো থাকবে
+- ডিফল্ট ভিউ
+- ক্রেতা ভিউ বদলাতে পারবে কিনা
+- কোন ফিল্টার দেখাবে
+
+উপরে ব্যানার দিতে বা Google-এর শিরোনাম বসাতে CMS → Pages-এ **shop** পেজ এডিট করুন (না থাকলে
+একবার base seed চালান)। মেনুতে `/shop` লিংক যোগ করুন CMS → Menus থেকে। লেখাগুলো UI strings
+(`storefront.listing.*`)।
+
 ### Product card buttons
 
 **EN** — Each product card has a heart (save to wishlist) and a bag button (add to cart) on its

@@ -18,6 +18,12 @@ export type ListProductsQueryDto = z.infer<typeof listProductsQuerySchema>;
  * valueId[]>` before this shape is used, since zod has no "parse every
  * `attr_*` key" primitive.
  */
+/** `"true"` → true; anything else (absent, `"false"`) → false. `z.coerce.boolean()` would turn the string "false" into true. */
+const queryFlag = z
+  .string()
+  .optional()
+  .transform((value) => value === "true");
+
 export const listingSortSchema = z.enum(["relevance", "newest", "price_asc", "price_desc", "bestselling"]);
 
 export const listingQuerySchema = z.object({
@@ -26,7 +32,13 @@ export const listingQuerySchema = z.object({
   tag: z.string().optional(),
   priceMin: z.coerce.number().int().min(0).optional(),
   priceMax: z.coerce.number().int().min(0).optional(),
-  inStockOnly: z.coerce.boolean().optional(),
+  inStockOnly: queryFlag,
+  /** Free-text search inside the listing (the all-products `/shop` page). Uses the same Bangla/English/Banglish search as `/search`. */
+  q: z.string().trim().max(100).optional(),
+  /** Comma-separated category ids; each also matches every category below it. */
+  categoryIds: z.string().max(2000).optional(),
+  /** Only products with a compare-at ("was") price. */
+  onSale: queryFlag,
   sort: listingSortSchema.default("relevance"),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(60).default(24),

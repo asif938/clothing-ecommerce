@@ -125,7 +125,7 @@ export class PagesService {
 
   async remove(id: string, actor: AuthenticatedStaff) {
     const page = await this.get(id);
-    if (page.isSystem) throw new BadRequestException({ code: "SYSTEM_PAGE", message: "System pages (home, 404, 500, maintenance) cannot be deleted" });
+    if (page.isSystem) throw new BadRequestException({ code: "SYSTEM_PAGE", message: "System pages (home, shop, 404, 500, maintenance) cannot be deleted" });
     await this.prisma.page.update({ where: { id }, data: { deletedAt: new Date() } });
     await this.audit.record({ actorType: "staff", actorId: actor.id, action: "page.delete", entityType: ENTITY_TYPE, entityId: id, before: { slug: page.slug } });
   }

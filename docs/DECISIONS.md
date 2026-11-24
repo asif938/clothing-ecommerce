@@ -3088,3 +3088,38 @@ review picker in the admin and testimonials already cover that need.
 
 **Alternatives considered.** A hover-only "Quick add" bar like many desktop shops use. Rejected because there is no
 hover on phones, and this store is mobile-first.
+
+---
+
+## 2026-11-24 — All-products page (/shop) and listing view switch
+
+**Context.** The store had no page listing every product; shoppers could only browse one category or collection at a
+time, and the header search page had no filters.
+
+**Decisions.**
+- `/shop` is a code route rather than a CMS page, because its results depend on the URL (search, filters, sort, page)
+  and need SEO-aware paging. The owner still controls it from the admin: Settings → shop (on/off, search box),
+  Settings → listing (page size, default sort, default view, the view switch, which filters show), and the "shop"
+  system page in CMS → Pages for a banner above the grid and its SEO title and description. `/products` redirects to
+  `/shop`.
+- Category, collection and shop pages share one listing UI (`ListingBrowser`). Filters show as a sidebar on desktop
+  and a bottom sheet on phones, where changes apply together through "Show results". Active filters appear as
+  removable chips. All state lives in the URL.
+- Paging uses a "Load more" button that appends the next page and moves `?page=` with `history.replaceState`, plus
+  plain previous/next links for crawlers. Infinite scroll was rejected because it hides the footer and is weak for
+  SEO. Opening `?page=3` directly shows page 3 with a "Show earlier products" link.
+- Search inside the listing (`q`) reuses the existing Postgres full-text and Banglish synonym search. It narrows the
+  scope (so facet counts follow the search) and orders results by relevance under the default sort. It is capped at
+  the top 1,000 matches, which is enough at free-tier catalogue sizes.
+- The category filter (shown on `/shop` only) rolls counts up the tree and matches sub-categories, so "Men" includes
+  "Men → Panjabi".
+- "On sale" uses the same rule as the product-grid block: the product has a compare-at price.
+- Filtered and searched URLs are `noindex, follow`; the plain listing and its pages are indexable. System pages are
+  no longer listed in the sitemap as `/pages/<slug>` (home and 404 used to appear there), and `/shop` is added.
+- The view switch offers Large (1 per row on phones, 2 on wider screens), Grid (2 per row, up to 4; the default) and
+  List (photo with name and price). The shopper's choice is kept in their browser (`localStorage`). It is applied
+  after the first paint, so a shopper who chose another view sees grid for a moment; storing it in a cookie would
+  avoid that but would make every listing page uncacheable per visitor.
+
+**Alternatives considered.** Building `/shop` with the CMS page builder (it can't do URL-driven filtering or paging),
+and keeping numbered pagination only (worse on phones).
