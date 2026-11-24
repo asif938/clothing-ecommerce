@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Link } from "../i18n/navigation";
 
 interface Review {
   id: string;
@@ -22,9 +23,18 @@ const FIT_LABEL: Record<string, { bn: string; en: string }> = {
 };
 
 /** Review display (docs/PROJECT_SPEC.md §7.4 "reviews display", §16 M8 "photo reviews and fit feedback") — submission happens from the account order page (§8.2's own "verified purchase" requirement means it needs an `order_item_id` the PDP doesn't have). */
-export function ProductReviews({ productId, locale }: { productId: string; locale: string }) {
+export function ProductReviews({ productId, locale, writeReviewLabel }: { productId: string; locale: string; writeReviewLabel: string }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [total, setTotal] = useState(0);
+  // "Write a review" shows only for a logged-in customer with a delivered, unreviewed purchase of this product.
+  const [reviewUrl, setReviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/v1/store/reviews/products/${productId}/eligibility`, { credentials: "same-origin", cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ reviewUrl: string | null }>) : null))
+      .then((result) => setReviewUrl(result?.reviewUrl ?? null))
+      .catch(() => undefined);
+  }, [productId]);
 
   useEffect(() => {
     fetch(`/api/v1/store/reviews/products/${productId}?pageSize=10`)
@@ -47,11 +57,18 @@ export function ProductReviews({ productId, locale }: { productId: string; local
     if (result) setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, helpfulCount: result.helpfulCount } : r)));
   }
 
-  if (total === 0) return null;
+  if (total === 0 && !reviewUrl) return null;
 
   return (
     <section className="mt-10 border-t border-border pt-6">
-      <h2 className="mb-4 text-lg font-semibold text-surface-foreground">{locale === "bn" ? `রিভিউ (${total})` : `Reviews (${total})`}</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-surface-foreground">{locale === "bn" ? `রিভিউ (${total})` : `Reviews (${total})`}</h2>
+        {reviewUrl && writeReviewLabel && (
+          <Link href={reviewUrl} className="flex min-h-11 items-center rounded-theme border border-brand px-4 text-sm font-medium text-brand hover:bg-brand hover:text-brand-foreground">
+            {writeReviewLabel}
+          </Link>
+        )}
+      </div>
       <div className="flex flex-col gap-4">
         {reviews.map((review) => (
           <div key={review.id} className="rounded-theme border border-border p-3">

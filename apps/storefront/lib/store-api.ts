@@ -386,3 +386,21 @@ const EMPTY_SEARCH: SearchResult = { data: [], meta: { page: 1, pageSize: 20, to
 export async function getSearchResults(q: string): Promise<SearchResult> {
   return (await storeGet<SearchResult>(`/store/search?q=${encodeURIComponent(q)}`, ["search"])) ?? EMPTY_SEARCH;
 }
+
+/** The login-free review page's order (`/review/<token>`); never cached — it changes as items are reviewed. `"invalid"` when the link is bad. */
+export interface ReviewOrderData {
+  orderNumber: string;
+  delivered: boolean;
+  items: { id: string; title: LocalizedText; sku: string; imageUrl: string | null; quantity: number; productSlug: string; reviewed: boolean }[];
+}
+
+export async function getReviewOrder(token: string): Promise<ReviewOrderData | "invalid" | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/v1/store/reviews/order/${encodeURIComponent(token)}`, { cache: "no-store" });
+    if (response.status === 404 || response.status === 400) return "invalid";
+    if (!response.ok) return null;
+    return (await response.json()) as ReviewOrderData;
+  } catch {
+    return null;
+  }
+}

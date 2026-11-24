@@ -320,6 +320,22 @@ just buyers.
 পারবেন (ভেরিফায়েড পারচেস)। মডারেশনে অনুমোদন/প্রত্যাখ্যান/রিপ্লাই করা
 যায়; অটো-অ্যাপ্রুভ একটি সেটিং।
 
+### Asking for reviews
+
+**EN** — Turn on **Settings → Reviews → Ask for a review after delivery**. Every delivered order, including guest
+orders, then gets one message a few days later (you choose how many days, SMS / WhatsApp / email, and the text). The
+message includes `{review_link}`, a personal link where the buyer reviews that order's items without logging in.
+Customers with an account can also use "Write a review" on their order list. On a product page, a logged-in
+customer who received that product sees a "Write a review" button. If you also run the "Review request" journey
+under Marketing → Journeys, an order in that journey isn't messaged twice. Messages appear in Notifications → Logs.
+
+**BN** — **সেটিংস → Reviews → "ডেলিভারির পর রিভিউ চেয়ে মেসেজ পাঠান"** চালু করুন। এতে প্রতিটা ডেলিভার হওয়া
+অর্ডারে (গেস্ট অর্ডারসহ) কয়েক দিন পর একটা মেসেজ যাবে। কত দিন পর যাবে, SMS / WhatsApp / ইমেইল আর মেসেজের লেখা
+আপনি ঠিক করবেন। মেসেজে `{review_link}` থাকে, যেটা একটা ব্যক্তিগত লিংক: ক্রেতা লগইন ছাড়াই ওই অর্ডারের পণ্যের রিভিউ
+দিতে পারেন। অ্যাকাউন্ট থাকলে অর্ডার তালিকার "রিভিউ লিখুন" থেকেও দেওয়া যায়। প্রোডাক্ট পেজে লগইন করা যে
+ক্রেতা পণ্যটা হাতে পেয়েছেন, তিনি "রিভিউ লিখুন" বাটন দেখবেন। Marketing → Journeys-এর "Review request"
+journey-ও চালু থাকলে একই অর্ডারে দুবার মেসেজ যাবে না। মেসেজগুলো Notifications → Logs-এ দেখা যায়।
+
 ## Reports (`reports.read`)
 
 **EN** — Sales, products, courier performance, staff performance,

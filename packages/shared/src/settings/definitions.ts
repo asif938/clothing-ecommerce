@@ -1265,6 +1265,72 @@ export const REVIEWS_AUTO_APPROVE = defineSetting({
   ui: { widget: "toggle" },
 });
 
+/**
+ * Review request after delivery (§8.2 "post-purchase review request"). Sent to
+ * every delivered order — guest or account — with a login-free review link.
+ * Off by default because each message costs an SMS/WhatsApp send.
+ */
+export const REVIEWS_REQUEST_ENABLED = defineSetting({
+  key: "reviews.requestEnabled",
+  group: "reviews",
+  type: z.boolean(),
+  default: false,
+  label: { bn: "ডেলিভারির পর রিভিউ চেয়ে মেসেজ পাঠান", en: "Ask for a review after delivery" },
+  help: { bn: "রিভিউ দেওয়ার লিংকসহ একটি মেসেজ যায়; লগইন লাগে না", en: "Sends one message with a review link that works without logging in" },
+  secret: false,
+  public: false,
+  permission: "settings.reviews.write",
+  ui: { widget: "toggle" },
+});
+
+export const REVIEWS_REQUEST_DELAY_DAYS = defineSetting({
+  key: "reviews.requestDelayDays",
+  group: "reviews",
+  type: z.enum(["1", "2", "3", "5", "7", "10", "14"]),
+  default: "3",
+  label: { bn: "ডেলিভারির কত দিন পর", en: "Days after delivery" },
+  secret: false,
+  public: false,
+  permission: "settings.reviews.write",
+  ui: { widget: "select", options: ["1", "2", "3", "5", "7", "10", "14"].map((value) => ({ value, label: { bn: `${value} দিন`, en: `${value} days` } })) },
+});
+
+export const REVIEWS_REQUEST_CHANNEL = defineSetting({
+  key: "reviews.requestChannel",
+  group: "reviews",
+  type: z.enum(["sms", "whatsapp", "email"]),
+  default: "sms",
+  label: { bn: "কোন মাধ্যমে পাঠাবে", en: "Send by" },
+  help: { bn: "এই মাধ্যমের প্রোভাইডার Integrations-এ চালু থাকতে হবে", en: "That channel's provider must be set up under Integrations" },
+  secret: false,
+  public: false,
+  permission: "settings.reviews.write",
+  ui: {
+    widget: "select",
+    options: [
+      { value: "sms", label: { bn: "SMS", en: "SMS" } },
+      { value: "whatsapp", label: { bn: "WhatsApp", en: "WhatsApp" } },
+      { value: "email", label: { bn: "ইমেইল", en: "Email" } },
+    ],
+  },
+});
+
+export const REVIEWS_REQUEST_MESSAGE = defineSetting({
+  key: "reviews.requestMessage",
+  group: "reviews",
+  type: localizedTextSchema,
+  default: {
+    bn: "{customer_name}, আপনার অর্ডার {order_number} কেমন লাগলো? ১ মিনিটে রিভিউ দিন: {review_link} - {brand_name}",
+    en: "Hi {customer_name}, how was your order {order_number}? Leave a quick review: {review_link} - {brand_name}",
+  },
+  label: { bn: "রিভিউ চাওয়ার মেসেজ", en: "Review request message" },
+  help: { bn: "ব্যবহার করা যায়: {customer_name}, {order_number}, {review_link}, {brand_name}", en: "You can use {customer_name}, {order_number}, {review_link}, {brand_name}" },
+  secret: false,
+  public: false,
+  permission: "settings.reviews.write",
+  ui: { widget: "localizedText" },
+});
+
 /** Product feeds (§10.5) — on-demand Meta catalog / Google Merchant XML, gated by a secret token in the feed URL rather than auth (platforms fetch feed URLs unauthenticated). */
 export const FEEDS_ENABLED = defineSetting({
   key: "feeds.enabled",

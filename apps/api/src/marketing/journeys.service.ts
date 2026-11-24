@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Prisma, type Journey } from "@clothing/db";
 import type { NotificationChannel } from "@clothing/shared/notifications";
 import { PrismaService } from "../prisma/prisma.service";
@@ -8,6 +9,8 @@ import { LoyaltyService } from "../loyalty/loyalty.service";
 import { dhakaParts } from "../common/dhaka-time";
 import type { AuthenticatedStaff } from "../common/types";
 import { MarketingMessagingService, pickChannel, RECIPIENT_SELECT, toRecipient } from "./marketing-messaging.service";
+import type { Env } from "../config/env.schema";
+import { signReviewToken } from "../reviews/review-link";
 import { journeyConfigSchema, journeyStepSchema, type JourneyConfig, type JourneyDto, type JourneyStep } from "./dto";
 
 const BATCH = 200;
@@ -48,6 +51,7 @@ export class JourneysService {
     private readonly audit: AuditService,
     private readonly loyalty: LoyaltyService,
     private readonly messaging: MarketingMessagingService,
+    @Optional() @Inject(ConfigService) private readonly config?: ConfigService<Env, true>,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -237,7 +241,11 @@ export class JourneysService {
     if (enrollment.orderId) {
       const order = await this.prisma.order.findUnique({ where: { id: enrollment.orderId }, select: { orderNumber: true } });
       variables.order_number = order?.orderNumber ?? "";
-      variables.review_url = `${process.env.STOREFRONT_URL ?? ""}/account/orders/${enrollment.orderId}/reviews`;
+      // The login-free review link (same one the Settings → Reviews request uses); the account page is the fallback without a key.
+      const key = this.config?.get("APP_ENCRYPTION_KEY", { infer: true });
+      variables.review_url = key
+        ? `${process.env.STOREFRONT_URL ?? ""}${customer.locale === "en" ? "/en" : ""}/review/${signReviewToken(enrollment.orderId, key)}`
+        : `${process.env.STOREFRONT_URL ?? ""}/account/orders/${enrollment.orderId}/reviews`;
     }
 
     await this.prisma.$transaction(async (tx) => {

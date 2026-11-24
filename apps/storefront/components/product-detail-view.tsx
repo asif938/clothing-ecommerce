@@ -33,11 +33,14 @@ export function ProductDetailView({
   locale,
   whatsappNumber,
   recommendations = null,
+  writeReviewLabel = "",
 }: {
   product: ProductDetail;
   locale: string;
   whatsappNumber: string | null;
   recommendations?: ProductRecommendations | null;
+  /** UI string `storefront.review.writeReview`, resolved on the server. */
+  writeReviewLabel?: string;
 }) {
   const colorOption = product.options.find((o) => o.type === "color");
   const sizeOption = product.options.find((o) => o.type === "size");
@@ -368,7 +371,7 @@ export function ProductDetailView({
 
       {isBundle && <BundleSection product={product} locale={locale} />}
 
-      <ProductReviews productId={product.id} locale={locale} />
+      <ProductReviews productId={product.id} locale={locale} writeReviewLabel={writeReviewLabel} />
       <ProductQnA productId={product.id} locale={locale} />
 
       <RecentlyViewedSection excludeId={product.id} locale={locale} />

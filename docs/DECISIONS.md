@@ -3123,3 +3123,33 @@ time, and the header search page had no filters.
 
 **Alternatives considered.** Building `/shop` with the CMS page builder (it can't do URL-driven filtering or paging),
 and keeping numbered pagination only (worse on phones).
+
+---
+
+## 2026-11-24 — Login-free review link and review request after delivery
+
+**Context.** Reviews could only be written from the customer account, but most orders are guest COD orders with no
+account (the only order in the store has none). Nothing asked buyers for a review, and the product page had no way
+to start one. The existing "Review request" journey (Marketing → Journeys) only reaches account holders, and its
+link needed a login.
+
+**Decisions.**
+- A signed, stateless review link per order, `/review/<orderId>-<hmac>`, keyed from `APP_ENCRYPTION_KEY`. The link
+  is the proof of purchase: it allows reviewing that order's delivered items, once each, and nothing else. No new
+  column. The separator is `-` because the storefront treats any path containing a dot as a static file.
+- Settings → Reviews gains "Ask for a review after delivery" (off by default because each message costs a send),
+  "days after delivery" (default 3), a channel (default SMS, the most reliable here) and a bilingual message with
+  `{review_link}`. A sweep asks every delivered order once, guest or account, within a 7-day window after the delay,
+  so switching it on doesn't message months of old orders. It skips orders whose items are all reviewed and orders
+  already in a post-purchase journey.
+- The message goes through the normal notification queue as `journey_message` with
+  `related_entity_type = "review_request"`. That avoids adding a `NotificationEvent` enum value, which would need a
+  migration; the related type is also how an order is remembered as asked.
+- One review form for everyone. The account's "Write a review" and the new product-page button (shown only to a
+  logged-in customer with a delivered, unreviewed purchase of that product) both open the same `/review/<token>`
+  page. The "Review request" journey's `{review_url}` now uses that link too.
+- Reviews from guest orders have no customer, so they show the generic "Customer" name.
+
+**Alternatives considered.** Linking guest orders to auto-created customer accounts (a bigger change to how
+customers are identified), and a new `review_request` notification event with an editable template (needs a
+migration; the message is editable in Settings instead).

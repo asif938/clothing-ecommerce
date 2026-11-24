@@ -3030,6 +3030,32 @@ include sub-categories (+1 test).
 
 ---
 
+## Getting more reviews: login-free review link, request after delivery, product page button (2026-11-24)
+
+Status: built; typecheck, lint and unit tests pass (API 893, +9 in `review-link.spec.ts` and
+`review-request.spec.ts`). Against the dev database:
+- The API returns the order for a valid link, 404 for a forged one, and no button for a visitor who
+  isn't logged in.
+- `/review/<token>` renders the form at 360 px in Bangla (`noindex`), checked with a temporary
+  bypass of the delivered check because the only order is still pending.
+- It shows the right message for a not-delivered order and for an invalid link.
+
+**Not done:** submitting a review and sending a request message, because there is no delivered order
+to try them on.
+
+- `apps/api/src/reviews`: `review-link.ts` (signed `/review/<orderId>-<sig>` links), token
+  endpoints (`GET/POST /store/reviews/order/:token`, `/photos`), `GET
+  /store/reviews/products/:id/eligibility`, `GET /store/reviews/orders/:id/link`, and
+  `ReviewRequestService` (recurring sweep `reviews.request_sweep`).
+- Settings → Reviews: `reviews.requestEnabled` (off), `requestDelayDays` (3), `requestChannel`
+  (SMS) and `requestMessage` (bn/en, `{review_link}`).
+- Storefront: `/review/[token]` with `review-order-form.tsx` (stars, fit, title, text, photo). The
+  account "Write a review" now opens that page. The product page shows a "Write a review" button
+  to eligible customers. UI strings live under `storefront.review.*`.
+- The "Review request" journey's `{review_url}` uses the login-free link.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending
