@@ -3176,3 +3176,28 @@ screen, out of thumb reach.
   from the theme tokens (`brand`, `accent`, `surface`) so each store's palette applies.
 - `useCart()` instances that load at the same moment now share one request (the header badge, the bar and the cart
   page used to fetch separately). Settled requests are never reused, so prices stay the server's current answer.
+
+---
+
+## 2026-11-24 — Hero slider, optional text and the phone banner ratio
+
+**Context.** The hero held one picture with a required heading. Owners wanted several pictures rotating on their own,
+and banners designed with the text already in the picture.
+
+**Decisions.**
+- `hero` props are now `{ slides[1..10], autoplay, intervalSeconds 3..15 }`. A hero saved in the old single-image
+  shape is converted to one slide on read (`upgradeHeroProps`, used by the schema and the admin form), and the API
+  saves the converted shape on the next edit. No data migration is needed.
+- Every text field is optional. A slide with no text gets no scrim, so a designed banner shows exactly as uploaded.
+  One `linkUrl` per slide: with a button label it is the button's link; without one, the whole picture is the link
+  (labelled by the image description); a label without a link shows no button (the admin form warns).
+- Phone ratio: the desktop 8:3 shape would be a 135px strip on a 360px phone, so it isn't kept. Each slide can carry
+  an optional 4:5 phone picture (`<picture>` source). `fit: "contain"` shows the whole picture uncropped at its own
+  ratio, for banners with text in the image.
+- Carousel: slides stacked in one grid cell (height = tallest slide, so nothing jumps) and cross-faded. Autoplay
+  pauses on hover, touch, focus, a hidden tab, `prefers-reduced-motion` and a visible pause button (WCAG 2.2.2).
+  There are dots, arrows from `sm` up, and swipe. Hidden slides are `inert`. Only the first slide's image loads
+  eagerly and only its heading is the `<h1>`.
+- The 4:5 / 8:3 shape of a picture-only slide comes from an invisible spacer, not from `aspect-ratio` on the slide.
+  On the slide itself, any height (even a minimum height) carries through the aspect ratio to the width and pushes
+  the page past the screen.

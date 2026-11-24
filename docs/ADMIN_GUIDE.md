@@ -80,6 +80,25 @@ lock prevents two staff from clobbering each other's draft.
 পাবলিশড আলাদা কপি — "Publish" ড্রাফট ব্লক পাবলিশড স্লটে কপি করে। ভার্সন
 হিস্টরি থেকে আগের পাবলিশড ভার্সনে ফিরে যাওয়া যায়।
 
+### Hero banner and slider
+
+**EN** — The Hero section can hold up to 10 slides. One slide is a still banner; two or more become a slider that
+changes on its own every few seconds (choose 3 to 15, or turn automatic change off). Shoppers can swipe, use the
+dots and arrows, or pause it. For each slide:
+- Add the picture (best 2400 × 900). Optionally add a phone picture (best 1080 × 1350), because a wide picture
+  becomes a thin strip on phones.
+- Heading, text and button are all optional. Leave them empty when the text is already in the picture, and choose
+  "Show the whole picture" so nothing is cropped.
+- Link: with a button label, only the button opens it. Without a button, tapping anywhere on the picture opens it.
+
+**BN** — হিরো সেকশনে সর্বোচ্চ ১০টা স্লাইড রাখা যায়। একটা স্লাইড থাকলে স্থির ব্যানার দেখায়; দুই বা বেশি থাকলে কয়েক
+সেকেন্ড পর পর নিজে থেকে বদলানো স্লাইডার হয় (৩–১৫ সেকেন্ড বেছে নিন, অথবা নিজে থেকে বদলানো বন্ধ রাখুন)। ক্রেতা
+সোয়াইপ, ডট আর তীর দিয়ে বদলাতে বা থামাতে পারেন। প্রতিটা স্লাইডে:
+- ছবি দিন (ভালো মাপ 2400 × 900)। চাইলে ফোনের ছবিও দিন (1080 × 1350), কারণ ফোনে চওড়া ছবি সরু ফিতার মতো দেখায়।
+- শিরোনাম, লেখা আর বাটন সবই ঐচ্ছিক। ছবিতেই লেখা থাকলে এগুলো ফাঁকা রাখুন আর "পুরো ছবি দেখাবে" বাছুন, যাতে কিছু
+  না কাটে।
+- লিংক: বাটনের লেখা থাকলে শুধু বাটনে চাপলে লিংকে যায়। বাটন না থাকলে ছবির যেকোনো জায়গায় চাপলে যায়।
+
 ### Customer reviews section
 
 **EN** — Add *Customer reviews* to a page (for example, the home page) to show star reviews from your

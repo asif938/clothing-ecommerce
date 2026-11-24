@@ -10,6 +10,8 @@
  * Labels are i18n keys under `blocks.fields.*` / `blocks.options.*`.
  */
 
+import { upgradeHeroProps } from "@clothing/blocks/schemas";
+
 type Props = Record<string, unknown>;
 
 interface BaseField {
@@ -22,6 +24,9 @@ interface BaseField {
   labelKey?: string;
   /** Other props reset when this field changes (e.g. the picked category when the product source changes). */
   clears?: string[];
+  /** Shows the `blocks.warnings.<warning>` message in red under the field while this returns true. */
+  warnIf?: (props: Props) => boolean;
+  warning?: string;
 }
 
 export type BlockField =
@@ -31,6 +36,7 @@ export type BlockField =
   | (BaseField & { kind: "image" })
   | (BaseField & { kind: "select"; options: string[] })
   | (BaseField & { kind: "number"; min: number; max: number })
+  | (BaseField & { kind: "toggle" })
   | (BaseField & { kind: "categories" })
   | (BaseField & { kind: "category" })
   | (BaseField & { kind: "collection" })
@@ -43,6 +49,8 @@ export interface BlockFormSpec {
   /** i18n key under `blocks.descriptions` — one line telling the owner what the block is for. */
   description: string;
   fields: BlockField[];
+  /** Brings props saved in an older shape up to date before the form reads them (the API saves the upgraded shape). */
+  normalize?: (props: Props) => Props;
 }
 
 const newId = () => `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -50,14 +58,38 @@ const newId = () => `h${Date.now().toString(36)}${Math.random().toString(36).sli
 export const BLOCK_FORMS: Record<string, BlockFormSpec> = {
   hero: {
     description: "hero",
+    normalize: (props) => upgradeHeroProps(props) as Props,
     fields: [
-      { key: "imageUrl", kind: "image", hint: "heroImage" },
-      { key: "heading", kind: "localizedText" },
-      { key: "subheading", kind: "localizedTextarea" },
-      { key: "ctaText", kind: "localizedText" },
-      { key: "ctaUrl", kind: "link" },
-      { key: "align", kind: "select", options: ["left", "center", "right"] },
-      { key: "imageAlt", kind: "localizedText", hint: "imageAlt" },
+      {
+        key: "slides",
+        kind: "list",
+        max: 10,
+        itemLabel: "slide",
+        hint: "heroSlides",
+        newItem: () => ({ imageUrl: null, align: "left", fit: "cover" }),
+        itemFields: [
+          { key: "imageUrl", kind: "image", hint: "heroImage" },
+          { key: "mobileImageUrl", kind: "image", hint: "heroMobileImage" },
+          { key: "fit", kind: "select", options: ["cover", "contain"], hint: "heroFit" },
+          { key: "imageAlt", kind: "localizedText", hint: "heroImageAlt" },
+          { key: "heading", kind: "localizedText", hint: "optional" },
+          { key: "subheading", kind: "localizedTextarea", hint: "optional" },
+          {
+            key: "ctaText",
+            kind: "localizedText",
+            hint: "heroButton",
+            warning: "buttonNeedsLink",
+            warnIf: (p) => {
+              const text = (p.ctaText ?? {}) as { bn?: string; en?: string };
+              return !!(text.bn?.trim() || text.en?.trim()) && !String(p.linkUrl ?? "").trim();
+            },
+          },
+          { key: "linkUrl", kind: "link", hint: "heroLink" },
+          { key: "align", kind: "select", options: ["left", "center", "right"] },
+        ],
+      },
+      { key: "autoplay", kind: "toggle", hint: "heroAutoplay" },
+      { key: "intervalSeconds", kind: "number", min: 3, max: 15, showIf: (p) => p.autoplay !== false },
     ],
   },
   rich_text: {

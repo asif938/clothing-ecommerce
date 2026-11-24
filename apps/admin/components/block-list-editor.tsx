@@ -103,7 +103,7 @@ function BlockCard({
       {expanded && (
         <>
           {spec && <p className="text-xs text-surface-foreground/60">{t(`descriptions.${spec.description}`)}</p>}
-          {spec ? <BlockFieldsForm fields={spec.fields} props={block.props} onChange={onChange} /> : <AdvancedJson props={block.props} onChange={onChange} />}
+          {spec ? <BlockFieldsForm fields={spec.fields} props={spec.normalize ? spec.normalize(block.props) : block.props} onChange={onChange} /> : <AdvancedJson props={block.props} onChange={onChange} />}
         </>
       )}
     </Card>

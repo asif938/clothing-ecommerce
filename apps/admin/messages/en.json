@@ -3117,7 +3117,7 @@
       "reviews": "Customer reviews"
     },
     "descriptions": {
-      "hero": "Large image across the top of the page with a heading and a button.",
+      "hero": "Big picture across the top of the page. Add several pictures to make a slider that changes on its own.",
       "rich_text": "A paragraph of text, e.g. a welcome message or brand story.",
       "image_text": "A picture next to a heading, text and an optional button.",
       "category_tiles": "Clickable tiles that open your chosen categories.",
@@ -3168,7 +3168,12 @@
       "quote": "What they said",
       "rating": "Stars (1–5)",
       "verifiedLabel": "Verified-buyer badge text",
-      "fallbackName": "Name when the reviewer has none"
+      "fallbackName": "Name when the reviewer has none",
+      "slides": "Slides",
+      "mobileImageUrl": "Phone picture (optional)",
+      "fit": "How the picture fits",
+      "autoplay": "Change slides automatically",
+      "intervalSeconds": "Seconds between slides"
     },
     "options": {
       "left": "Left",
@@ -3188,7 +3193,9 @@
       "recent": "Newest reviews",
       "top_rated": "Highest rated",
       "with_photos": "Reviews with photos",
-      "none": "Only my own testimonials"
+      "none": "Only my own testimonials",
+      "cover": "Fill the banner (may crop)",
+      "contain": "Show the whole picture (no crop)"
     },
     "items": {
       "banner": "Banner",
@@ -3198,10 +3205,12 @@
       "hotspot": "Dot",
       "add_hotspot": "Add product dot",
       "testimonial": "Testimonial",
-      "add_testimonial": "Add testimonial"
+      "add_testimonial": "Add testimonial",
+      "slide": "Slide",
+      "add_slide": "Add slide"
     },
     "hints": {
-      "heroImage": "Best size: 2400 × 900 px. Keep the left side plain — the heading sits there.",
+      "heroImage": "Best size: 2400 × 900 px.",
       "imageAlt": "Short description for screen readers and Google, e.g. \"Three men in cotton panjabis\".",
       "link": "A page on this store, e.g. /collections/eid or /categories/men, or a full https:// link.",
       "tag": "Products that have this tag, e.g. eid-2026.",
@@ -3212,8 +3221,21 @@
       "reviewsSource": "Only approved reviews of products that are live are shown. Names are shortened, e.g. \"Rahim K.\".",
       "minRating": "4 = show 4 and 5 star reviews only.",
       "testimonials": "Shown before the customer reviews, e.g. quotes from WhatsApp or Facebook.",
-      "fallbackName": "Used when a customer account has no name."
-    }
+      "fallbackName": "Used when a customer account has no name.",
+      "heroSlides": "One picture shows as a still banner; two or more become a slider. Drag order with the arrows.",
+      "heroMobileImage": "Portrait picture for phones, best 1080 × 1350 px. Without it the main picture is used.",
+      "heroFit": "Choose \"Show the whole picture\" for banners with text designed into the image.",
+      "heroImageAlt": "What the picture shows, e.g. \"Eid collection\". Read aloud by screen readers and used by Google.",
+      "optional": "Optional. Leave empty if the picture already has text.",
+      "heroButton": "Optional. With a button, only the button opens the link.",
+      "heroLink": "With a button label, the button opens it. Without one, tapping anywhere on the picture opens it.",
+      "heroAutoplay": "Only when there are two or more slides. Shoppers can pause it."
+    },
+    "warnings": {
+      "buttonNeedsLink": "Add a link below, or the button won't show."
+    },
+    "on": "On",
+    "off": "Off"
   },
   "pickers": {
     "searchCustomer": "Search by name, phone or email…",

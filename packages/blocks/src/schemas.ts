@@ -9,6 +9,7 @@
  */
 import type { z } from "zod";
 import { heroSchema } from "./blocks/hero/schema.ts";
+export { upgradeHeroProps } from "./blocks/hero/schema.ts";
 import { heroDefaults } from "./blocks/hero/defaults.ts";
 import { richTextSchema } from "./blocks/rich-text/schema.ts";
 import { richTextDefaults } from "./blocks/rich-text/defaults.ts";

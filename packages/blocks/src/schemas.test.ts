@@ -6,7 +6,8 @@ describe("validateBlocks", () => {
     const { valid, errors } = validateBlocks([{ id: "b1", type: "hero", props: { heading: { en: "Hi" } } }], false);
     expect(errors).toEqual([]);
     expect(valid).toHaveLength(1);
-    expect(valid[0]?.props).toMatchObject({ heading: { en: "Hi" }, align: "left" });
+    // A hero saved in the old single-image shape becomes one slide.
+    expect(valid[0]?.props).toMatchObject({ slides: [{ heading: { en: "Hi" }, align: "left", fit: "cover" }], autoplay: true, intervalSeconds: 5 });
   });
 
   it("reports an unknown block type without throwing", () => {

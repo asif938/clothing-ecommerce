@@ -3083,6 +3083,29 @@ The admin tab picker compiles but hasn't been clicked through (staff login needs
 
 ---
 
+## Hero slider with optional text and phone pictures (2026-11-24)
+
+Status: built; typecheck, lint and tests pass (blocks 21 with +5 hero tests, storefront 42,
+admin 21). The in-app browser pane was unusable (the machine had about 0.8 GB of RAM free), so the
+slider was checked with headless Playwright on a temporary page, since removed:
+- At 360 px: autoplay 0 → 1, pause holds, the dots jump, and the page stays 360 px wide.
+- At 1280 px: arrows, dots and play/pause show.
+- The server HTML has 3 slides and one `h1`, the button links `/shop`, the image-only slide is a
+  labelled link, the whole-picture slide is uncropped, and only the first image loads eagerly.
+
+The live home page (hero still saved in the old shape) renders unchanged as one banner. The admin
+slide editor compiles but hasn't been clicked through (staff login needs the owner's 2FA).
+
+- `packages/blocks/src/blocks/hero`: `schema.ts` (slides, `upgradeHeroProps`, `heroSlideLink`,
+  `wrapSlideIndex`), `Component.tsx` (slides; optional text, scrim only with text, picture link,
+  `<picture>` phone source, `fit`), and the new `HeroCarousel.tsx`.
+- Admin: the hero form edits a list of slides (picture, phone picture, fit, description, heading,
+  subheading, button label, link, alignment), plus autoplay and seconds. There is a new `toggle`
+  field kind, a `normalize` hook for older saved props, and a red warning when a button has no
+  link.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

@@ -54,12 +54,13 @@ function categoryPaths(categories: CategoryOption[], locale: string): { id: stri
 
 /* ---------- individual inputs ---------- */
 
-function FieldShell({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function FieldShell({ label, hint, warning, children }: { label: string; hint?: string; warning?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1 text-sm">
       <span className="font-medium text-surface-foreground">{label}</span>
       {children}
       {hint && <span className="text-xs text-surface-foreground/60">{hint}</span>}
+      {warning && <span className="text-xs text-danger">{warning}</span>}
     </div>
   );
 }
@@ -247,12 +248,13 @@ function FieldInput({ field, props, onChange }: { field: BlockField; props: Prop
   const labelKey = field.labelKey ?? (field.key === "sourceId" ? `sourceId_${field.kind}` : field.key);
   const label = t(`fields.${labelKey}`);
   const hint = field.hint ? t(`hints.${field.hint}`) : undefined;
+  const warning = field.warning && field.warnIf?.(props) ? t(`warnings.${field.warning}`) : undefined;
 
   switch (field.kind) {
     case "localizedText":
     case "localizedTextarea":
       return (
-        <FieldShell label={label} hint={hint}>
+        <FieldShell label={label} hint={hint} warning={warning}>
           <LocalizedInput value={value as Localized | undefined} onChange={set} multiline={field.kind === "localizedTextarea"} />
         </FieldShell>
       );
@@ -278,6 +280,15 @@ function FieldInput({ field, props, onChange }: { field: BlockField; props: Prop
               <option key={o} value={o}>{t(`options.${o}`)}</option>
             ))}
           </select>
+        </FieldShell>
+      );
+    case "toggle":
+      return (
+        <FieldShell label={label} hint={hint}>
+          <label className="flex min-h-10 w-fit cursor-pointer items-center gap-2">
+            <input type="checkbox" className="h-4 w-4" checked={value !== false} onChange={(e) => set(e.target.checked)} />
+            <span className="text-surface-foreground/80">{t(value !== false ? "on" : "off")}</span>
+          </label>
         </FieldShell>
       );
     case "number":
