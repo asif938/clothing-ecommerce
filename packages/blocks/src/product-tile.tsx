@@ -20,6 +20,9 @@ export function discountPercent(priceFrom: number, compareAtFrom: number | null)
   return percent >= 1 ? percent : null;
 }
 
+/** Class for the box around a tile's link and its action buttons (`ProductTileActions`), which sit over the photo. Buttons can't go inside the link itself. */
+export const PRODUCT_TILE_WRAPPER_CLASS = "relative";
+
 /** Class for the link that wraps a tile's content (blocks use a plain `<a>`, the storefront's catalog uses its locale-aware `Link`). */
 export const PRODUCT_TILE_CLASS = "group flex flex-col gap-3";
 

@@ -2957,6 +2957,32 @@ been clicked through, because staff login needs the owner's 2FA.
 
 ---
 
+## Product cards: wishlist heart and quick add (§4.4.3, 2026-11-24)
+
+Status: built; typecheck, lint and unit tests pass (storefront 30, blocks 16, shared 278). The
+server-rendered home page has one heart and one quick-add button on each of its 16 cards. Not yet
+checked visually or tapped through in a browser.
+
+- **Every product card** (home page blocks, category and search listings, related products,
+  recently viewed, wishlist page) now has a heart at the top right of the photo and a bag button at
+  the bottom right. Buttons are 40 px round, with bn/en labels for screen readers.
+- **Heart**: adds the product to the wishlist or removes it. All hearts, the product page button and
+  the wishlist page stay in step, including across open tabs (`use-local-list.ts` now syncs).
+- **Quick add**: loads the product when tapped. A product with nothing to choose goes straight into
+  the cart and shows "Added to cart · View cart". Otherwise a sheet opens: a bottom sheet on phones,
+  a dialog on desktop. In the sheet, colour is pre-picked and size never is, sold-out sizes are
+  crossed out, the price follows the chosen variant, and there is a link to the full product page.
+  Bundles open their product page. Fully sold-out products show "Out of stock".
+- **Header cart count** updates right away after any add, including from the product page
+  (`useCart` now broadcasts changes).
+- `packages/blocks`: `ProductTileActions` slot plus `ProductActionsContext`. The storefront supplies
+  the buttons through `ProductActionsProvider` in its layout.
+- `apps/storefront`: `product-card-actions.tsx`, `quick-add-sheet.tsx`,
+  `product-actions-provider.tsx`, `lib/variant-selection.ts` (+7 tests) and `lib/card-text.ts`.
+- `packages/shared`: 11 `storefront.card.*` UI strings with bn/en defaults, editable as UI strings.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

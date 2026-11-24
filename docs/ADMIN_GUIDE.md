@@ -131,6 +131,18 @@ words such as "Cart" or "Account" are UI strings (`storefront.*`).
 মধ্যে স্টোরফ্রন্টে দেখাবে। হেডার/ফুটারের "কার্ট", "অ্যাকাউন্ট"-এর মতো লেখাগুলো
 UI strings (`storefront.*`)।
 
+### Product card buttons
+
+**EN** — Each product card has a heart (save to wishlist) and a bag button (add to cart) on its
+photo. If the product has sizes or colours, the bag button opens a small picker; otherwise it adds
+the product straight away. Their words, such as "Add to cart", "Added to cart" and "View cart", are
+UI strings under `storefront.card.*`.
+
+**BN** — প্রতিটা প্রোডাক্ট কার্ডের ছবিতে একটা হার্ট (উইশলিস্টে রাখা) আর একটা ব্যাগ বাটন (কার্টে
+যোগ) থাকে। পণ্যের সাইজ বা রং থাকলে ব্যাগ বাটন একটা ছোট বাছাই-প্যানেল খোলে, না থাকলে সরাসরি কার্টে
+যোগ করে। "কার্টে যোগ করুন", "কার্টে যোগ হয়েছে", "কার্ট দেখুন"-এর মতো লেখাগুলো UI strings
+(`storefront.card.*`)।
+
 ## Products (`catalog.manage`)
 
 **EN** — The full product editor: title/description (bn+en), options

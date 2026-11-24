@@ -1,5 +1,6 @@
 import { t } from "@clothing/shared";
-import { PRODUCT_TILE_CLASS, ProductTileContent } from "../../product-tile.tsx";
+import { PRODUCT_TILE_CLASS, PRODUCT_TILE_WRAPPER_CLASS, ProductTileContent } from "../../product-tile.tsx";
+import { ProductTileActions } from "../../product-actions.tsx";
 import type { BlockComponentProps } from "../../registry.ts";
 import { SectionHeading } from "../../section-heading.tsx";
 import { storeApiGet } from "../../store-api.ts";
@@ -27,9 +28,12 @@ export async function ProductGridBlock({ props, locale }: BlockComponentProps<Pr
       {props.heading && <SectionHeading>{t(props.heading, locale as "bn" | "en")}</SectionHeading>}
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 md:grid-cols-4">
         {products.map((product) => (
-          <a key={product.id} href={`${locale === "en" ? "/en" : ""}/p/${product.slug}`} className={PRODUCT_TILE_CLASS}>
-            <ProductTileContent product={product} locale={locale} />
-          </a>
+          <div key={product.id} className={PRODUCT_TILE_WRAPPER_CLASS}>
+            <a href={`${locale === "en" ? "/en" : ""}/p/${product.slug}`} className={PRODUCT_TILE_CLASS}>
+              <ProductTileContent product={product} locale={locale} />
+            </a>
+            <ProductTileActions product={{ id: product.id, slug: product.slug, title: product.title }} locale={locale} />
+          </div>
         ))}
       </div>
     </section>

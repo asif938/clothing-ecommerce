@@ -109,4 +109,16 @@ export const UI_STRING_DEFAULTS: UiStringDefault[] = [
   { key: "storefront.header.showSubmenu", bn: "সাবমেনু দেখান", en: "Show submenu" },
   { key: "storefront.header.searchByPhoto", bn: "ছবি দিয়ে খুঁজুন", en: "Search by photo" },
   { key: "storefront.footer.contact", bn: "যোগাযোগ", en: "Contact" },
+  // Product-card actions: wishlist heart and quick add (size picker sheet).
+  { key: "storefront.card.addToWishlist", bn: "উইশলিস্টে যোগ করুন", en: "Add to wishlist" },
+  { key: "storefront.card.removeFromWishlist", bn: "উইশলিস্ট থেকে সরান", en: "Remove from wishlist" },
+  { key: "storefront.card.quickAdd", bn: "কার্টে যোগ করুন", en: "Add to cart" },
+  { key: "storefront.card.preorder", bn: "প্রি-অর্ডার করুন", en: "Preorder" },
+  { key: "storefront.card.addedToCart", bn: "কার্টে যোগ হয়েছে", en: "Added to cart" },
+  { key: "storefront.card.viewCart", bn: "কার্ট দেখুন", en: "View cart" },
+  { key: "storefront.card.viewDetails", bn: "সব বিস্তারিত দেখুন", en: "View full details" },
+  { key: "storefront.card.chooseOption", bn: "বেছে নিন", en: "Choose" },
+  { key: "storefront.card.outOfStock", bn: "স্টক শেষ", en: "Out of stock" },
+  { key: "storefront.card.addFailed", bn: "কার্টে যোগ করা যায়নি, আবার চেষ্টা করুন", en: "Could not add to cart, please try again" },
+  { key: "storefront.card.close", bn: "বন্ধ করুন", en: "Close" },
 ];

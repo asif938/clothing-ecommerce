@@ -3,6 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { addCartBundle, addCartItem, getCart, removeCartItem, updateCartItem, type CartResponse } from "./cart-api";
 
+/** Fired with the new `CartResponse` after any change, so every `useCart()` on the page (e.g. the header badge) shows it without refetching. */
+const CART_UPDATED_EVENT = "cart:updated";
+
+function broadcast(data: CartResponse) {
+  window.dispatchEvent(new CustomEvent<CartResponse>(CART_UPDATED_EVENT, { detail: data }));
+}
+
+/** Adds to the cart without loading it first — for product-card quick add, where a full `useCart()` per card would fetch the cart once per card. Every `useCart()` on the page still updates. */
+export async function addToCart(variantId: string, quantity: number): Promise<CartResponse> {
+  const data = await addCartItem(variantId, quantity);
+  broadcast(data);
+  return data;
+}
+
 /** Loads the cart once on mount and exposes mutations that each refetch the server's authoritative totals (golden rule 6) — no client-side price math anywhere in the storefront. */
 export function useCart() {
   const [data, setData] = useState<CartResponse | null>(null);
@@ -22,10 +36,16 @@ export function useCart() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onUpdated = (event: Event) => setData((event as CustomEvent<CartResponse>).detail);
+    window.addEventListener(CART_UPDATED_EVENT, onUpdated);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, onUpdated);
+  }, []);
+
   const addItem = useCallback(async (variantId: string, quantity: number) => {
     setError(null);
     try {
-      setData(await addCartItem(variantId, quantity));
+      broadcast(await addCartItem(variantId, quantity));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add to cart");
       throw err;
@@ -36,7 +56,7 @@ export function useCart() {
   const addBundle = useCallback(async (bundleProductId: string) => {
     setError(null);
     try {
-      setData(await addCartBundle(bundleProductId));
+      broadcast(await addCartBundle(bundleProductId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add this look to your cart");
       throw err;
@@ -46,7 +66,7 @@ export function useCart() {
   const updateItem = useCallback(async (id: string, quantity: number) => {
     setError(null);
     try {
-      setData(await updateCartItem(id, quantity));
+      broadcast(await updateCartItem(id, quantity));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update cart");
     }
@@ -55,7 +75,7 @@ export function useCart() {
   const removeItem = useCallback(async (id: string) => {
     setError(null);
     try {
-      setData(await removeCartItem(id));
+      broadcast(await removeCartItem(id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove item");
     }
@@ -63,5 +83,5 @@ export function useCart() {
 
   const itemCount = data?.cart.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
-  return { data, loading, error, itemCount, refresh, addItem, addBundle, updateItem, removeItem, setCart: setData };
+  return { data, loading, error, itemCount, refresh, addItem, addBundle, updateItem, removeItem, setCart: broadcast };
 }

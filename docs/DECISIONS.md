@@ -3065,3 +3065,26 @@ block out because reviews did not exist yet. Reviews were added in M8.
 **Alternatives considered.** Separate `testimonials` and `reviews` blocks. Rejected because owners would have to
 manage two sections that look the same. Picking individual reviews was also rejected for now, because it needs a
 review picker in the admin and testimonials already cover that need.
+
+---
+
+## 2026-11-24 — Wishlist and quick add on product cards
+
+**Context.** Shoppers had to open the product page to save an item or add it to the cart. The spec names a
+"quick-add" card variant (§4.4.3) that had not been built.
+
+**Decisions.**
+- Every card gets both buttons. There is no admin toggle to switch to a plain card yet. Both buttons sit over the
+  photo, next to the card link rather than inside it, because a button inside a link is invalid HTML and breaks
+  taps.
+- Quick add never guesses a size. A product with nothing to choose (one variant, or only one value per option) is
+  added straight away; anything else opens a picker with colour pre-selected. Bundles go to their own page.
+- The card carries no variant data. The product is fetched only when quick add is tapped, so listing payloads and
+  cached HTML stay the same size.
+- `@clothing/blocks` doesn't own the cart or wishlist, so it exposes a context slot (`ProductTileActions`) that the
+  storefront fills. This lets block cards and catalog cards share one implementation.
+- Card buttons add to the cart with `addToCart()` instead of `useCart()`, so a page of 24 cards doesn't fetch the
+  cart 24 times. A `cart:updated` event keeps every `useCart()` (for example the header badge) current.
+
+**Alternatives considered.** A hover-only "Quick add" bar like many desktop shops use. Rejected because there is no
+hover on phones, and this store is mobile-first.

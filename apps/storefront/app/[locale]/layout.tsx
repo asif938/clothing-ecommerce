@@ -13,6 +13,8 @@ import { TrackingScripts } from "../../components/tracking-scripts";
 import { UtmCapture } from "../../components/utm-capture";
 import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
+import { ProductActionsProvider } from "../../components/product-actions-provider";
+import { resolveCardText } from "../../lib/card-text";
 import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
 import { fontClassNames, fontStackCss } from "../../lib/fonts";
 import { pickForegroundColor, safeHexColor, serializeJsonLd } from "../../lib/theme";
@@ -113,7 +115,9 @@ export default async function LocaleLayout({
           <AnnouncementBar bars={announcements} locale={locale} />
           {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
           <Header brandName={brandName} logoUrl={logoLight} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1">
+            <ProductActionsProvider text={resolveCardText(uiStrings, locale)}>{children}</ProductActionsProvider>
+          </main>
           <Footer
             brandName={brandName}
             logoUrl={logoDark}

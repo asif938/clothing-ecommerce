@@ -8,4 +8,5 @@ export const BLOCKS_PACKAGE_VERSION = "0.1.0";
 export * from "./registry.ts";
 export * from "./library.ts";
 export * from "./product-tile.tsx";
+export * from "./product-actions.tsx";
 export * from "./section-heading.tsx";
