@@ -260,3 +260,17 @@ describe("StoreCatalogService.listForListing search and filters", () => {
     expect(JSON.stringify(findMany.mock.calls[0]![0].where)).not.toContain('"id":{"in"');
   });
 });
+
+describe("StoreCatalogService category page scope", () => {
+  it("includes products in sub-categories", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      product: { findMany, count: vi.fn().mockResolvedValue(0) },
+      category: { findMany: vi.fn().mockResolvedValue([{ id: "women", parentId: null }, { id: "saree", parentId: "women" }, { id: "men", parentId: null }]) },
+    };
+    const cache = { get: vi.fn((key: string) => (key.startsWith("facets:") ? { attributes: [], categories: [], priceRange: null } : undefined)), set: vi.fn(), delete: vi.fn(), invalidateTag: vi.fn() };
+    const service = new StoreCatalogService(prisma as never, makeMediaProviders() as never, cache as never, makeSearch() as never);
+    await service.listForListing({ categoryId: "women", sort: "newest", page: 1, pageSize: 24, inStockOnly: false, onSale: false });
+    expect(JSON.stringify(findMany.mock.calls[0]![0].where)).toContain('"categoryId":{"in":["women","saree"]}');
+  });
+});

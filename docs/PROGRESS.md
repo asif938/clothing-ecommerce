@@ -2985,16 +2985,20 @@ checked visually or tapped through in a browser.
 
 ## All-products page /shop, new listing UI and view switch (§7.3, 2026-11-24)
 
-Status: built; typecheck, lint and unit tests pass (API 883, storefront 37, shared 278). Checked
-against the dev database:
-- The API returns all 10 live products, the category tree with rolled-up counts, and 2 results
-  for "panjabi".
-- `/en/shop` renders at 360 px with no sideways scroll.
-- `/products?q=x` redirects (308) to `/shop?q=x`.
+Status: built; typecheck, lint and unit tests pass (API 884, storefront 37, shared 278). Clicked
+through in a browser against the dev database, at 360 px and 1280 px, in Bangla and English:
+- views: list, large and grid; the choice is remembered
+- the phone filter sheet: Women + On sale gives 5 products, with chips and the badge count
+- removing a chip
+- search: "saree" and "শাড়ি" (Best match), and price sort
+- the desktop sidebar
+- "Load more", tested with a temporary page size of 4: 4 → 8 → 10, `?page=` follows, there are no
+  duplicates, and the button hides at the end
+- opening `?page=2` directly shows "Show earlier products"
 
-**Not clicked through yet.** The browser pane can only reach the storefront through 127.0.0.1,
-because another dev server holds port 3000, and Next.js dev blocks hydration from that origin. The
-filter sheet, chips, view switch, load more and search box are untested in a browser.
+Found and fixed while testing: category pages showed only products filed directly on that
+category, so "Women" was empty because its products sit in its sub-categories. Category pages now
+include sub-categories (+1 test).
 
 - **`/shop`** (`/en/shop`) lists every live product. It has a search box (Bangla, English and
   Banglish, the same search as the header), sort options (Featured or Best match while searching,

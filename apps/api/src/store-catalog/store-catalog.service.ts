@@ -409,7 +409,8 @@ export class StoreCatalogService {
   /** The category/collection/tag scope alone — shared by the listing query and the facet-count query (facets never re-filter by the attribute they're counting, so a shopper can still broaden a selection). */
   private async buildListingScope(query: ListingQuery, rankedIds: string[] | null = null): Promise<Prisma.ProductWhereInput | null> {
     const base: Prisma.ProductWhereInput = { deletedAt: null, status: "active", ...(rankedIds ? { id: { in: rankedIds } } : {}) };
-    if (query.categoryId) return { ...base, categoryId: query.categoryId };
+    // A category page shows its sub-categories' products too ("Women" includes "Women → Saree").
+    if (query.categoryId) return { ...base, categoryId: { in: expandWithDescendants(await this.loadCategoryTree(), [query.categoryId]) } };
     if (query.collectionId) {
       const collection = await this.prisma.collection.findUnique({ where: { id: query.collectionId } });
       if (!collection) return null;
