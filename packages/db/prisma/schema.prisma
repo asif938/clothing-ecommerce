@@ -2139,9 +2139,24 @@ model Review {
   orderItem OrderItem?      @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
   customer  Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
+  helpfulVotes ReviewHelpfulVote[]
+
   @@index([productId, status])
   @@index([customerId])
   @@map("reviews")
+}
+
+/// One "helpful" vote per visitor per review (customer id, or the anonymous-id cookie for guests).
+model ReviewHelpfulVote {
+  id        String   @id @default(cuid(2))
+  reviewId  String   @map("review_id")
+  voterKey  String   @map("voter_key")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, voterKey])
+  @@map("review_helpful_votes")
 }
 
 enum ProductQuestionStatus {

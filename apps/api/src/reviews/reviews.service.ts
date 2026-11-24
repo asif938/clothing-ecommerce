@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import type { AuthenticatedStaff } from "../common/types";
+import { isUniqueViolation } from "../common/document-number";
 import type { ListReviewsQueryDto, ModerateReviewDto } from "./dto";
 
 /**
@@ -44,8 +45,23 @@ export class ReviewsService {
     return review;
   }
 
-  async markHelpful(id: string) {
-    return this.prisma.review.update({ where: { id }, data: { helpfulCount: { increment: 1 } } });
+  /**
+   * One vote per visitor per review (`voterKey`: the customer, or the guest's anonymous-id cookie), and only on approved
+   * reviews. Returns just the count — the old version returned the whole review row, even a pending or rejected one.
+   */
+  async markHelpful(id: string, voterKey: string): Promise<{ helpfulCount: number; counted: boolean }> {
+    const review = await this.prisma.review.findFirst({ where: { id, status: "approved" }, select: { id: true, helpfulCount: true } });
+    if (!review) throw new NotFoundException({ code: "REVIEW_NOT_FOUND", message: "Review not found" });
+    try {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await tx.reviewHelpfulVote.create({ data: { reviewId: id, voterKey } });
+        return tx.review.update({ where: { id }, data: { helpfulCount: { increment: 1 } }, select: { helpfulCount: true } });
+      });
+      return { helpfulCount: updated.helpfulCount, counted: true };
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      return { helpfulCount: review.helpfulCount, counted: false }; // already voted
+    }
   }
 
   async recomputeProductRating(productId: string): Promise<void> {

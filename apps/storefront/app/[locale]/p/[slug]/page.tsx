@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ProductDetailView } from "../../../../components/product-detail-view";
 import { getProduct, getProductRecommendations, getStoreConfig } from "../../../../lib/store-api";
+import { serializeJsonLd } from "../../../../lib/theme";
 
 function localized(value: { bn?: string; en?: string } | null, locale: string): string | undefined {
   if (!value) return undefined;
@@ -70,7 +71,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <>
       {buildStructuredData(product, locale).map((data, index) => (
-        <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+        <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />
       ))}
       <ProductDetailView product={product} locale={locale} whatsappNumber={whatsappNumber} recommendations={recommendations} />
     </>

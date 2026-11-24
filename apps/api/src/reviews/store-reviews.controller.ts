@@ -25,8 +25,11 @@ export class StoreReviewsController {
   }
 
   @Post(":id/helpful")
-  markHelpful(@Param("id") id: string) {
-    return this.reviews.markHelpful(id);
+  @UseGuards(CustomerContextGuard)
+  markHelpful(@Param("id") id: string, @Req() req: Request) {
+    const ctx = req.customerContext!;
+    const voterKey = ctx.customer ? `customer:${ctx.customer.id}` : `anon:${ctx.anonymousId}`;
+    return this.reviews.markHelpful(id, voterKey);
   }
 
   @Post("photos")

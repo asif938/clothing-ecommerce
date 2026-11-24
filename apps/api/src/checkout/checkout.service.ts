@@ -27,6 +27,7 @@ import { AffiliatesService } from "../affiliates/affiliates.service";
 import { OrderTendersService } from "../rewards-core/order-tenders.service";
 import { OrdersLifecycleService } from "./orders-lifecycle.service";
 import type { PlaceOrderDto } from "./dto";
+import { isUniqueViolation } from "../common/document-number";
 
 const ORDER_WITH_PAYMENTS_INCLUDE = { items: true, payments: true } as const;
 type OrderWithPayments = Prisma.OrderGetPayload<{ include: typeof ORDER_WITH_PAYMENTS_INCLUDE }>;
@@ -184,150 +185,161 @@ export class CheckoutService {
       }
     }
 
-    const order = await this.prisma.$transaction(async (tx) => {
-      await this.stock.reserve(tx, location.id, stockLines);
-      await this.discounts.claimBulkCodesInTx(tx, quote.discounts.applied);
+    let order: OrderWithPayments;
+    try {
+      order = await this.prisma.$transaction(async (tx) => {
+        await this.stock.reserve(tx, location.id, stockLines);
+        await this.discounts.claimBulkCodesInTx(tx, quote.discounts.applied);
 
-      const created = await tx.order.create({
-        data: {
-          orderNumber,
+        const created = await tx.order.create({
+          data: {
+            orderNumber,
+            customerId: requestContext.identity.customerId,
+            channel: "web",
+            status: finalStatus,
+            subtotal: quote.subtotal,
+            discountTotal: quote.discounts.totalDiscount,
+            shippingFee: quote.shippingFee,
+            shippingDiscount: quote.shippingDiscount,
+            advanceRequired: advanceAmount,
+            total: quote.total,
+            codAmount: dto.paymentMethod === "cod" ? Math.max(0, amountDue - advanceAmount) : 0,
+            // §16 M16 — tenders are payments: recorded as succeeded `payments` rows by `OrderTendersService.spendInTx` below.
+            giftCardUsed,
+            giftCardId: giftCardUsed > 0 ? (quote.giftCard?.giftCardId ?? null) : null,
+            storeCreditUsed,
+            referralDiscount,
+            paidTotal: creditTenders,
+            paymentStatus: creditTenders === 0 ? "unpaid" : creditTenders >= quote.total ? "paid" : "partially_paid",
+            totalWeightGrams: quote.totalWeightGrams,
+            shippingAddress: toJson({
+              recipientName: cartRow.contactName,
+              phone: cartRow.contactPhone,
+              divisionId: cartRow.divisionId,
+              districtId: cartRow.districtId,
+              areaId: cartRow.areaId,
+              addressLine: cartRow.addressLine,
+              landmark: cartRow.landmark,
+            }),
+            billingContact: toJson({ name: cartRow.contactName, phone: cartRow.contactPhone, email: cartRow.contactEmail }),
+            customerNote: cartRow.customerNote,
+            riskScore: risk.score,
+            riskReasonCodes: risk.reasonCodes,
+            riskLevel: risk.level,
+            requiresReview: outcome.manualReviewRequired,
+            utmSource: dto.utmSource ?? null,
+            // §16 M13 — campaign attribution for the ROAS report.
+            utmMedium: dto.utmMedium ?? null,
+            utmCampaign: dto.utmCampaign ?? null,
+            utmContent: dto.utmContent ?? null,
+            pointsRedeemed: quote.loyalty?.pointsApplied ?? 0,
+            pointsDiscount: quote.loyalty?.discount ?? 0,
+            // §16 M14 — attributes A/B test conversions to the variant this visitor saw.
+            visitorId: requestContext.identity.anonymousId,
+            ip: requestContext.ip,
+            userAgent: requestContext.userAgent,
+            deviceId: dto.deviceId ?? null,
+            idempotencyKey: requestContext.idempotencyKey,
+            paymentTimeoutAt: needsOnlinePayment ? new Date(Date.now() + timeoutMinutes * 60 * 1000) : null,
+            possibleDuplicateOrderIds,
+            // §10.5/§13.3 — shared with the client pixel's own Purchase event id for platform-side dedup; generated server-side when the client didn't send one (e.g. tracking scripts never loaded).
+            trackingEventId: dto.trackingEventId ?? randomUUID(),
+            items: {
+              create: priceableLines.map((line) => ({
+                variantId: line.variantId,
+                locationId: location.id,
+                title: toJson(line.title),
+                sku: line.sku,
+                // `flashSaleItemId` lets a cancellation give the flash-sale unit back (OrdersLifecycleService).
+                optionsSnapshot: toJson({ optionValueIds: line.optionValueIds, ...(line.flashSaleItemId ? { flashSaleItemId: line.flashSaleItemId } : {}) }),
+                imageUrl: line.imageUrl,
+                unitPrice: line.unitPrice,
+                compareAtPrice: line.compareAtPrice,
+                quantity: line.quantity,
+                discountAllocated: discountAllocatedByVariant.get(line.variantId) ?? 0,
+                lineTotal: line.lineTotal,
+              })),
+            },
+            discounts: {
+              create: quote.discounts.applied.map((a) => ({ discountId: a.discountId, code: a.code, type: a.valueType, amount: a.amount, allocation: toJson(Object.fromEntries(a.allocations)) })),
+            },
+            events: { create: [{ type: "status_change", data: { from: null, to: finalStatus } }] },
+          },
+          include: { items: true, payments: true },
+        });
+
+        // §6.3 step 9 — spend the points in the same transaction; a concurrent redemption that emptied the balance rolls the whole order back.
+        if (quote.loyalty && quote.loyalty.pointsApplied > 0 && requestContext.identity.customerId) {
+          await this.loyalty.redeemInTx(tx, requestContext.identity.customerId, created.id, quote.loyalty.pointsApplied);
+        }
+
+        // §16 M16 — spend gift card / store credit, record the referral and the affiliate attribution, all or nothing with the order.
+        await this.tenders.spendInTx(tx, { id: created.id, customerId: created.customerId, giftCardId: created.giftCardId, giftCardUsed, storeCreditUsed });
+        if (referralDiscount > 0 && quote.referral) {
+          await this.referrals.createInTx(tx, { orderId: created.id, code: quote.referral.code, refereeCustomerId: requestContext.identity.customerId, refereePhone: contactPhone, discount: referralDiscount });
+        }
+        await this.affiliates.attributeInTx(tx, {
+          orderId: created.id,
+          discountIds: quote.discounts.applied.map((a) => a.discountId),
+          cartAffiliateCode: cartRow.affiliateCode,
+          cartAffiliateClickedAt: cartRow.affiliateClickedAt,
+          phone: cartRow.contactPhone,
           customerId: requestContext.identity.customerId,
-          channel: "web",
-          status: finalStatus,
-          subtotal: quote.subtotal,
-          discountTotal: quote.discounts.totalDiscount,
-          shippingFee: quote.shippingFee,
-          shippingDiscount: quote.shippingDiscount,
-          advanceRequired: advanceAmount,
-          total: quote.total,
-          codAmount: dto.paymentMethod === "cod" ? Math.max(0, amountDue - advanceAmount) : 0,
-          // §16 M16 — tenders are payments: recorded as succeeded `payments` rows by `OrderTendersService.spendInTx` below.
-          giftCardUsed,
-          giftCardId: giftCardUsed > 0 ? (quote.giftCard?.giftCardId ?? null) : null,
-          storeCreditUsed,
-          referralDiscount,
-          paidTotal: creditTenders,
-          paymentStatus: creditTenders === 0 ? "unpaid" : creditTenders >= quote.total ? "paid" : "partially_paid",
-          totalWeightGrams: quote.totalWeightGrams,
-          shippingAddress: toJson({
-            recipientName: cartRow.contactName,
-            phone: cartRow.contactPhone,
-            divisionId: cartRow.divisionId,
-            districtId: cartRow.districtId,
-            areaId: cartRow.areaId,
-            addressLine: cartRow.addressLine,
-            landmark: cartRow.landmark,
-          }),
-          billingContact: toJson({ name: cartRow.contactName, phone: cartRow.contactPhone, email: cartRow.contactEmail }),
-          customerNote: cartRow.customerNote,
-          riskScore: risk.score,
-          riskReasonCodes: risk.reasonCodes,
-          riskLevel: risk.level,
-          requiresReview: outcome.manualReviewRequired,
-          utmSource: dto.utmSource ?? null,
-          // §16 M13 — campaign attribution for the ROAS report.
-          utmMedium: dto.utmMedium ?? null,
-          utmCampaign: dto.utmCampaign ?? null,
-          utmContent: dto.utmContent ?? null,
-          pointsRedeemed: quote.loyalty?.pointsApplied ?? 0,
-          pointsDiscount: quote.loyalty?.discount ?? 0,
-          // §16 M14 — attributes A/B test conversions to the variant this visitor saw.
-          visitorId: requestContext.identity.anonymousId,
-          ip: requestContext.ip,
-          userAgent: requestContext.userAgent,
-          deviceId: dto.deviceId ?? null,
-          idempotencyKey: requestContext.idempotencyKey,
-          paymentTimeoutAt: needsOnlinePayment ? new Date(Date.now() + timeoutMinutes * 60 * 1000) : null,
-          possibleDuplicateOrderIds,
-          // §10.5/§13.3 — shared with the client pixel's own Purchase event id for platform-side dedup; generated server-side when the client didn't send one (e.g. tracking scripts never loaded).
-          trackingEventId: dto.trackingEventId ?? randomUUID(),
-          items: {
-            create: priceableLines.map((line) => ({
-              variantId: line.variantId,
-              locationId: location.id,
-              title: toJson(line.title),
-              sku: line.sku,
-              // `flashSaleItemId` lets a cancellation give the flash-sale unit back (OrdersLifecycleService).
-              optionsSnapshot: toJson({ optionValueIds: line.optionValueIds, ...(line.flashSaleItemId ? { flashSaleItemId: line.flashSaleItemId } : {}) }),
-              imageUrl: line.imageUrl,
-              unitPrice: line.unitPrice,
-              compareAtPrice: line.compareAtPrice,
-              quantity: line.quantity,
-              discountAllocated: discountAllocatedByVariant.get(line.variantId) ?? 0,
-              lineTotal: line.lineTotal,
-            })),
+          lines: created.items.map((i) => ({ lineTotal: i.lineTotal, discountAllocated: i.discountAllocated, quantity: i.quantity })),
+          orderLevelDiscounts: referralDiscount + (quote.loyalty?.discount ?? 0),
+        });
+
+        for (const line of priceableLines) {
+          if (line.flashSaleItemId) await this.flashSales.recordSoldInTx(tx, line.flashSaleItemId, line.quantity);
+        }
+
+        // Bookkeeping that belongs to the order: all or nothing with it, so a failure can never leave a half-recorded order behind.
+        for (const applied of quote.discounts.applied) {
+          await this.discounts.recordUsageInTx(tx, applied.discountId, created.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);
+        }
+        // Symmetric: the orders found above don't yet list this new order as one of their duplicates.
+        for (const otherId of possibleDuplicateOrderIds) {
+          await tx.order.update({ where: { id: otherId }, data: { possibleDuplicateOrderIds: { push: created.id } } });
+        }
+        await tx.cart.update({ where: { id: cartRow.id }, data: { status: "converted", recoveredAt: new Date() } });
+        if (requestContext.identity.customerId) {
+          await tx.customer.update({ where: { id: requestContext.identity.customerId }, data: { ordersCount: { increment: 1 }, totalSpent: { increment: created.total } } });
+        }
+
+        await this.notifications.enqueue(tx, {
+          event: "order_placed",
+          recipientType: requestContext.identity.customerId ? "customer" : "guest",
+          recipientId: requestContext.identity.customerId ?? null,
+          locale: cartRow.locale,
+          contacts: { sms: cartRow.contactPhone, whatsapp: cartRow.contactPhone, email: cartRow.contactEmail ?? null, push: requestContext.identity.customerId },
+          variables: {
+            ...notificationCommonVariables,
+            customer_name: cartRow.contactName,
+            order_number: created.orderNumber,
+            order_total: formatTakaFromPoisha(created.total),
+            cod_amount: formatTakaFromPoisha(created.codAmount),
+            // §16 M10 — present only when the order has a preorder line; the
+            // template is free to ignore it, same optional-variable pattern
+            // every other event already uses (e.g. `cod_amount` on COD-only orders).
+            preorder_release_date: priceableLines.find((l) => l.isPreorder)?.preorderReleaseDate?.toISOString().slice(0, 10) ?? "",
           },
-          discounts: {
-            create: quote.discounts.applied.map((a) => ({ discountId: a.discountId, code: a.code, type: a.valueType, amount: a.amount, allocation: toJson(Object.fromEntries(a.allocations)) })),
-          },
-          events: { create: [{ type: "status_change", data: { from: null, to: finalStatus } }] },
-        },
-        include: { items: true, payments: true },
+          related: { type: "order", id: created.id },
+        });
+
+        // §16 M11 - rules/queue assignment/self-confirm react after commit. An order still awaiting online payment fires this later, from onPaymentSucceeded.
+        if (finalStatus !== "pending_payment") await this.automationOutbox.enqueue(tx, "order.placed", created.id);
+
+        return created;
       });
-
-      // §6.3 step 9 — spend the points in the same transaction; a concurrent redemption that emptied the balance rolls the whole order back.
-      if (quote.loyalty && quote.loyalty.pointsApplied > 0 && requestContext.identity.customerId) {
-        await this.loyalty.redeemInTx(tx, requestContext.identity.customerId, created.id, quote.loyalty.pointsApplied);
+    } catch (error) {
+      // Two requests with the same Idempotency-Key raced past the lookup at the top: the loser hits the unique index.
+      // Its transaction already rolled back (stock, points, tenders), so answer with the order the winner created.
+      if (isUniqueViolation(error)) {
+        const winner = await this.prisma.order.findUnique({ where: { idempotencyKey: requestContext.idempotencyKey }, include: ORDER_WITH_PAYMENTS_INCLUDE });
+        if (winner) return this.buildReplayResponse(winner);
       }
-
-      // §16 M16 — spend gift card / store credit, record the referral and the affiliate attribution, all or nothing with the order.
-      await this.tenders.spendInTx(tx, { id: created.id, customerId: created.customerId, giftCardId: created.giftCardId, giftCardUsed, storeCreditUsed });
-      if (referralDiscount > 0 && quote.referral) {
-        await this.referrals.createInTx(tx, { orderId: created.id, code: quote.referral.code, refereeCustomerId: requestContext.identity.customerId, refereePhone: contactPhone, discount: referralDiscount });
-      }
-      await this.affiliates.attributeInTx(tx, {
-        orderId: created.id,
-        discountIds: quote.discounts.applied.map((a) => a.discountId),
-        cartAffiliateCode: cartRow.affiliateCode,
-        cartAffiliateClickedAt: cartRow.affiliateClickedAt,
-        phone: cartRow.contactPhone,
-        customerId: requestContext.identity.customerId,
-        lines: created.items.map((i) => ({ lineTotal: i.lineTotal, discountAllocated: i.discountAllocated, quantity: i.quantity })),
-        orderLevelDiscounts: referralDiscount + (quote.loyalty?.discount ?? 0),
-      });
-
-      for (const line of priceableLines) {
-        if (line.flashSaleItemId) await this.flashSales.recordSoldInTx(tx, line.flashSaleItemId, line.quantity);
-      }
-
-      // Bookkeeping that belongs to the order: all or nothing with it, so a failure can never leave a half-recorded order behind.
-      for (const applied of quote.discounts.applied) {
-        await this.discounts.recordUsageInTx(tx, applied.discountId, created.id, requestContext.identity.customerId, cartRow.contactPhone, applied.amount, applied.code);
-      }
-      // Symmetric: the orders found above don't yet list this new order as one of their duplicates.
-      for (const otherId of possibleDuplicateOrderIds) {
-        await tx.order.update({ where: { id: otherId }, data: { possibleDuplicateOrderIds: { push: created.id } } });
-      }
-      await tx.cart.update({ where: { id: cartRow.id }, data: { status: "converted", recoveredAt: new Date() } });
-      if (requestContext.identity.customerId) {
-        await tx.customer.update({ where: { id: requestContext.identity.customerId }, data: { ordersCount: { increment: 1 }, totalSpent: { increment: created.total } } });
-      }
-
-      await this.notifications.enqueue(tx, {
-        event: "order_placed",
-        recipientType: requestContext.identity.customerId ? "customer" : "guest",
-        recipientId: requestContext.identity.customerId ?? null,
-        locale: cartRow.locale,
-        contacts: { sms: cartRow.contactPhone, whatsapp: cartRow.contactPhone, email: cartRow.contactEmail ?? null, push: requestContext.identity.customerId },
-        variables: {
-          ...notificationCommonVariables,
-          customer_name: cartRow.contactName,
-          order_number: created.orderNumber,
-          order_total: formatTakaFromPoisha(created.total),
-          cod_amount: formatTakaFromPoisha(created.codAmount),
-          // §16 M10 — present only when the order has a preorder line; the
-          // template is free to ignore it, same optional-variable pattern
-          // every other event already uses (e.g. `cod_amount` on COD-only orders).
-          preorder_release_date: priceableLines.find((l) => l.isPreorder)?.preorderReleaseDate?.toISOString().slice(0, 10) ?? "",
-        },
-        related: { type: "order", id: created.id },
-      });
-
-      // §16 M11 - rules/queue assignment/self-confirm react after commit. An order still awaiting online payment fires this later, from onPaymentSucceeded.
-      if (finalStatus !== "pending_payment") await this.automationOutbox.enqueue(tx, "order.placed", created.id);
-
-      return created;
-    });
+      throw error;
+    }
 
     let redirectUrl: string | null = null;
     if (needsOnlinePayment && onlineMethodForPayment) {

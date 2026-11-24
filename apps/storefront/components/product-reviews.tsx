@@ -36,9 +36,15 @@ export function ProductReviews({ productId, locale }: { productId: string; local
       .catch(() => undefined);
   }, [productId]);
 
+  const [voted, setVoted] = useState<Set<string>>(new Set());
+
   async function markHelpful(id: string) {
-    await fetch(`/api/v1/store/reviews/${id}/helpful`, { method: "POST" }).catch(() => undefined);
-    setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, helpfulCount: r.helpfulCount + 1 } : r)));
+    setVoted((prev) => new Set(prev).add(id));
+    // The server counts one vote per visitor and returns the real total; show that rather than guessing +1.
+    const result = await fetch(`/api/v1/store/reviews/${id}/helpful`, { method: "POST", credentials: "same-origin" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ helpfulCount: number }>) : null))
+      .catch(() => null);
+    if (result) setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, helpfulCount: result.helpfulCount } : r)));
   }
 
   if (total === 0) return null;
@@ -64,7 +70,7 @@ export function ProductReviews({ productId, locale }: { productId: string; local
               </div>
             )}
             {review.adminReply && <p className="mt-2 rounded-theme bg-muted p-2 text-xs text-surface-foreground/70">{locale === "bn" ? "দোকানের উত্তর" : "Store reply"}: {review.adminReply}</p>}
-            <button onClick={() => void markHelpful(review.id)} className="mt-2 text-xs text-surface-foreground/50 hover:text-brand">
+            <button onClick={() => void markHelpful(review.id)} disabled={voted.has(review.id)} className="mt-2 min-h-11 text-xs text-surface-foreground/50 hover:text-brand disabled:cursor-default disabled:text-brand">
               {locale === "bn" ? "সহায়ক" : "Helpful"} ({review.helpfulCount})
             </button>
           </div>

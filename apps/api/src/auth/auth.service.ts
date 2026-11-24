@@ -64,8 +64,19 @@ export class AuthService {
       throw new UnauthorizedException({ code: "LOGIN_EXPIRED", message: "Log in again" });
     }
     const staffUser = await this.prisma.staffUser.findUniqueOrThrow({ where: { id: staffUserId } });
+    if (staffUser.deletedAt || staffUser.status !== "active") {
+      throw new UnauthorizedException({ code: "ACCOUNT_DISABLED", message: "This account has been disabled" });
+    }
+    // Same lockout as the password step: wrong 2FA codes are failed logins too, so a ticket can't be used to guess codes.
+    if (staffUser.lockedUntil && staffUser.lockedUntil.getTime() > Date.now()) {
+      throw new ForbiddenException({ code: "ACCOUNT_LOCKED", message: "Too many failed attempts — try again later", lockedUntil: staffUser.lockedUntil });
+    }
     if (!staffUser.totpSecret || !(await verifyTotpToken(staffUser.totpSecret, code))) {
+      await this.recordFailedLogin(staffUser.id, staffUser.failedLoginAttempts);
       throw new UnauthorizedException({ code: "INVALID_TOTP", message: "That code isn't right" });
+    }
+    if (staffUser.failedLoginAttempts > 0) {
+      await this.prisma.staffUser.update({ where: { id: staffUser.id }, data: { failedLoginAttempts: 0 } });
     }
     return await this.issueSession(staffUser.id, context);
   }

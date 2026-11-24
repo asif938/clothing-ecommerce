@@ -15,7 +15,7 @@ import { RewardsCapture } from "../../components/rewards-capture";
 import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
 import { fontClassNames, fontStackCss } from "../../lib/fonts";
-import { pickForegroundColor } from "../../lib/theme";
+import { pickForegroundColor, safeHexColor, serializeJsonLd } from "../../lib/theme";
 import "./globals.css";
 
 /** A setting holding an image URL, or null when it is unset or blank. */
@@ -56,7 +56,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
   const config = await getStoreConfig();
 
-  const brandColor = typeof config["theme.brandColor"] === "string" ? (config["theme.brandColor"] as string) : "#111827";
+  const brandColor = safeHexColor(config["theme.brandColor"], "#111827");
   const headerVariant = (config["theme.headerVariant"] as "centered" | "left" | "mega" | "minimal" | undefined) ?? "left";
   const footerVariant = (config["theme.footerVariant"] as "columns" | "compact" | undefined) ?? "columns";
   const brandName = localized(config["brand.name"], locale) || "Store";
@@ -97,7 +97,7 @@ export default async function LocaleLayout({
       <body className="flex min-h-screen flex-col">
         <style dangerouslySetInnerHTML={{ __html: themeStyle }} />
         {siteLd.map((data, index) => (
-          <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+          <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />
         ))}
         <TrackingScripts
           gtmContainerId={typeof config["tracking.gtmContainerId"] === "string" ? (config["tracking.gtmContainerId"] as string) : null}

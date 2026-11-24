@@ -2991,3 +2991,37 @@ with retries — rejected; a single transaction is simpler and the writes are sm
 **Operational note.** Set `TRUST_PROXY=2` on Render once it is confirmed that storefront/admin traffic reaches
 the API through the Vercel rewrite with the client in `X-Forwarded-For`. Apply the new migration
 (`pnpm db:migrate:deploy`) — the index is not required for correctness, only for the per-IP count's speed.
+
+---
+
+## 2026-11-24 — Medium audit items
+
+**Context.** The remaining medium items from the 2026-11-22 audit. Two of them turned out not to be real: the
+storefront already sends a CSP and security headers from `apps/storefront/proxy.ts` (the audit only looked at
+`next.config.mjs`), and the CORS `origin: true` fallback could never trigger because `STOREFRONT_URL`/`ADMIN_URL`
+are required by `env.schema.ts`. The OTP-attempt and expiry/payment races were already fixed on 2026-11-22/23.
+
+**Decisions.**
+- **JSON-LD** is written with `serializeJsonLd` (`apps/storefront/lib/theme.ts`), which escapes `<`, `>`, `&`,
+  U+2028/2029 — a product name containing `</script>` can no longer break out of the tag. The brand color is
+  only used when it is a plain hex color (`safeHexColor`), since it lands in an inline `<style>`.
+- **CORS** falls back to `false` instead of reflecting any origin — belt and braces, given the env validation.
+- **Idempotency-key race:** the request that loses the unique index on `orders.idempotency_key` now gets the
+  winner's order back (a replay) instead of a 500. Its own transaction has already rolled back.
+- **Review "helpful" votes:** one per visitor per review (`review_helpful_votes`, unique `(review_id,
+  voter_key)`; voter = customer id or the anonymous-id cookie), approved reviews only, and the endpoint returns
+  just the count — it used to return the whole review row, including pending/rejected ones.
+- **2FA login ticket** is a signed, stateless token (HMAC, key derived from `APP_ENCRYPTION_KEY`) instead of an
+  in-memory map that every restart (free-tier spin-down) emptied. Because a ticket can now be presented more than
+  once within its 5 minutes, wrong 2FA codes count toward the account's login lockout, and a locked or disabled
+  account is refused at the 2FA step.
+
+**Alternatives considered.** A DB table for login tickets — rejected: the signed token needs no migration and the
+lockout bounds guessing. Clearing a guest's cookie gives them another helpful vote; acceptable for a "helpful"
+counter (a sign-in requirement would cost far more real votes than it stops fake ones).
+
+**Found, not fixed:** the storefront never renders a Turnstile widget, so turning on `checkout.turnstileEnabled`
+makes every checkout fail with `CAPTCHA_REQUIRED` — leave it off until the widget is built.
+
+**Operational note.** Apply migration `20261124090000_review_helpful_votes` (`pnpm db:migrate:deploy`) before or
+right after deploying; until then the helpful button returns an error (nothing else is affected).
