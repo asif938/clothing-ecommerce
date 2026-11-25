@@ -1,6 +1,7 @@
 import { t } from "@clothing/shared";
 import type { BlockComponentProps } from "../../registry.ts";
 import type { ImageTextProps } from "./schema.ts";
+import { BlockLink } from "../../block-link.tsx";
 
 export function ImageTextBlock({ props, locale }: BlockComponentProps<ImageTextProps>) {
   const heading = t(props.heading, locale as "bn" | "en");
@@ -19,9 +20,9 @@ export function ImageTextBlock({ props, locale }: BlockComponentProps<ImageTextP
         {heading && <h2 className="text-balance text-3xl leading-tight text-surface-foreground sm:text-4xl">{heading}</h2>}
         <p className="max-w-prose text-pretty leading-relaxed text-surface-foreground/75">{body}</p>
         {ctaText && props.ctaUrl && (
-          <a href={props.ctaUrl} className="mt-2 inline-flex h-12 w-fit items-center rounded-theme bg-brand px-8 text-sm font-medium tracking-wide text-brand-foreground transition-[opacity,transform] duration-300 hover:opacity-90 active:scale-[0.98]">
+          <BlockLink href={props.ctaUrl} className="mt-2 inline-flex h-12 w-fit items-center rounded-theme bg-brand px-8 text-sm font-medium tracking-wide text-brand-foreground transition-[opacity,transform] duration-300 hover:opacity-90 active:scale-[0.98]">
             {ctaText}
-          </a>
+          </BlockLink>
         )}
       </div>
     </section>

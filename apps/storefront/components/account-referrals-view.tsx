@@ -6,6 +6,7 @@ import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { me } from "../lib/account-api";
 import { myReferrals, type MyReferrals } from "../lib/rewards-api";
+import { AccountSkeleton } from "./skeletons";
 
 const STATUS: Record<string, { bn: string; en: string }> = {
   pending: { bn: "অপেক্ষমাণ", en: "Pending" },
@@ -34,7 +35,7 @@ export function AccountReferralsView() {
     });
   }, [router, locale]);
 
-  if (!data) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!data) return <AccountSkeleton />;
 
   const { discount } = data.rules;
   const friendGets = discount.type === "percent" ? `${discount.value}%${discount.maxDiscount > 0 ? (bn ? ` (সর্বোচ্চ ${formatBdt(discount.maxDiscount)})` : ` (up to ${formatBdt(discount.maxDiscount)})`) : ""}` : formatBdt(discount.value);

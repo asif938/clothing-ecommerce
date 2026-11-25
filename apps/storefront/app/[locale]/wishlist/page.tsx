@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { ProductCard } from "../../../components/product-card";
 import { useLocalList } from "../../../lib/use-local-list";
 import { useProductsByIds } from "../../../lib/use-products-by-ids";
+import { ProductCardSkeleton } from "../../../components/skeletons";
 
 const WISHLIST_KEY = "wishlist";
 
@@ -18,7 +19,11 @@ export default function WishlistPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
       <h1 className="text-2xl font-semibold text-surface-foreground">{locale === "bn" ? "উইশলিস্ট" : "Wishlist"}</h1>
       {loading ? (
-        <p className="mt-4 text-sm text-surface-foreground/60">…</p>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
       ) : products.length === 0 ? (
         <p className="mt-4 text-sm text-surface-foreground/60">{locale === "bn" ? "উইশলিস্ট খালি।" : "Your wishlist is empty."}</p>
       ) : (

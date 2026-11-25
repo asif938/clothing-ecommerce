@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { formatBdt } from "../lib/money";
 import { affiliatePortal, type AffiliatePortal } from "../lib/rewards-api";
+import { AccountSkeleton } from "./skeletons";
 
 const STATUS: Record<string, { bn: string; en: string }> = {
   pending: { bn: "অপেক্ষমাণ", en: "Pending" },
@@ -26,7 +27,7 @@ export function AffiliatePortalView() {
   }, [params.token]);
 
   if (error) return <div className="mx-auto max-w-2xl px-4 py-10 text-sm text-danger">{bn ? "লিংকটি বৈধ নয়।" : "This link isn't valid."}</div>;
-  if (!data) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!data) return <AccountSkeleton />;
 
   const clicks = data.clickDays.reduce((sum, d) => sum + d.clicks, 0);
   const max = Math.max(1, ...data.clickDays.map((d) => d.clicks));

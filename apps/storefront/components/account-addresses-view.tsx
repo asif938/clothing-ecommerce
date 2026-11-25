@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "../i18n/navigation";
 import { deleteAddress, me, myAddresses, type Address } from "../lib/account-api";
+import { AccountSkeleton } from "./skeletons";
 
 /** §7.5 "saved addresses for logged-in customers" — view/remove here; new ones are saved from checkout's own address form (not duplicated as a second form on this page). */
 export function AccountAddressesView() {
@@ -22,7 +23,7 @@ export function AccountAddressesView() {
     });
   }, [router]);
 
-  if (!addresses) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!addresses) return <AccountSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

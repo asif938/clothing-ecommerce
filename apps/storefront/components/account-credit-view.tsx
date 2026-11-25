@@ -6,6 +6,7 @@ import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { me } from "../lib/account-api";
 import { giftCardBalance, giftCardOptions, giftCardToWallet, myStoreCredit, type StoreCreditEntry } from "../lib/rewards-api";
+import { AccountSkeleton } from "./skeletons";
 
 const REASONS: Record<string, { bn: string; en: string }> = {
   refund: { bn: "রিফান্ড", en: "Refund" },
@@ -86,7 +87,7 @@ export function AccountCreditView() {
     }
   }
 
-  if (!wallet) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!wallet) return <AccountSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

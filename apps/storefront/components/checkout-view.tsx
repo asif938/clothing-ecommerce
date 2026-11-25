@@ -9,6 +9,7 @@ import { useCart } from "../lib/use-cart";
 import { readUtm } from "../lib/utm";
 import { CheckoutCredits, CreditTotals } from "./checkout-credits";
 import { TurnstileWidget } from "./turnstile-widget";
+import { CartSkeleton } from "./skeletons";
 import {
   availablePaymentMethods,
   checkoutCaptchaConfig,
@@ -165,7 +166,7 @@ export function CheckoutView() {
   const otpRequired = pricing?.paymentRules.otpRequired ?? false;
   const disabledMethods = useMemo(() => new Set(pricing?.paymentRules.disabledMethods ?? []), [pricing]);
 
-  if (cart.loading) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (cart.loading) return <CartSkeleton />;
   if (!cart.data || pricing?.lines.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">

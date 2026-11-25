@@ -2,6 +2,7 @@ import { t } from "@clothing/shared";
 import type { BlockComponentProps } from "../../registry.ts";
 import { HeroCarousel } from "./HeroCarousel.tsx";
 import { heroSlideLink, type HeroProps, type HeroSlide } from "./schema.ts";
+import { BlockLink } from "../../block-link.tsx";
 
 const ALIGN_CLASS = { left: "sm:items-start sm:text-left", center: "sm:items-center sm:text-center", right: "sm:items-end sm:text-right" } as const;
 /** Desktop scrim: fades from the side the text sits on, so the copy stays legible over any photo while the other side stays untouched. Tinted with the page color, so it works for light and dark brands alike. */
@@ -57,12 +58,12 @@ function Slide({ slide, locale, first }: { slide: HeroSlide; locale: string; fir
         )}
         {subheading && <p className="max-w-md text-pretty text-base text-surface-foreground/80 sm:text-lg">{subheading}</p>}
         {link.kind === "button" && (
-          <a
+          <BlockLink
             href={link.href}
             className="mt-2 inline-flex h-12 items-center rounded-theme bg-brand px-8 text-sm font-medium tracking-wide text-brand-foreground transition-[opacity,transform] duration-300 hover:opacity-90 active:scale-[0.98]"
           >
             {ctaText}
-          </a>
+          </BlockLink>
         )}
       </div>
     </div>
@@ -94,9 +95,9 @@ function Slide({ slide, locale, first }: { slide: HeroSlide; locale: string; fir
 
   if (link.kind === "image") {
     return (
-      <a href={link.href} aria-label={alt || heading || undefined} className="block h-full">
+      <BlockLink href={link.href} aria-label={alt || heading || undefined} className="block h-full">
         {body}
-      </a>
+      </BlockLink>
     );
   }
   return body;

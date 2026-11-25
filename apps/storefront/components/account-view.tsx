@@ -7,6 +7,7 @@ import { formatBdt } from "../lib/money";
 import { me, myOrders, logout, type OrderSummary } from "../lib/account-api";
 import { PushOptIn } from "./push-opt-in";
 import { AccountProfileForm } from "./account-profile-form";
+import { AccountSkeleton } from "./skeletons";
 
 export function AccountView() {
   const params = useParams<{ locale: string }>();
@@ -36,7 +37,7 @@ export function AccountView() {
       .catch(() => undefined);
   }, [router]);
 
-  if (!checked) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!checked) return <AccountSkeleton />;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Link } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { giftCardOptions, purchaseGiftCard, type GiftCardOptions, type GiftCardPurchaseInput } from "../lib/rewards-api";
+import { AccountSkeleton } from "./skeletons";
 
 const inputClass = "w-full rounded-theme border border-border px-3 py-2 text-sm";
 
@@ -33,7 +34,7 @@ export function GiftCardPurchaseView() {
   }, []);
 
   if (loadFailed) return <div className="mx-auto max-w-xl px-4 py-10 text-sm text-danger">{bn ? "লোড করা যায়নি।" : "Couldn't load."}</div>;
-  if (!options) return <div className="mx-auto max-w-xl px-4 py-10">…</div>;
+  if (!options) return <AccountSkeleton />;
   if (!options.purchaseEnabled) {
     return <div className="mx-auto max-w-xl px-4 py-10 text-sm text-surface-foreground/70">{bn ? "এখন গিফট কার্ড বিক্রি হচ্ছে না।" : "Gift cards aren't on sale right now."}</div>;
   }

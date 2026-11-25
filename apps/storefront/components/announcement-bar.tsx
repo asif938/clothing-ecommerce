@@ -1,6 +1,7 @@
 import { t } from "@clothing/shared";
 import type { AnnouncementBar as AnnouncementBarData } from "../lib/store-api";
 import { ExperimentSwitch } from "./experiment-switch";
+import { BlockLink } from "@clothing/blocks";
 
 type LocalizedText = { bn?: string; en?: string };
 
@@ -13,7 +14,7 @@ function BarContent({ message, linkText, linkUrl, locale }: { message: Localized
       {linkUrl && linkText && <span className="ml-2 underline underline-offset-4 decoration-brand-foreground/50">{t(linkText, locale as "bn" | "en")}</span>}
     </span>
   );
-  return <div className="bg-brand px-4 py-2.5 text-center text-xs font-medium tracking-wide text-brand-foreground sm:text-[13px]">{linkUrl ? <a href={linkUrl}>{content}</a> : content}</div>;
+  return <div className="bg-brand px-4 py-2.5 text-center text-xs font-medium tracking-wide text-brand-foreground sm:text-[13px]">{linkUrl ? <BlockLink href={linkUrl}>{content}</BlockLink> : content}</div>;
 }
 
 /**

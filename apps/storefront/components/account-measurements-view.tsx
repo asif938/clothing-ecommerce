@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "../i18n/navigation";
 import { me } from "../lib/account-api";
 import { myMeasurements, saveMeasurements, type CustomerMeasurements } from "../lib/account-api";
+import { AccountSkeleton } from "./skeletons";
 
 const EMPTY: CustomerMeasurements = { unit: "cm", heightCm: null, weightKg: null, chestCm: null, waistCm: null, hipCm: null, inseamCm: null, preferredFit: "regular" };
 
@@ -38,7 +39,7 @@ export function AccountMeasurementsView() {
     });
   }, [router]);
 
-  if (!checked) return <div className="mx-auto max-w-md px-4 py-10">…</div>;
+  if (!checked) return <AccountSkeleton />;
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();

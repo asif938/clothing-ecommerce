@@ -4,6 +4,7 @@ import { SectionHeading } from "../../section-heading.tsx";
 import { storeApiGet } from "../../store-api.ts";
 import { buildReviewCards, type FeaturedReviewData, type ReviewCardData } from "./cards.ts";
 import type { ReviewsProps } from "./schema.ts";
+import { BlockLink } from "../../block-link.tsx";
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -40,10 +41,10 @@ function ReviewCard({ card, locale, verifiedLabel }: { card: ReviewCardData; loc
           )}
         </span>
         {card.product && (
-          <a href={`${locale === "en" ? "/en" : ""}/p/${card.product.slug}`} className="group flex min-h-11 items-center gap-3">
+          <BlockLink href={`${locale === "en" ? "/en" : ""}/p/${card.product.slug}`} className="group flex min-h-11 items-center gap-3">
             {card.product.imageUrl && <img src={card.product.imageUrl} alt="" loading="lazy" className="h-11 w-9 shrink-0 rounded-theme bg-muted object-cover" />}
             <span className="line-clamp-2 text-[13px] leading-snug text-surface-foreground/70 transition-colors group-hover:text-brand">{productTitle}</span>
-          </a>
+          </BlockLink>
         )}
       </figcaption>
     </figure>

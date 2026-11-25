@@ -3106,6 +3106,25 @@ slide editor compiles but hasn't been clicked through (staff login needs the own
 
 ---
 
+## Instant page changes and loading skeletons (2026-11-25)
+
+Status: built; typecheck, lint and tests pass. Checked with headless Playwright at 360 px against
+the dev servers. A home product card, a home category tile and the bottom-bar Shop tab all now
+switch pages without a full reload (a marker on `window` survives), and each shows its skeleton
+first: 0.45 s to first change in dev, where Next compiles each route on first visit. Screenshots of
+the listing and product skeletons match the real layouts. In production, prefetching should make it
+close to instant; that hasn't been measured on the live site.
+
+- `packages/blocks/src/block-link.tsx` (`BlockLink`, `BlockLinkContext`) is used by the hero, image
+  + text, banner strip, category tiles, product grid, for-you and reviews blocks.
+  `apps/storefront/components/block-link-provider.tsx` (wraps the layout) and the announcement bar
+  use it too.
+- `apps/storefront/components/skeletons.tsx`, plus `loading.tsx` for `[locale]`, `shop`,
+  `c/[...slug]`, `collections/[slug]`, `search`, `wishlist`, `p/[slug]`, `cart` and `account`.
+  Client pages' "…" placeholders were replaced with skeletons.
+
+---
+
 ### Next up
 
 Phase 3 (§16) is complete. Remaining work is operational: apply the pending

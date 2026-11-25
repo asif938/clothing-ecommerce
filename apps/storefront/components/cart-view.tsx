@@ -7,6 +7,7 @@ import { formatBdt } from "../lib/money";
 import { useCart } from "../lib/use-cart";
 import { setCartCodes } from "../lib/cart-api";
 import { CartRecommendations } from "./cart-recommendations";
+import { CartSkeleton } from "./skeletons";
 
 /** Cart page (docs/PROJECT_SPEC.md §7.5) — line items, coupon field, free-delivery progress, totals breakdown. The drawer variant named in the spec isn't built separately; this same component is the one surface, reachable from the header's cart link. */
 export function CartView() {
@@ -33,7 +34,7 @@ export function CartView() {
     cart.setCart(await setCartCodes(cart.data.cart.couponCodes.filter((c) => c !== code)));
   }
 
-  if (cart.loading) return <div className="mx-auto max-w-3xl px-4 py-10">…</div>;
+  if (cart.loading) return <CartSkeleton />;
   if (cart.error) return <div className="mx-auto max-w-3xl px-4 py-10 text-danger">{cart.error}</div>;
   if (!cart.data || cart.data.pricing.lines.length === 0) {
     return (

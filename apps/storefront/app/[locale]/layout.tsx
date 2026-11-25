@@ -16,6 +16,7 @@ import { OfferExperimentStrip } from "../../components/offer-experiment-strip";
 import { ProductActionsProvider } from "../../components/product-actions-provider";
 import { resolveCardText } from "../../lib/card-text";
 import { BottomNav } from "../../components/bottom-nav";
+import { BlockLinkProvider } from "../../components/block-link-provider";
 import { readBottomNavConfig, resolveBottomNavLabels } from "../../lib/bottom-nav";
 import { getAnnouncements, getMenu, getPage, getStoreConfig, getUiStrings } from "../../lib/store-api";
 import { fontClassNames, fontStackCss } from "../../lib/fonts";
@@ -115,31 +116,33 @@ export default async function LocaleLayout({
         <UtmCapture />
         <RewardsCapture />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <AnnouncementBar bars={announcements} locale={locale} />
-          {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
-          <Header brandName={brandName} logoUrl={logoLight} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
-          <main className="flex-1">
-            <ProductActionsProvider text={resolveCardText(uiStrings, locale)}>{children}</ProductActionsProvider>
-          </main>
-          <Footer
-            brandName={brandName}
-            logoUrl={logoDark}
-            footerVariant={footerVariant}
-            menu={footerMenu}
-            phone={typeof config["brand.phone"] === "string" ? (config["brand.phone"] as string) : null}
-            email={typeof config["brand.email"] === "string" ? (config["brand.email"] as string) : null}
-            locale={locale}
-            uiStrings={uiStrings}
-          />
-          {bottomNav.enabled && <BottomNav items={bottomNav.items} labels={resolveBottomNavLabels(uiStrings, locale)} />}
-          <ChatButtons
-            liveChatEnabled={config["support.liveChat.enabled"] === true}
-            locale={locale}
-            whatsappEnabled={config["chat.whatsappEnabled"] === true}
-            whatsappNumber={typeof config["chat.whatsappNumber"] === "string" ? (config["chat.whatsappNumber"] as string) : null}
-            messengerEnabled={config["chat.messengerEnabled"] === true}
-            messengerPageUrl={typeof config["chat.messengerPageUrl"] === "string" ? (config["chat.messengerPageUrl"] as string) : null}
-          />
+          <BlockLinkProvider>
+            <AnnouncementBar bars={announcements} locale={locale} />
+            {config["experiments.enabled"] === true && <OfferExperimentStrip locale={locale} />}
+            <Header brandName={brandName} logoUrl={logoLight} headerVariant={headerVariant} menu={headerMenu} locale={locale} uiStrings={uiStrings} visualSearch={config["visualSearch.enabled"] === true} />
+            <main className="flex-1">
+              <ProductActionsProvider text={resolveCardText(uiStrings, locale)}>{children}</ProductActionsProvider>
+            </main>
+            <Footer
+              brandName={brandName}
+              logoUrl={logoDark}
+              footerVariant={footerVariant}
+              menu={footerMenu}
+              phone={typeof config["brand.phone"] === "string" ? (config["brand.phone"] as string) : null}
+              email={typeof config["brand.email"] === "string" ? (config["brand.email"] as string) : null}
+              locale={locale}
+              uiStrings={uiStrings}
+            />
+            {bottomNav.enabled && <BottomNav items={bottomNav.items} labels={resolveBottomNavLabels(uiStrings, locale)} />}
+            <ChatButtons
+              liveChatEnabled={config["support.liveChat.enabled"] === true}
+              locale={locale}
+              whatsappEnabled={config["chat.whatsappEnabled"] === true}
+              whatsappNumber={typeof config["chat.whatsappNumber"] === "string" ? (config["chat.whatsappNumber"] as string) : null}
+              messengerEnabled={config["chat.messengerEnabled"] === true}
+              messengerPageUrl={typeof config["chat.messengerPageUrl"] === "string" ? (config["chat.messengerPageUrl"] as string) : null}
+            />
+          </BlockLinkProvider>
         </NextIntlClientProvider>
       </body>
     </html>

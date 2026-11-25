@@ -3201,3 +3201,24 @@ and banners designed with the text already in the picture.
 - The 4:5 / 8:3 shape of a picture-only slide comes from an invisible spacer, not from `aspect-ratio` on the slide.
   On the slide itself, any height (even a minimum height) carries through the aspect ratio to the width and pushes
   the page past the screen.
+
+---
+
+## 2026-11-25 — Instant page changes: client-side block links and loading skeletons
+
+**Context.** Tapping a menu item, a bottom-bar tab or a home page card felt slow. The storefront had no `loading.tsx`
+anywhere, so the old page stayed on screen until the new one was fully rendered on the server; and every link inside
+CMS blocks (product cards, category tiles, hero, banners, reviews, "for you") and the announcement bar was a plain
+`<a>`, which reloads the whole site.
+
+**Decisions.**
+- `@clothing/blocks` stays framework-free. It gets a `BlockLink` that renders through a `BlockLinkContext`, and the
+  storefront provides one (`BlockLinkProvider`) that uses `next/link`, the same slot pattern as the product-card
+  actions. Store paths (`/…`) switch pages in place and are prefetched; external links stay plain `<a>`. Plain
+  `next/link` is used, not the locale-aware one, because block hrefs already carry the locale prefix.
+- `loading.tsx` files: a hero-and-cards skeleton for home and CMS pages; listing skeletons for shop, categories,
+  collections, search and wishlist; and product, cart and account skeletons. Per the Next.js docs, a dynamic route
+  with `loading.tsx` is partially prefetched, so its skeleton appears the instant a link is tapped. Client pages that
+  showed "…" while loading (cart, checkout, account pages, gift cards, affiliate) use the same skeletons.
+- Skeletons copy the real layout's sizes so nothing jumps, use only theme colours, contain no text, are announced as
+  busy, and skip the pulse under `prefers-reduced-motion`.

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Link, useRouter } from "../i18n/navigation";
 import { formatBdt } from "../lib/money";
 import { me, myLoyalty, type LoyaltyEntry, type LoyaltySummary } from "../lib/account-api";
+import { AccountSkeleton } from "./skeletons";
 
 const REASONS: Record<string, { bn: string; en: string }> = {
   order_delivered: { bn: "অর্ডার ডেলিভার", en: "Order delivered" },
@@ -40,7 +41,7 @@ export function AccountPointsView() {
     });
   }, [router]);
 
-  if (!summary) return <div className="mx-auto max-w-2xl px-4 py-10">…</div>;
+  if (!summary) return <AccountSkeleton />;
   const name = (v: { bn?: string; en?: string } | null | undefined) => (v ? (bn ? v.bn || v.en : v.en || v.bn) : "") ?? "";
 
   return (

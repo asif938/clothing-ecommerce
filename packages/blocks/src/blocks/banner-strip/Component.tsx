@@ -1,6 +1,7 @@
 import { t } from "@clothing/shared";
 import type { BlockComponentProps } from "../../registry.ts";
 import type { BannerStripProps } from "./schema.ts";
+import { BlockLink } from "../../block-link.tsx";
 
 // Tailwind only picks up complete, literal class strings when scanning
 // source files — a template-interpolated `sm:grid-cols-${n}` would never
@@ -21,9 +22,9 @@ export function BannerStripBlock({ props, locale }: BlockComponentProps<BannerSt
           </div>
         );
         return item.linkUrl ? (
-          <a key={index} href={item.linkUrl}>
+          <BlockLink key={index} href={item.linkUrl}>
             {content}
-          </a>
+          </BlockLink>
         ) : (
           <div key={index}>{content}</div>
         );

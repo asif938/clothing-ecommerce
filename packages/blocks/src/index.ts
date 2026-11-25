@@ -9,4 +9,5 @@ export * from "./registry.ts";
 export * from "./library.ts";
 export * from "./product-tile.tsx";
 export * from "./product-actions.tsx";
+export * from "./block-link.tsx";
 export * from "./section-heading.tsx";
