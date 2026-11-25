@@ -19,9 +19,8 @@ const SWIPE_PX = 40;
  * tallest slide's and nothing jumps) and cross-faded. Moves on its own every
  * `intervalSeconds` unless the shopper paused it, is hovering, touching or
  * focused inside it, the tab is hidden, or the device asks for reduced
- * motion. Dots everywhere, arrows from `sm` up, swipe on touch screens, a
- * pause button (WCAG 2.2.2: anything that moves for more than 5 seconds must
- * be pausable). Hidden slides are `inert`, so their links can't be tabbed to.
+ * motion. Dots, arrows and a pause button (WCAG 2.2.2) from `sm` up; on phones
+ * swipe, and touching the banner pauses it. Hidden slides are `inert`, so their links can't be tabbed to.
  */
 export function HeroCarousel({ slides, autoplay, intervalSeconds, locale }: { slides: ReactNode[]; autoplay: boolean; intervalSeconds: number; locale: string }) {
   const text = LABELS[locale === "en" ? "en" : "bn"];
@@ -121,7 +120,8 @@ export function HeroCarousel({ slides, autoplay, intervalSeconds, locale }: { sl
         </svg>
       </button>
 
-      <div className="absolute inset-x-0 bottom-3 z-10 flex items-center justify-center gap-1 sm:bottom-5">
+      {/* Dots and pause: from `sm` up only. On phones the banner stays clean; shoppers swipe, and touching it pauses autoplay. */}
+      <div className="absolute inset-x-0 bottom-5 z-10 hidden items-center justify-center gap-1 sm:flex">
         <div className="flex items-center gap-0.5 rounded-full bg-surface/80 px-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
           {slides.map((_, i) => (
             <button
