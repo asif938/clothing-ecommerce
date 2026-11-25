@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTsQuery, expandTerm, type SynonymRow } from "./search-query";
+import { banglaSpellings, buildTsQuery, expandTerm, type SynonymRow } from "./search-query";
 
 const panjabiSynonyms: SynonymRow[] = [{ term: "panjabi", synonyms: ["punjabi", "পাঞ্জাবি"] }];
 
@@ -46,5 +46,25 @@ describe("buildTsQuery", () => {
 
   it("returns an empty string for blank input", () => {
     expect(buildTsQuery("   ", panjabiSynonyms)).toBe("");
+  });
+});
+
+describe("Bangla nukta spellings", () => {
+  // "শাড়ি" typed with ড় as one code point (Gboard) vs. ড + nukta (how the product titles are stored).
+  const composed = "শাড়ি";
+  const decomposed = "শাড়ি";
+
+  it("gives both spellings of a word with a nukta letter, whichever was typed", () => {
+    expect(banglaSpellings(composed).sort()).toEqual([composed, decomposed].sort());
+    expect(banglaSpellings(decomposed).sort()).toEqual([composed, decomposed].sort());
+  });
+
+  it("leaves other words alone", () => {
+    expect(banglaSpellings("saree")).toEqual(["saree"]);
+    expect(banglaSpellings("জামদানি")).toEqual(["জামদানি"]);
+  });
+
+  it("searches both spellings", () => {
+    expect(buildTsQuery(composed, [])).toBe(`(${decomposed} | ${composed})`);
   });
 });

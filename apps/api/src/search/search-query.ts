@@ -13,6 +13,27 @@ export interface SynonymRow {
   synonyms: string[];
 }
 
+/**
+ * Bangla letters with a nukta have two Unicode spellings that look the same:
+ * one code point (ড় U+09DC, ঢ় U+09DD, য় U+09DF) or the base letter + nukta
+ * (ড U+09A1 + ় U+09BC, …). Keyboards differ — Gboard types the single code
+ * point, while NFC (and most stored text) uses the pair — and the search index
+ * treats them as different words, so "শাড়ি" missed every saree. Each search
+ * word is tried in both spellings.
+ */
+const NUKTA_PAIRS: [composed: string, decomposed: string][] = [
+  ["\u09DC", "\u09A1\u09BC"],
+  ["\u09DD", "\u09A2\u09BC"],
+  ["\u09DF", "\u09AF\u09BC"],
+];
+
+/** The same Bangla word in both nukta spellings (just the word when it has none). */
+export function banglaSpellings(word: string): string[] {
+  const decomposed = NUKTA_PAIRS.reduce((w, [one, pair]) => w.split(one).join(pair), word.normalize("NFC"));
+  const composed = NUKTA_PAIRS.reduce((w, [one, pair]) => w.split(pair).join(one), decomposed);
+  return [...new Set([decomposed, composed])];
+}
+
 /** Strip characters with special meaning to Postgres's tsquery parser. */
 function escapeTsQueryWord(word: string): string {
   return word.replace(/[&|!():*']/g, "");
@@ -33,7 +54,7 @@ export function buildTsQuery(rawQuery: string, synonyms: SynonymRow[]): string {
 
   return tokens
     .map((token) => {
-      const group = [...new Set(expandTerm(token, synonyms))].map(escapeTsQueryWord).filter(Boolean);
+      const group = [...new Set(expandTerm(token, synonyms).flatMap(banglaSpellings))].map(escapeTsQueryWord).filter(Boolean);
       if (group.length === 0) return null;
       return group.length === 1 ? group[0] : `(${group.join(" | ")})`;
     })
